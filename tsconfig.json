@@ -5,6 +5,13 @@
     "jsx": "react-native",
     "moduleResolution": "bundler",
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "baseUrl": "./",
+    "paths": {
+      "@components/*": ["src/components/*"],
+      "@fonts/*": ["assets/fonts/*"],
+      "@styles/*": ["src/styles/*"],
+      "@screens/*": ["src/screens/*"]
+    }
   }
 }
