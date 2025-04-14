@@ -18,7 +18,7 @@ export const isConnected = async (): Promise<boolean> => {
 export const isApiReachable = async (): Promise<boolean> => {
   try {
     // Faz uma requisição simples para verificar se a API está acessível
-    await api.get('/ping');
+    await api.get('/users');
     return true;
   } catch (error) {
     return false;

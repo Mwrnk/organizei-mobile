@@ -7,10 +7,11 @@ export class UserController {
     const newUser: User = {
       ...userData,
       id: Math.random().toString(36).substr(2, 9),
+      role: userData.role || 'user', // Garantir que role seja definido
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    
+
     this.users.push(newUser);
     return newUser;
   }
@@ -18,4 +19,4 @@ export class UserController {
   async getUsers(): Promise<User[]> {
     return this.users;
   }
-} 
+}

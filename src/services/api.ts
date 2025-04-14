@@ -31,7 +31,7 @@ api.interceptors.response.use(
     
     // Se o erro for 401 (Unauthorized) e não for uma tentativa de refresh
     if (error.response?.status === 401 && !originalRequest._retry) {
-      // Aqui você poderia implementar a lógica de refresh token
+      // IMPLEMENTAR REFRESH TOKEN
       // Por enquanto, apenas redireciona para login
       await AsyncStorage.removeItem(TOKEN_KEY);
       // Navegação seria manipulada no componente usando o serviço

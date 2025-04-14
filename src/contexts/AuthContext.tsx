@@ -5,6 +5,7 @@ interface User {
   id: string;
   name: string;
   email: string;
+  role: string;
 }
 
 interface AuthContextData {
@@ -28,10 +29,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     async function loadStorageData() {
       setLoading(true);
-      
+
       try {
         const currentUser = await AuthService.getCurrentUser();
-        
+
         if (currentUser) {
           setUser(currentUser);
         }
@@ -47,7 +48,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (credentials: LoginCredentials) => {
     setLoading(true);
-    
+
     try {
       const response = await AuthService.login(credentials);
       setUser(response.user);
@@ -60,7 +61,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async () => {
     setLoading(true);
-    
+
     try {
       await AuthService.logout();
       setUser(null);
@@ -97,4 +98,4 @@ export function useAuth(): AuthContextData {
   return context;
 }
 
-export default AuthContext; 
+export default AuthContext;
