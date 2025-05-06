@@ -1,49 +1,133 @@
-# Organizei Frontend
 
-This is a React Native application following the MVC (Model-View-Controller) architecture pattern.
+# Organize.ei
 
-## Project Structure
+## 📚 Introdução
 
+Bem-vindo ao Organizei, somos um projeto desenvolvido para buscar ajudar estudantes a se organizarem de forma que seus estudos possam ser otimizados. Nossa API ainda está em construção, mas por aqui você já consegue visualizar algumas coisas como tela de login mobile e web.
+
+O projeto contará com as entidades **Usuário**, **Quadro**, **Lista**, **Card**, **tipoCard**, e **plano**.
+
+### Tecnologias Utilizadas
+
+- **Backend:**
+  - Node.js com **Express**
+  - **bcrypt / bcryptjs** 
+  - **dotenv** 
+  - **jsonwebtoken** 
+  - **knex** 
+  - **mongoose** 
+  - **uuid** 
+  - **zod**
+
+- **Frontend Web:**
+  - **React 19**
+  - **Styled Components**
+
+- **Mobile (React Native com Expo):**
+  - **Expo**
+  - **React Navigation**
+  - **Axios**
+  - **AsyncStorage**
+  - **Reanimated, Safe Area Context, NetInfo, etc.**
+
+---
+
+## ⚙️ Instalação
+
+### Requisitos
+
+Para rodar a API localmente, você precisa dos seguintes pré-requisitos:
+
+- **Node.js**: versão 16.x ou superior
+- **npm** ou **yarn**: para gerenciar pacotes
+- **MongoDB**: local ou em nuvem (MongoDB Atlas)
+
+---
+
+## 🚀 Executando o Projeto
+
+1. Clone o repositório:
+
+```bash
+git clone https://github.com/seu-usuario/organizei-api.git
+cd organizei-api
 ```
-src/
-├── models/         # Data models and interfaces
-├── views/          # React components and screens
-├── controllers/    # Business logic and data manipulation
-├── services/       # External services and API calls
-├── utils/          # Utility functions and helpers
-├── types/          # TypeScript type definitions
-├── components/     # Reusable UI components
-├── hooks/          # Custom React hooks
-└── constants/      # Application constants and configuration
-```
 
-### Directory Descriptions
+2. Instale as dependências:
 
-- **models/**: Contains data models and interfaces that define the structure of your application's data
-- **views/**: Contains React components and screens that handle the presentation layer
-- **controllers/**: Contains business logic and data manipulation code
-- **services/**: Contains code for external services, API calls, and third-party integrations
-- **utils/**: Contains utility functions and helper methods
-- **types/**: Contains TypeScript type definitions and interfaces
-- **components/**: Contains reusable UI components
-- **hooks/**: Contains custom React hooks
-- **constants/**: Contains application constants, configuration, and environment variables
-
-## Getting Started
-
-1. Install dependencies:
 ```bash
 npm install
+# ou
+yarn
 ```
 
-2. Start the development server:
-```bash
-npm start
+3. Configure o arquivo `.env`:
+
+```env
+PORT=3000
+DATABASE_URL="sua_conexao_postgresql"
+JWT_SECRET="sua_chave_secreta"
+MONGO_URI="sua_string_mongodb"
 ```
 
-3. Run on your preferred platform:
+4. Rode as migrations (se estiver usando Knex com banco relacional):
+
 ```bash
-npm run android
-# or
-npm run ios
-``` 
+npx knex migrate:latest
+```
+
+5. Inicie o servidor:
+
+```bash
+npm run dev
+# ou
+yarn dev
+```
+
+---
+
+## 🧩 Estrutura do Projeto
+
+```bash
+organizei-api/
+├── controllers/
+├── middlewares/
+├── models/
+├── routes/
+├── services/
+├── utils/
+├── index.js
+└── .env
+```
+
+---
+
+## 🛠️ Funcionalidades (em desenvolvimento)
+
+- [x] Autenticação JWT
+- [x] Criptografia de senhas
+- [ ] Integração completa com MongoDB
+- [ ] CRUD de Quadros, Listas e Cards
+- [ ] Plano Premium (futuramente)
+- [ ] Testes automatizados
+
+---
+
+## 👤 Equipe
+
+- Mateus Werneck - [@Mwrnk](https://github.com/Mwrnk)
+- Carlos Breno - [@usuario2](https://github.com/usuario2)
+
+---
+
+## 📄 Licença
+
+Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+
+---
+
+## 💡 Observações Finais
+
+Ainda estamos trabalhando na documentação oficial da API (Swagger ou Postman). Em breve você poderá visualizar todos os endpoints e realizar testes diretamente por lá.
+
+Enquanto isso, agradecemos por estar acompanhando o desenvolvimento do **Organizei**! 🎓📅✨
