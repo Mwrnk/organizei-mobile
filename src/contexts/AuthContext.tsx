@@ -1,12 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import AuthService, { LoginCredentials } from '../services/auth';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-}
+import { LoginCredentials } from '../services/auth';
+import AuthController from '../controllers/AuthController';
+import { User } from '../models/User';
 
 interface AuthContextData {
   signed: boolean;
@@ -31,7 +26,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(true);
 
       try {
-        const currentUser = await AuthService.getCurrentUser();
+        // Utiliza o controller para carregar os dados do usuário
+        const currentUser = await AuthController.loadCurrentUser();
 
         if (currentUser) {
           setUser(currentUser);
@@ -50,7 +46,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setLoading(true);
 
     try {
-      const response = await AuthService.login(credentials);
+      // Utiliza o controller para realizar o login
+      const response = await AuthController.login(credentials);
       setUser(response.user);
     } catch (error) {
       throw error;
@@ -63,7 +60,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setLoading(true);
 
     try {
-      await AuthService.logout();
+      // Utiliza o controller para realizar o logout
+      await AuthController.logout();
       setUser(null);
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
