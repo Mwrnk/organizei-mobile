@@ -3,10 +3,10 @@ import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { GlobalStyles } from '@styles/global';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import Input from '@components/Input';
-import { useAuth } from '../contexts/AuthContext';
-import colors from '@styles/colors';
+import { useAuth } from '@contexts/AuthContext';
 import CustomButton from '@components/CustomButton';
-import { checkConnectivity } from '../utils/network';
+import { checkConnectivity } from '@utils/network';
+import AuthController from '../controllers/AuthController';
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
@@ -14,14 +14,21 @@ const LoginScreen = () => {
   const [error, setError] = useState('');
   const { login, loading } = useAuth();
 
-  const handleLogin = async () => {
-    // Validação básica
+  const validateForm = (): boolean => {
     if (!email || !password) {
       setError('Por favor, preencha todos os campos');
+      return false;
+    }
+    return true;
+  };
+
+  const handleLogin = async () => {
+    // Validação do formulário
+    if (!validateForm()) {
       return;
     }
 
-    // Verifica conectividade
+    // Verificação de conectividade
     const isConnected = await checkConnectivity();
     if (!isConnected) {
       return;
@@ -29,6 +36,7 @@ const LoginScreen = () => {
 
     try {
       setError('');
+      // Usa a função de login do contexto que agora delega para o controller
       await login({ email, password });
     } catch (err) {
       setError('Login falhou. Verifique suas credenciais.');
@@ -42,27 +50,21 @@ const LoginScreen = () => {
         <View style={styles.logoContainer}>
           <Text style={GlobalStyles.title}>organiz.ei</Text>
         </View>
-        
+
         <View style={styles.welcomeContainer}>
           <Text style={GlobalStyles.title2}>Bem-vindo de volta!</Text>
         </View>
 
         <View style={styles.formContainer}>
-          <Input 
-            placeholder="Email" 
+          <Input
+            placeholder="Email"
             onChangeText={setEmail}
             autoCapitalize="none"
             keyboardType="email-address"
           />
-          <Input 
-            placeholder="Senha" 
-            secureTextEntry={true} 
-            onChangeText={setPassword} 
-          />
-          
-          {error ? (
-            <Text style={styles.errorText}>{error}</Text>
-          ) : null}
+          <Input placeholder="Senha" secureTextEntry={true} onChangeText={setPassword} />
+
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
         </View>
 
         <View style={styles.createAccountContainer}>
@@ -72,7 +74,7 @@ const LoginScreen = () => {
           </TouchableOpacity>
         </View>
 
-        <CustomButton 
+        <CustomButton
           title="Entrar"
           loading={loading}
           onPress={handleLogin}
@@ -108,7 +110,7 @@ const styles = StyleSheet.create({
     color: 'red',
     textAlign: 'center',
     marginTop: 8,
-  }
+  },
 });
 
 export default LoginScreen;

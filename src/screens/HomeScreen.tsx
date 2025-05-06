@@ -10,6 +10,7 @@ const HomeScreen = () => {
 
   const handleLogout = async () => {
     try {
+      // O contexto agora delega a ação para o controller
       await logout();
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
@@ -22,18 +23,18 @@ const HomeScreen = () => {
         <View style={styles.header}>
           <Text style={GlobalStyles.title}>organiz.ei</Text>
         </View>
-        
+
         <View style={styles.welcomeContainer}>
           <Text style={GlobalStyles.title2}>Olá, {user?.name || 'Usuário'}!</Text>
           <Text style={GlobalStyles.text}>Bem-vindo à sua área de organização.</Text>
         </View>
-        
+
         <View style={styles.contentContainer}>
           {/* Conteúdo principal do app irá aqui */}
           <Text style={GlobalStyles.text}>Seu conteúdo principal aqui</Text>
         </View>
-        
-        <CustomButton 
+
+        <CustomButton
           title="Sair"
           loading={loading}
           onPress={handleLogout}
