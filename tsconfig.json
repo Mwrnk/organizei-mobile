@@ -11,7 +11,9 @@
       "@components/*": ["src/components/*"],
       "@fonts/*": ["assets/fonts/*"],
       "@styles/*": ["src/styles/*"],
-      "@screens/*": ["src/screens/*"]
+      "@screens/*": ["src/screens/*"],
+      "@contexts/*": ["src/contexts/*"],
+      "@utils/*": ["src/utils/*"]
     }
   }
 }

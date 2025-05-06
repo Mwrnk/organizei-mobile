@@ -12,6 +12,8 @@ module.exports = function (api) {
             '@fonts': './assets/fonts',
             '@styles': './src/styles',
             '@screens': './src/screens',
+            '@contexts': './src/contexts',
+            '@utils': './src/utils',
           },
         },
       ],
