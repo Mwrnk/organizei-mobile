@@ -1,6 +1,7 @@
 import { Alert } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import api from '../services/api';
+import axios from 'axios';
 
 /**
  * Verifica se o dispositivo está conectado à internet
@@ -17,10 +18,18 @@ export const isConnected = async (): Promise<boolean> => {
  */
 export const isApiReachable = async (): Promise<boolean> => {
   try {
-    // Faz uma requisição simples para verificar se a API está acessível
-    await api.get('/users');
-    return true;
+    // Tenta obter apenas os cabeçalhos da resposta do servidor
+    // sem necessidade de autenticação, usando uma requisição HEAD
+    const response = await api.head('/');
+    return response.status < 500; // Considera disponível se não for erro de servidor
   } catch (error) {
+    // Verifica se o erro é de conexão (e não de autenticação)
+    if (axios.isAxiosError(error)) {
+      // Se houver uma resposta, o servidor está online, mesmo que retorne 401 ou 403
+      if (error.response) {
+        return error.response.status < 500;
+      }
+    }
     return false;
   }
 };
@@ -59,4 +68,4 @@ export default {
   isConnected,
   isApiReachable,
   checkConnectivity
-}; 
+};

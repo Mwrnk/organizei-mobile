@@ -12,13 +12,15 @@ const icons: Record<string, React.ElementType> = {
 
 const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigation }) => {
   return (
-    <View style={{
-      flexDirection: 'row',
-      backgroundColor: '#f5f5f5',
-      height: 60,
-      justifyContent: 'space-around',
-      alignItems: 'center'
-    }}>
+    <View
+      style={{
+        flexDirection: 'row',
+        backgroundColor: '#f5f5f5',
+        height: 60,
+        justifyContent: 'space-around',
+        alignItems: 'center',
+      }}
+    >
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key];
 
@@ -34,7 +36,7 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigat
                 focused: isFocused,
                 color,
                 position: 'below-icon',
-                children: labelText
+                children: labelText,
               })
             : options.tabBarLabel ?? labelText;
 
@@ -42,7 +44,7 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigat
           const event = navigation.emit({
             type: 'tabPress',
             target: route.key,
-            canPreventDefault: true
+            canPreventDefault: true,
           });
 
           if (!isFocused && !event.defaultPrevented) {
@@ -62,7 +64,7 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigat
               borderRadius: 30,
               alignItems: 'center',
               flexDirection: 'row',
-              gap: 6
+              gap: 6,
             }}
           >
             <Icon color={color} size={20} />
