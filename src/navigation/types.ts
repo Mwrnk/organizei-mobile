@@ -4,4 +4,5 @@ export type RootTabParamList = {
   IA: undefined;
   Eu: undefined;
   Login: undefined;
+  Register: undefined;
 };

@@ -7,12 +7,16 @@ import { useAuth } from '@contexts/AuthContext';
 import CustomButton from '@components/CustomButton';
 import { checkConnectivity } from '@utils/network';
 import AuthController from '../controllers/AuthController';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootTabParamList } from '../navigation/types';
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const { login, loading } = useAuth();
+  const navigation = useNavigation<StackNavigationProp<RootTabParamList>>();
 
   const validateForm = (): boolean => {
     if (!email || !password) {
@@ -69,7 +73,7 @@ const LoginScreen = () => {
 
         <View style={styles.createAccountContainer}>
           <Text style={GlobalStyles.textSmall}>Não tem uma conta? </Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('Register')}>
             <Text style={GlobalStyles.textLink}>Crie uma conta</Text>
           </TouchableOpacity>
         </View>
