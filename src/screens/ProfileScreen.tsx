@@ -1,159 +1,112 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
+import React from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, FlatList, Image } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
-import UserController from '../controllers/UserController';
-import BoardController from '../controllers/BoardController';
-import api from '../services/api';
+import { fontNames } from '../styles/fonts';
+import { useNavigation } from '@react-navigation/native';
+import type { StackNavigationProp } from '@react-navigation/stack';
+import type { RootTabParamList } from '../navigation/types';
 
-// Função utilitária para pegar as iniciais do nome
-const getInitials = (name: string) => {
-  if (!name) return '';
-  const parts = name.trim().split(' ');
-  if (parts.length === 1) return parts[0][0].toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-};
+const dummyCards = [
+  {
+    id: '1',
+    title: 'Citações Fisioterapia',
+    date: '11/01/01',
+    type: 'Escolar',
+    image: 'https://via.placeholder.com/80x60',
+  },
+  {
+    id: '2',
+    title: 'Banco de Dados...',
+    date: '11/01/01',
+    type: 'Profissional',
+    image: 'https://via.placeholder.com/80x60',
+  },
+  {
+    id: '3',
+    title: 'Boas Práticas Front...',
+    date: '11/01/01',
+    type: 'Profissional',
+    image: 'https://via.placeholder.com/80x60',
+  },
+];
 
 const ProfileScreen = () => {
-  const { user: authUser, logout, loading: authLoading } = useAuth();
-  const [user, setUser] = useState<any>(null);
-  const [plan, setPlan] = useState<any>(null);
-  const [cards, setCards] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchProfileData = async () => {
-      if (!authUser) return;
-      setLoading(true);
-      try {
-        // Buscar dados do usuário
-        const userData = await UserController.getUserById(authUser.id);
-        setUser(userData);
-
-        // Buscar plano do usuário
-        try {
-          const planRes = await api.get(`/users/${authUser.id}/plan`);
-          setPlan(planRes.data.data);
-        } catch (err) {
-          setPlan({ name: 'Gratuito', price: 0 });
-        }
-
-        // Buscar boards e cards do usuário
-        const boards = await BoardController.getBoards(authUser.id);
-        const allCards = boards.flatMap((board: any) => board.cards || []);
-        setCards(allCards);
-      } catch (err) {
-        // fallback
-        setUser(null);
-        setPlan({ name: 'Gratuito', price: 0 });
-        setCards([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProfileData();
-  }, [authUser]);
-
-  // Placeholder para virar premium
-  const handlePremium = () => {
-    // Implementar navegação para página de assinatura
-    alert('Ir para página de assinatura!');
-  };
-
-  if (authLoading || loading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#007bff" />
-        <Text style={{ marginTop: 12 }}>Carregando perfil...</Text>
-      </View>
-    );
-  }
-
-  if (!user) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>Usuário não encontrado.</Text>
-      </View>
-    );
-  }
-
+  const { user } = useAuth();
+  const navigation = useNavigation<StackNavigationProp<RootTabParamList>>();
   return (
     <View style={styles.container}>
       {/* Banner */}
       <View style={styles.banner} />
 
-      {/* Avatar e nome */}
-      <View style={styles.profileBox}>
+      {/* Avatar centralizado */}
+      <View style={styles.avatarContainer}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {user.profileImage ? 'IMG' : getInitials(user.name)}
-          </Text>
-        </View>
-        <View style={styles.userInfo}>
-          <Text style={styles.userName}>{user.name}</Text>
-          <Text style={styles.userPoints}>{user.orgPoints ?? 0} pts</Text>
+          {/* Placeholder do avatar */}
+          <Text style={styles.avatarText}>{user?.name ? user.name[0] : 'G'}</Text>
         </View>
       </View>
 
-      {/* Informações pessoais */}
-      <View style={styles.infoSection}>
-        <Text style={styles.infoTitle}>Informações Pessoais</Text>
-        <View style={styles.infoGrid}>
-          <View style={styles.infoBox}>
-            <Text style={styles.label}>Código</Text>
-            <Text style={styles.value}>{user.coduser}</Text>
+      {/* Nome, pontos e editar */}
+      <View style={styles.nameRow}>
+        <Text style={styles.userName}>{user?.name || 'Usuário'}</Text>
+        <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('EditProfile')}>
+          <View style={styles.editIconCircle}>
+            <Text style={styles.editIcon}>✎</Text>
           </View>
-          <View style={styles.infoBox}>
-            <Text style={styles.label}>Email</Text>
-            <Text style={styles.value}>{user.email}</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.pointsRow}>
+        <Text style={styles.pointsIcon}>⚡</Text>
+        <Text style={styles.pointsText}>+0pts</Text>
+      </View>
+
+      {/* Cards */}
+      <View style={styles.cardsHeaderRow}>
+        <Text style={styles.cardsTitle}>#meus cards</Text>
+        <Text style={styles.cardsSeeAll}>Ver todos</Text>
+      </View>
+      <FlatList
+        data={dummyCards}
+        keyExtractor={item => item.id}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.cardsList}
+        contentContainerStyle={{ paddingLeft: 12, paddingRight: 12 }}
+        renderItem={({ item }) => (
+          <View style={styles.cardBox}>
+            <Image source={{ uri: item.image }} style={styles.cardImage} />
+            <Text style={styles.cardTitle}>{item.title}</Text>
+            <View style={styles.cardFooter}>
+              <Text style={styles.cardDate}>{item.date}</Text>
+              <Text style={styles.cardType}>{item.type}</Text>
+            </View>
           </View>
-          <View style={styles.infoBox}>
-            <Text style={styles.label}>Data de Nascimento</Text>
-            <Text style={styles.value}>{user.dateOfBirth ? new Date(user.dateOfBirth).toLocaleDateString() : '-'}</Text>
-          </View>
-          <View style={styles.infoBox}>
-            <Text style={styles.label}>Plano Atual</Text>
-            <Text style={styles.value}>{plan?.name || 'Gratuito'}</Text>
-          </View>
-          <View style={styles.infoBox}>
-            <Text style={styles.label}>Valor</Text>
-            <Text style={styles.value}>{plan?.price === 0 ? 'Gratuito' : `R$ ${plan?.price}`}</Text>
-          </View>
-        </View>
-        <TouchableOpacity style={styles.logoutButton} onPress={logout}>
-          <Text style={styles.logoutText}>Sair</Text>
+        )}
+      />
+
+      {/* Botões de menu */}
+      <View style={styles.menuBox}>
+        <TouchableOpacity style={styles.menuBtn}>
+          <Text style={styles.menuIcon}>🔔</Text>
+          <Text style={styles.menuText}>Informação Pessoal</Text>
+          <Text style={styles.menuArrow}>→</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.menuBtn}>
+          <Text style={styles.menuIcon}>📊</Text>
+          <Text style={styles.menuText}>Minhas Análises</Text>
+          <Text style={styles.menuArrow}>→</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate('Plan')}>
+          <Text style={styles.menuIcon}>💳</Text>
+          <Text style={styles.menuText}>Meu Plano</Text>
+          <Text style={styles.menuArrow}>→</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Cards criados */}
-      <View style={styles.infoSection}>
-        <Text style={styles.infoTitle}>Meus Cards</Text>
-        {cards.length > 0 ? (
-          <FlatList
-            data={cards}
-            keyExtractor={(item) => item.id}
-            horizontal
-            renderItem={({ item }) => (
-              <View style={styles.cardBox}>
-                <Text style={styles.cardTitle}>{item.title}</Text>
-              </View>
-            )}
-            showsHorizontalScrollIndicator={false}
-            style={{ marginVertical: 10 }}
-          />
-        ) : (
-          <Text style={styles.emptyText}>Ainda não foram criados cards.</Text>
-        )}
-      </View>
-
       {/* Botão Premium */}
-      <TouchableOpacity
-        style={plan?.name === 'Gratuito' ? styles.premiumButton : styles.premiumButtonActive}
-        onPress={handlePremium}
-        disabled={plan?.name !== 'Gratuito'}
-      >
-        <Text style={styles.premiumButtonText}>
-          {plan?.name === 'Gratuito' ? 'Vire Premium' : 'Você é premium!'}
-        </Text>
+      <TouchableOpacity style={styles.premiumBtn}>
+        <Text style={styles.premiumBtnText}>Vire Premium</Text>
+        <Text style={styles.menuArrow}>→</Text>
       </TouchableOpacity>
     </View>
   );
@@ -164,140 +117,186 @@ export default ProfileScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
-    paddingTop: 40,
+    backgroundColor: '#fff',
   },
   banner: {
     width: '100%',
-    height: 120,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 8,
+    height: 140,
+    backgroundColor: '#ddd',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    marginBottom: 0,
   },
-  profileBox: {
-    flexDirection: 'row',
+  avatarContainer: {
     alignItems: 'center',
-    marginTop: -40,
-    marginLeft: 20,
+    marginTop: -48,
   },
   avatar: {
-    width: 80,
-    height: 80,
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    width: 96,
+    height: 96,
+    backgroundColor: '#181818',
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-    zIndex: 10,
+    borderWidth: 4,
+    borderColor: '#fff',
   },
   avatarText: {
-    fontSize: 32,
-    color: '#222',
+    color: '#fff',
+    fontSize: 48,
     fontWeight: 'bold',
   },
-  userInfo: {
-    marginLeft: 20,
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
   },
   userName: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginTop: 20,
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#222',
+    fontFamily: fontNames.bold,
   },
-  userPoints: {
-    fontSize: 16,
-    color: '#888',
-    marginTop: 4,
+  editBtn: {
+    marginLeft: 8,
   },
-  infoSection: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    marginTop: 24,
-    marginHorizontal: 16,
-    padding: 16,
-  },
-  infoTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 12,
-  },
-  infoGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    justifyContent: 'flex-start',
-  },
-  infoBox: {
-    backgroundColor: '#f9f9f9',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 10,
-    margin: 4,
-    minWidth: 120,
-    flex: 1,
-  },
-  label: {
-    fontSize: 13,
-    color: '#777',
-    marginBottom: 2,
-  },
-  value: {
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  logoutButton: {
-    backgroundColor: 'red',
-    borderRadius: 8,
-    padding: 10,
-    marginTop: 18,
-    alignItems: 'center',
-  },
-  logoutText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  cardBox: {
-    backgroundColor: '#f9f9f9',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 16,
-    marginRight: 10,
-    minWidth: 140,
+  editIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#EAEAEA',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  emptyText: {
+  editIcon: {
+    fontSize: 18,
     color: '#888',
-    fontStyle: 'italic',
-    marginTop: 8,
-    textAlign: 'center',
+    fontFamily: fontNames.regular,
   },
-  premiumButton: {
-    backgroundColor: '#007bff',
-    borderRadius: 8,
-    padding: 14,
-    margin: 20,
+  pointsRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
   },
-  premiumButtonActive: {
-    backgroundColor: '#00c851',
-    borderRadius: 8,
-    padding: 14,
-    margin: 20,
-    alignItems: 'center',
-  },
-  premiumButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
+  pointsIcon: {
     fontSize: 16,
+    color: '#222',
+    marginRight: 2,
+  },
+  pointsText: {
+    fontSize: 14,
+    color: '#222',
+    fontFamily: fontNames.regular,
+  },
+  cardsHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 18,
+    marginHorizontal: 18,
+  },
+  cardsTitle: {
+    color: '#222',
+    fontWeight: '500',
+    fontSize: 13,
+    fontFamily: fontNames.semibold,
+  },
+  cardsSeeAll: {
+    color: '#888',
+    fontSize: 13,
+    fontFamily: fontNames.regular,
+  },
+  cardsList: {
+    marginTop: 8,
+    minHeight: 140,
+    maxHeight: 160,
+  },
+  cardBox: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    marginRight: 12,
+    padding: 10,
+    width: 160,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  cardImage: {
+    width: '100%',
+    height: 60,
+    borderRadius: 10,
+    marginBottom: 8,
+    backgroundColor: '#eee',
+  },
+  cardTitle: {
+    fontWeight: '600',
+    fontSize: 15,
+    color: '#222',
+    marginBottom: 4,
+    fontFamily: fontNames.bold,
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  cardDate: {
+    fontSize: 11,
+    color: '#888',
+    fontFamily: fontNames.regular,
+  },
+  cardType: {
+    fontSize: 11,
+    color: '#888',
+    fontFamily: fontNames.regular,
+  },
+  menuBox: {
+    marginTop: 18,
+    marginHorizontal: 12,
+  },
+  menuBtn: {
+    backgroundColor: '#F7F7F7',
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    marginBottom: 10,
+  },
+  menuIcon: {
+    fontSize: 18,
+    marginRight: 12,
+  },
+  menuText: {
+    flex: 1,
+    fontSize: 15,
+    color: '#222',
+    fontWeight: '500',
+    fontFamily: fontNames.semibold,
+  },
+  menuArrow: {
+    fontSize: 18,
+    color: '#888',
+  },
+  premiumBtn: {
+    backgroundColor: '#007AFF',
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    marginHorizontal: 8,
+    marginTop: 8,
+    marginBottom: 18,
+  },
+  premiumBtnText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
+    marginRight: 8,
+    fontFamily: fontNames.bold,
   },
 });
