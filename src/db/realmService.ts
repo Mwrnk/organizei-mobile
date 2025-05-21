@@ -95,7 +95,7 @@ export async function createCard(cardData: {
       });
 
       // >>> ACESSO ao _id de createdCard (usando cast para any para resolver erro de tipagem) <<<
-      if (createdCard) { // Adicionar verificação extra
+      if (createdCard) { 
           console.log(`Card criado no Realm com ID: ${(createdCard as any)._id}`); // Cast para any aqui
       } else {
           console.warn('Card não foi criado no Realm.');
@@ -119,7 +119,7 @@ export async function getAllCards(): Promise<Realm.Results<Card & Realm.Object> 
     // Busca todos os objetos do tipo 'Card' que NÃO ESTÃO marcados como deletados
     const cards = realm!.objects<Card>('Card').filtered('isDeleted == false');
     console.log(`Buscados ${cards.length} cards não deletados do Realm.`);
-    // >>> CORREÇÃO para erro 2352: Converter para unknown primeiro <<<
+  
     return cards as unknown as Realm.Results<Card & Realm.Object>;
   } catch (error) {
     console.error('Erro ao buscar todos os cards do Realm:', error);
@@ -135,7 +135,7 @@ export async function getCardsByUserId(userId: string): Promise<Realm.Results<Ca
         // Busca cards onde o campo userId seja igual ao userId passado E que NÃO ESTÃO marcados como deletados
         const cards = realm!.objects<Card>('Card').filtered('userId == $0 AND isDeleted == false', userId);
          console.log(`Buscados ${cards.length} cards não deletados para o usuário ${userId}.`);
-        // >>> CORREÇÃO para erro 2352: Converter para unknown primeiro <<<
+    
         return cards as unknown as Realm.Results<Card & Realm.Object>;
     } catch (error) {
         console.error(`Erro ao buscar cards para o usuário ${userId} do Realm:`, error);
@@ -151,7 +151,7 @@ export async function searchCardsByTerm(term: string): Promise<Realm.Results<Car
         // Busca cards onde o título OU o conteúdo contenham o termo (case-insensitive) E que NÃO ESTÃO marcados como deletados
         const cards = realm!.objects<Card>('Card').filtered('(title CONTAINS[c] $0 OR content CONTAINS[c] $0) AND isDeleted == false', term);
         console.log(`Buscados ${cards.length} cards não deletados para o termo "${term}".`);
-        // >>> CORREÇÃO para erro 2352: Converter para unknown primeiro <<<
+        
         return cards as unknown as Realm.Results<Card & Realm.Object>;
     } catch (error) {
         console.error(`Erro ao buscar cards para o termo "${term}" do Realm:`, error);
@@ -169,7 +169,7 @@ export async function updateCard(cardId: string, updates: Partial<Card>, markAsU
 
     realm!.write(() => {
       // Busca o card pela chave primária
-       // >>> CORREÇÃO para objectForPrimaryKey: Cast do primaryKey para 'any' <<<
+      
       const cardToUpdate = realm!.objectForPrimaryKey<Card>('Card', cardId as any);
       if (!cardToUpdate) {
         console.warn(`Card with ID ${cardId} not found for update.`);
@@ -210,7 +210,7 @@ export async function deleteCard(cardId: string): Promise<void> {
 
     realm!.write(() => {
        // Busca o card pela chave primária
-       // >>> CORREÇÃO para objectForPrimaryKey: Cast do primaryKey para 'any' <<<
+    
       const cardToDelete = realm!.objectForPrimaryKey<Card>('Card', cardId as any);
       if (!cardToDelete) {
         console.warn(`Card with ID ${cardId} not found for deletion.`);
@@ -250,7 +250,7 @@ export async function saveOrUpdateCurrentUser(userData: {
 
       realm!.write(() => {
         // Tenta encontrar o usuário pelo ID (string)
-         // >>> CORREÇÃO para objectForPrimaryKey: Cast do primaryKey para 'any' <<<
+      
         let existingUser = realm!.objectForPrimaryKey<User>('User', userData._id as any);
 
         if (existingUser) {
@@ -282,9 +282,7 @@ export async function saveOrUpdateCurrentUser(userData: {
              profileImage: userData.profileImage || null,
              createdAt: userData.createdAt,
              updatedAt: userData.updatedAt,
-             // Campos não incluídos localmente
-             // loginAttempts: userData.loginAttempts || 0,
-             // lastLoginAttempt: userData.lastLoginAttempt || null,
+             
            });
         }
       });
@@ -301,19 +299,13 @@ export async function getCurrentUser(userId: string): Promise<User & Realm.Objec
     try {
       realm = await getRealm();
       // Busca o usuário pela chave primária (string)
-       // >>> CORREÇÃO para objectForPrimaryKey: Cast do primaryKey para 'any' <<<
+       
       const user = realm!.objectForPrimaryKey<User>('User', userId as any);
       console.log(`Buscado usuário ${userId} do Realm.`);
-       // >>> CORREÇÃO para erro 2352: Converter para unknown primeiro <<<
+      
       return user as unknown as (User & Realm.Object) | null;
     } catch (error) {
       console.error(`Erro ao buscar usuário ${userId} do Realm:`, error);
       throw error;
     }
 }
-
-// Função auxiliar para gerar um ObjectId (requer a biblioteca bson)
-// import BSON from 'bson';
-// export function generateObjectId(): string {
-//     return new BSON.ObjectId().toHexString();
-// }

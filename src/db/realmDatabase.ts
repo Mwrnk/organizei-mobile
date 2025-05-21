@@ -31,13 +31,6 @@ const migrationFunction: MigrationCallback = (oldRealm, newRealm) => {
     console.log('Migração de schema version 1 para 2 concluída.');
   }
 
-  // Se você tiver futuras migrações (ex: da versão 2 para 3), adicione mais 'if' blocks:
-  // if (oldRealm.schemaVersion < 3) {
-  //   console.log('Migrando de schema version 2 para 3...');
-  //   // Sua lógica de migração para a versão 3 aqui
-  //   console.log('Migração de schema version 2 para 3 concluída.');
-  // }
-
   console.log('Migração do Realm finalizada.');
 };
 
