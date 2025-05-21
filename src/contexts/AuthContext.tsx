@@ -9,6 +9,7 @@ interface AuthContextData {
   loading: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
   logout: () => Promise<void>;
+  updateUserData: (userData: User) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -71,6 +72,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const updateUserData = async (userData: User) => {
+    try {
+      await AuthController.updateCurrentUserData(userData);
+      setUser(userData);
+    } catch (error) {
+      console.error('Erro ao atualizar dados do usuário:', error);
+      throw error;
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -79,6 +90,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         loading,
         login,
         logout,
+        updateUserData,
       }}
     >
       {children}

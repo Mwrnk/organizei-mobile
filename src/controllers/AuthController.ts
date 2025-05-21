@@ -68,6 +68,19 @@ export class AuthController {
       return null;
     }
   }
+
+  /**
+   * Atualiza os dados do usuário atual no armazenamento local
+   * @param userData Dados atualizados do usuário
+   */
+  async updateCurrentUserData(userData: User): Promise<void> {
+    try {
+      await AuthService.updateCurrentUser(userData);
+    } catch (error) {
+      console.error('Erro ao atualizar dados do usuário atual:', error);
+      throw error;
+    }
+  }
 }
 
 export default AuthController.getInstance();
