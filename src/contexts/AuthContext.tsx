@@ -25,18 +25,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     async function loadStorageData() {
       setLoading(true);
+      console.log('AuthContext - Iniciando carregamento de dados do storage...');
 
       try {
         // Utiliza o controller para carregar os dados do usuário
         const currentUser = await AuthController.loadCurrentUser();
+        console.log('AuthContext - Usuário carregado do storage:', {
+          user: currentUser,
+          hasUser: !!currentUser,
+          userId: currentUser?._id,
+          userEmail: currentUser?.email,
+          userName: currentUser?.name,
+          allFields: currentUser ? Object.keys(currentUser) : [],
+        });
 
         if (currentUser) {
+          console.log('AuthContext - Definindo usuário válido no contexto');
           setUser(currentUser);
+        } else {
+          console.log('AuthContext - Nenhum usuário válido encontrado no storage');
+          setUser(null);
         }
       } catch (error) {
         console.error('Erro ao carregar dados de autenticação:', error);
+        setUser(null);
       } finally {
         setLoading(false);
+        console.log('AuthContext - Carregamento finalizado');
       }
     }
 
@@ -45,12 +60,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (credentials: LoginCredentials) => {
     setLoading(true);
+    console.log('AuthContext - Iniciando processo de login...');
 
     try {
       // Utiliza o controller para realizar o login
       const response = await AuthController.login(credentials);
+      console.log('AuthContext - Resposta do login recebida:', {
+        hasUser: !!response.user,
+        userId: response.user?._id,
+        userEmail: response.user?.email,
+        userName: response.user?.name,
+        userFields: response.user ? Object.keys(response.user) : [],
+        hasToken: !!response.token,
+      });
+
+      console.log('AuthContext - Definindo usuário logado no contexto');
       setUser(response.user);
+      console.log('AuthContext - Login finalizado com sucesso');
     } catch (error) {
+      console.error('AuthContext - Erro no processo de login:', error);
       throw error;
     } finally {
       setLoading(false);

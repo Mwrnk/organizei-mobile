@@ -49,6 +49,7 @@ export class UserController {
   private mapApiUserToModel(apiUser: ApiUserResponse): User {
     return {
       id: apiUser._id,
+      _id: apiUser._id, // Mantém o ID original do MongoDB
       coduser: apiUser.coduser,
       name: apiUser.name,
       email: apiUser.email,
@@ -123,7 +124,7 @@ export class UserController {
     } catch (error) {
       console.error(`Erro ao obter usuário com ID ${id}:`, error);
       // Tenta encontrar no cache local
-      return this.users.find((user) => user.id === id) || null;
+      return this.users.find((user) => user._id === id) || null;
     }
   }
 
@@ -139,7 +140,7 @@ export class UserController {
       const updatedUser = this.mapApiUserToModel(response.data.data);
 
       // Atualiza o cache local
-      const index = this.users.findIndex((user) => user.id === id);
+      const index = this.users.findIndex((user) => user._id === id);
       if (index !== -1) {
         this.users[index] = updatedUser;
       }
@@ -161,7 +162,7 @@ export class UserController {
       await api.delete(`/users/${id}`);
 
       // Atualiza o cache local
-      this.users = this.users.filter((user) => user.id !== id);
+      this.users = this.users.filter((user) => user._id !== id);
       return true;
     } catch (error) {
       console.error(`Erro ao excluir usuário com ID ${id}:`, error);
@@ -197,7 +198,7 @@ export class UserController {
       const updatedUser = this.mapApiUserToModel(response.data.data);
 
       // Atualiza o cache local
-      const index = this.users.findIndex((user) => user.id === id);
+      const index = this.users.findIndex((user) => user._id === id);
       if (index !== -1) {
         this.users[index] = updatedUser;
       }
@@ -237,7 +238,7 @@ export class UserController {
       const updatedUser = this.mapApiUserToModel(response.data.data);
 
       // Atualiza o cache local
-      const index = this.users.findIndex((user) => user.id === id);
+      const index = this.users.findIndex((user) => user._id === id);
       if (index !== -1) {
         this.users[index] = updatedUser;
       }
