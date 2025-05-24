@@ -29,7 +29,7 @@ const BoardScreen = () => {
 
     setLoading(true);
     try {
-      const userBoards = await BoardController.getBoards(user.id);
+      const userBoards = await BoardController.getBoards(user._id);
       setBoards(userBoards);
 
       // Seleciona o primeiro board por padrão, se existir
@@ -49,7 +49,7 @@ const BoardScreen = () => {
 
     setLoading(true);
     try {
-      await BoardController.addCard(selectedBoard.id, user.id, { title: cardTitle });
+      await BoardController.addCard(selectedBoard.id, user._id, { title: cardTitle });
       setCardTitle('');
       setIsModalOpen(false);
 

@@ -4,12 +4,14 @@ import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 // import { Home, Globe, Bot, User } from 'lucide-react-native'; // Remove Lucide imports
 
 import HomeIcon from 'assets/icons/HomeIcon';
+import EscolarIcon from 'assets/icons/EscolarIcon';
 import NetworkIcon from 'assets/icons/NetworkIcon'; // Assuming NetworkIcon for Globe/Comunidade
 import BotIcon from 'assets/icons/BotIcon';
 import UserIcon from 'assets/icons/UserIcon';
 
 const icons: Record<string, React.ElementType> = {
   Home: HomeIcon,
+  Escolar: EscolarIcon,
   Comunidade: NetworkIcon, // Changed from Globe to NetworkIcon
   IA: BotIcon,
   Eu: UserIcon,
@@ -31,7 +33,7 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigat
 
         const isFocused = state.index === index;
         // Use UserIcon as a fallback if no specific icon is found for a route name
-        const IconComponent = icons[route.name] || UserIcon; 
+        const IconComponent = icons[route.name] || UserIcon;
 
         const iconColor = isFocused ? '#000' : '#444'; // Adjusted focused color for better visibility with default SVG black
         const labelTextColor = isFocused ? '#000' : '#444';
@@ -40,7 +42,7 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigat
         const label =
           typeof options.tabBarLabel === 'function'
             ? options.tabBarLabel({
-                focused: isFocused, 
+                focused: isFocused,
                 color: labelTextColor, // Use labelTextColor for the label
                 position: 'below-icon',
                 children: labelText,
@@ -85,7 +87,16 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigat
               <IconComponent color={isFocused ? '#fff' : '#888'} size={22} />
             </View>
             {typeof label === 'string' || typeof label === 'number' ? (
-              <Text style={{ color: isFocused ? '#18171A' : '#888', fontSize: 15, fontWeight: isFocused ? '600' : '400', marginTop: 2 }}>{label}</Text>
+              <Text
+                style={{
+                  color: isFocused ? '#18171A' : '#888',
+                  fontSize: 15,
+                  fontWeight: isFocused ? '600' : '400',
+                  marginTop: 2,
+                }}
+              >
+                {label}
+              </Text>
             ) : (
               label
             )}

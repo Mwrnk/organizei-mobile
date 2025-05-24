@@ -5,6 +5,7 @@ import { RootTabParamList } from './types';
 import CustomTabBar from '@components/CustomTabBar';
 
 import HomeScreen from '@screens/HomeScreen';
+import EscolarScreen from '@screens/EscolarScreen';
 import CommunityScreen from '@screens/CommunityScreen';
 import AIScreen from '@screens/AIScreen';
 import ProfileScreen from '@screens/ProfileScreen';
@@ -31,6 +32,7 @@ const AppRoutes = () => (
     tabBar={(props) => <CustomTabBar {...props} />}
   >
     <Tab.Screen name="Home" component={HomeScreen} />
+    <Tab.Screen name="Escolar" component={EscolarScreen} />
     <Tab.Screen name="Comunidade" component={CommunityScreen} />
     <Tab.Screen name="IA" component={AIScreen} />
     <Tab.Screen name="Eu" component={ProfileStackScreen} />

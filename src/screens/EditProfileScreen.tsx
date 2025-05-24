@@ -32,7 +32,7 @@ const EditProfileScreen = () => {
     if (!user) return;
     setLoading(true);
     try {
-      const updated = await UserController.updateUser(user.id, { name, email });
+      const updated = await UserController.updateUser(user._id, { name, email });
       if (updated) {
         Alert.alert('Perfil atualizado com sucesso!');
         navigation.goBack();
@@ -109,7 +109,12 @@ const EditProfileScreen = () => {
       {/* Senha */}
       <Text style={styles.label}>Senha</Text>
       <View style={styles.inputBox}>
-        <Ionicons name="lock-closed-outline" size={22} color={colors.button} style={styles.inputIcon} />
+        <Ionicons
+          name="lock-closed-outline"
+          size={22}
+          color={colors.button}
+          style={styles.inputIcon}
+        />
         <TextInput
           style={styles.input}
           value={password}
@@ -269,4 +274,4 @@ const styles = StyleSheet.create({
     fontFamily: fontNames.bold,
     textAlign: 'center',
   },
-}); 
+});
