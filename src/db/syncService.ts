@@ -1,9 +1,9 @@
-import { getRealm } from './realmDatabase';
-import { Card, List, User } from './realmSchemas';
-import Realm from 'realm';
+const { getRealm } = require('./realmDatabase');
+const { Card, List, User } = require('./realmSchemas');
+const Realm = require('realm');
 
 // Configuração da API
-const API_URL = 'https://organizei-api.onrender.com/api';
+const API_URL = 'http://localhost:3000';
 
 // Interface para os dados que vêm do servidor
 interface IServerResponse {
@@ -13,7 +13,7 @@ interface IServerResponse {
 }
 
 // Interfaces para os objetos do Realm
-interface IRealmList extends Realm.Object {
+interface IRealmList {
   _id: string;
   userId: string;
   title: string;
@@ -22,30 +22,30 @@ interface IRealmList extends Realm.Object {
   updatedAt: Date;
   isSynced: boolean;
   isDeleted: boolean;
-  cards: Realm.List<IRealmCard>;
+  cards: any[];
 }
 
-interface IRealmCard extends Realm.Object {
+interface IRealmCard {
   _id: string;
   listId: string;
   userId: string;
   title: string;
   priority: string;
   is_published: boolean;
-  image_url: Realm.List<string>;
-  pdfs: Realm.List<any>;
+  image_url: string[];
+  pdfs: any[];
   likes: number;
-  comments: Realm.List<any>;
+  comments: any[];
   downloads: number;
   createdAt: Date;
   updatedAt: Date;
   content: string;
   isSynced: boolean;
   isDeleted: boolean;
-  list: Realm.Results<IRealmList>;
+  list: any[];
 }
 
-interface IRealmUser extends Realm.Object {
+interface IRealmUser {
   _id: string;
   coduser: string;
   name: string;
@@ -60,15 +60,24 @@ interface IRealmUser extends Realm.Object {
   createdAt: Date;
   updatedAt: Date;
   isSynced: boolean;
-  cards: Realm.List<IRealmCard>;
+  cards: any[];
 }
 
 // Função para obter o token de autenticação
 async function getAuthToken(): Promise<string | null> {
   try {
     const realm = await getRealm();
-    const currentUser = realm.objects<IRealmUser>('User').filtered('isSynced == true')[0];
-    return currentUser?._id || null;
+    // Primeiro, vamos verificar se existe algum usuário
+    const users = realm.objects('User');
+    if (users.length === 0) {
+      console.log('Nenhum usuário encontrado no banco local');
+      return null;
+    }
+
+    // Se existir usuário, vamos usar o primeiro como autenticado
+    const currentUser = users[0];
+    console.log('Usuário encontrado:', currentUser._id);
+    return currentUser._id;
   } catch (error) {
     console.error('Erro ao obter token de autenticação:', error);
     return null;
@@ -96,7 +105,7 @@ async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Re
 }
 
 // Função para sincronizar dados com o servidor
-export async function syncWithServer() {
+async function syncWithServer() {
   try {
     const token = await getAuthToken();
     if (!token) {
@@ -125,7 +134,7 @@ async function syncLists() {
   
   try {
     // Buscar todas as lists não sincronizadas
-    const unsyncedLists = realm.objects<IRealmList>('List').filtered('isSynced == false');
+    const unsyncedLists = realm.objects('List').filtered('isSynced == false');
     
     for (const list of unsyncedLists) {
       try {
@@ -161,7 +170,7 @@ async function syncCards() {
   
   try {
     // Buscar todos os cards não sincronizados
-    const unsyncedCards = realm.objects<IRealmCard>('Card').filtered('isSynced == false');
+    const unsyncedCards = realm.objects('Card').filtered('isSynced == false');
     
     for (const card of unsyncedCards) {
       try {
@@ -197,7 +206,7 @@ async function syncUsers() {
   
   try {
     // Buscar todos os users não sincronizados
-    const unsyncedUsers = realm.objects<IRealmUser>('User').filtered('isSynced == false');
+    const unsyncedUsers = realm.objects('User').filtered('isSynced == false');
     
     for (const user of unsyncedUsers) {
       try {
@@ -252,10 +261,10 @@ async function syncCardWithServer(card: IRealmCard): Promise<IServerResponse> {
         title: card.title,
         priority: card.priority,
         is_published: card.is_published,
-        image_url: Array.from(card.image_url),
-        pdfs: Array.from(card.pdfs),
+        image_url: card.image_url,
+        pdfs: card.pdfs,
         likes: card.likes,
-        comments: Array.from(card.comments),
+        comments: card.comments,
         downloads: card.downloads,
         createdAt: card.createdAt,
         updatedAt: card.updatedAt,
@@ -366,4 +375,18 @@ async function fetchNewCardsFromServer() {
     console.error('Erro ao buscar novos cards do servidor:', error);
     throw error;
   }
-} 
+}
+
+module.exports = {
+  syncWithServer,
+  syncLists,
+  syncCards,
+  syncUsers,
+  syncListWithServer,
+  syncCardWithServer,
+  syncUserWithServer,
+  deleteListOnServer,
+  deleteCardOnServer,
+  fetchNewListsFromServer,
+  fetchNewCardsFromServer
+}; 

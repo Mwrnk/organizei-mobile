@@ -6,7 +6,9 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test:db": "ts-node --project tsconfig.json src/db/databaseTest.ts",
+    "test:sync": "ts-node --project tsconfig.json src/db/syncTest.ts"
   },
   "dependencies": {
     "@expo/metro-runtime": "~5.0.4",
