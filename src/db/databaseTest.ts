@@ -1,44 +1,34 @@
-const { getRealm } = require('./realmDatabase');
-const { createList, getAllLists, updateList, deleteList } = require('./realmService');
-const { createCard, getAllCards, updateCard, deleteCard } = require('./realmService');
-const { saveOrUpdateCurrentUser, getCurrentUser } = require('./realmService');
-const { Card, List, User } = require('./realmSchemas');
-const Realm = require('realm');
+const {
+  createList,
+  getAllLists,
+  updateList,
+  deleteList,
+  createCard,
+  getAllCards,
+  updateCard,
+  deleteCard,
+  saveOrUpdateCurrentUser,
+  getCurrentUser,
+  getAllUsers,
+  updateUser,
+  deleteUser,
+  getCardsByList,
+} = require('./realmService');
 
-// Interfaces para as atualizações
-interface ListUpdate {
-  title?: string;
-  description?: string;
-}
-
-interface CardUpdate {
-  title?: string;
-  priority?: string;
-  content?: string;
-  is_published?: boolean;
-}
-
-// Tipos para os objetos do Realm
-type RealmList = typeof List & { _id: string; userId: string; title: string; description: string };
-type RealmCard = typeof Card & { _id: string; listId: string; userId: string; title: string };
+const { closeRealm } = require('./realmDatabase');
 
 async function testDatabase() {
-  console.log('Iniciando testes do banco de dados local...');
-  
-  try {
-    // 1. Teste de Conexão
-    console.log('\n1. Testando conexão com o banco...');
-    const realm = await getRealm();
-    console.log('✅ Conexão com o banco estabelecida com sucesso');
+  console.log('Iniciando testes do banco de dados local...\n');
 
-    // 2. Teste de Usuário
-    console.log('\n2. Testando operações de usuário...');
+  try {
+    // 1. Teste de Usuário
+    console.log('1. Testando operações de usuário...');
     const testUser = {
-      _id: 'test-user-' + Date.now(),
+      _id: `test-user-${Date.now()}`,
       coduser: 'TEST001',
       name: 'Usuário Teste',
       email: 'teste@teste.com',
-      dateOfBirth: new Date(),
+      dateOfBirth: new Date('1990-01-01'),
       role: 'user',
       plan: 'free',
       orgPoints: 0,
@@ -47,18 +37,26 @@ async function testDatabase() {
     };
 
     // Criar usuário
-    await saveOrUpdateCurrentUser(testUser);
-    console.log('✅ Usuário criado com sucesso');
+    const createdUser = await saveOrUpdateCurrentUser(testUser);
+    console.log('✅ Usuário criado:', createdUser._id);
 
     // Buscar usuário
-    const createdUser = await getCurrentUser(testUser._id);
-    console.log('✅ Usuário encontrado:', createdUser ? 'Sim' : 'Não');
+    const foundUser = await getCurrentUser(createdUser._id);
+    console.log('✅ Usuário encontrado:', foundUser._id);
 
-    // 3. Teste de Lista
-    console.log('\n3. Testando operações de lista...');
+    // Atualizar usuário
+    const updatedUser = await updateUser(createdUser._id, { name: 'Usuário Teste Atualizado' });
+    console.log('✅ Usuário atualizado:', updatedUser.name);
+
+    // Listar todos os usuários
+    const allUsers = await getAllUsers();
+    console.log('✅ Total de usuários:', allUsers.length);
+
+    // 2. Teste de Lista
+    console.log('\n2. Testando operações de lista...');
     const testList = {
-      _id: 'test-list-' + Date.now(),
-      userId: testUser._id,
+      _id: `test-list-${Date.now()}`,
+      userId: createdUser._id,
       title: 'Lista Teste',
       description: 'Descrição da lista teste',
       createdAt: new Date(),
@@ -66,85 +64,77 @@ async function testDatabase() {
     };
 
     // Criar lista
-    await createList(testList);
-    console.log('✅ Lista criada com sucesso');
+    const createdList = await createList(testList);
+    console.log('✅ Lista criada:', createdList._id);
 
-    // Buscar lista
-    const lists = await getAllLists();
-    const createdList = lists?.find((l: RealmList) => l._id === testList._id);
-    console.log('✅ Lista encontrada:', createdList ? 'Sim' : 'Não');
+    // Buscar todas as listas
+    const allLists = await getAllLists();
+    console.log('✅ Total de listas:', allLists.length);
 
-    // 4. Teste de Card
-    console.log('\n4. Testando operações de card...');
+    // Atualizar lista
+    const updatedList = await updateList(createdList._id, { title: 'Lista Teste Atualizada' });
+    console.log('✅ Lista atualizada:', updatedList.title);
+
+    // 3. Teste de Card
+    console.log('\n3. Testando operações de card...');
     const testCard = {
-      _id: 'test-card-' + Date.now(),
-      listId: testList._id,
-      userId: testUser._id,
+      _id: `test-card-${Date.now()}`,
+      listId: createdList._id,
+      userId: createdUser._id,
       title: 'Card Teste',
-      priority: 'medium',
-      is_published: false,
-      image_url: [],
-      pdfs: [],
-      likes: 0,
-      comments: [],
-      downloads: 0,
+      content: 'Conteúdo do card teste',
       createdAt: new Date(),
       updatedAt: new Date(),
-      content: 'Conteúdo do card teste',
     };
 
     // Criar card
-    await createCard(testCard);
-    console.log('✅ Card criado com sucesso');
+    const createdCard = await createCard(testCard);
+    console.log('✅ Card criado:', createdCard._id);
 
-    // Buscar card
-    const cards = await getAllCards();
-    const createdCard = cards?.find((c: RealmCard) => c._id === testCard._id);
-    console.log('✅ Card encontrado:', createdCard ? 'Sim' : 'Não');
+    // Buscar todos os cards
+    const allCards = await getAllCards();
+    console.log('✅ Total de cards:', allCards.length);
 
-    // 5. Teste de Atualização
-    console.log('\n5. Testando operações de atualização...');
-    
-    // Atualizar lista
-    const listUpdate: ListUpdate = { title: 'Lista Teste Atualizada' };
-    await updateList(testList._id, listUpdate as any);
-    console.log('✅ Lista atualizada com sucesso');
+    // Buscar cards por lista
+    const listCards = await getCardsByList(createdList._id);
+    console.log('✅ Cards na lista:', listCards.length);
 
     // Atualizar card
-    const cardUpdate: CardUpdate = { title: 'Card Teste Atualizado' };
-    await updateCard(testCard._id, cardUpdate as any);
-    console.log('✅ Card atualizado com sucesso');
+    const updatedCard = await updateCard(createdCard._id, { title: 'Card Teste Atualizado' });
+    console.log('✅ Card atualizado:', updatedCard.title);
 
-    // 6. Teste de Deleção
-    console.log('\n6. Testando operações de deleção...');
-    
+    // 4. Teste de Deleção
+    console.log('\n4. Testando operações de deleção...');
+
     // Deletar card
-    await deleteCard(testCard._id);
-    console.log('✅ Card deletado com sucesso');
+    await deleteCard(createdCard._id);
+    console.log('✅ Card deletado');
 
     // Deletar lista
-    await deleteList(testList._id);
-    console.log('✅ Lista deletada com sucesso');
+    await deleteList(createdList._id);
+    console.log('✅ Lista deletada');
 
-    // 7. Verificação Final
-    console.log('\n7. Verificação final do banco...');
-    const finalLists = await getAllLists();
-    const finalCards = await getAllCards();
-    console.log('Listas restantes:', finalLists?.length || 0);
-    console.log('Cards restantes:', finalCards?.length || 0);
+    // Deletar usuário
+    await deleteUser(createdUser._id);
+    console.log('✅ Usuário deletado');
 
-    console.log('\n✅ Todos os testes foram concluídos com sucesso!');
-    
+    // Verificar deleção
+    const remainingUsers = await getAllUsers();
+    const remainingLists = await getAllLists();
+    const remainingCards = await getAllCards();
+    console.log('✅ Verificação final:');
+    console.log('   - Usuários restantes:', remainingUsers.length);
+    console.log('   - Listas restantes:', remainingLists.length);
+    console.log('   - Cards restantes:', remainingCards.length);
+
+    console.log('\n✅ Todos os testes do banco de dados foram concluídos com sucesso!');
+
   } catch (error) {
-    console.error('\n❌ Erro durante os testes:', error);
+    console.error('❌ Erro durante os testes:', error);
   } finally {
-    // Fechar conexão com o banco
-    const realm = await getRealm();
-    realm.close();
+    await closeRealm();
   }
 }
 
 // Executar os testes
-testDatabase().catch(console.error);
-
-module.exports = { testDatabase }; 
+testDatabase(); 

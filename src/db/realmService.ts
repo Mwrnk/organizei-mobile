@@ -83,6 +83,38 @@ async function getCurrentUser(id: string) {
   return realm.objectForPrimaryKey('User', id);
 }
 
+async function getAllUsers() {
+  const realm = await getRealm();
+  return realm.objects('User');
+}
+
+async function updateUser(id: string, updates: any) {
+  const realm = await getRealm();
+  return realm.write(() => {
+    const user = realm.objectForPrimaryKey('User', id);
+    if (user) {
+      Object.assign(user, updates);
+    }
+    return user;
+  });
+}
+
+async function deleteUser(id: string) {
+  const realm = await getRealm();
+  return realm.write(() => {
+    const user = realm.objectForPrimaryKey('User', id);
+    if (user) {
+      realm.delete(user);
+    }
+  });
+}
+
+// Função para obter cards por lista
+async function getCardsByList(listId: string) {
+  const realm = await getRealm();
+  return realm.objects('Card').filtered('listId = $0', listId);
+}
+
 module.exports = {
   createList,
   getAllLists,
@@ -94,4 +126,8 @@ module.exports = {
   deleteCard,
   saveOrUpdateCurrentUser,
   getCurrentUser,
+  getAllUsers,
+  updateUser,
+  deleteUser,
+  getCardsByList,
 };
