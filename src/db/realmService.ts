@@ -1,7 +1,7 @@
 import Realm from 'realm';
 import { getRealm } from './realmDatabase'; // Importa a função para obter a instância do Realm
 // Importa os schemas e modelos tipados diretamente como classes
-import { Card, User, Comment, Pdf } from './realmSchemas';
+import { Card, User, Comment, Pdf, List } from './realmSchemas';
 
 // Definir tipos para os dados de entrada de objetos aninhados,
 // pois a entrada pode não ser diretamente instâncias do Realm.Object
@@ -24,54 +24,55 @@ interface ICommentData {
 
 // Cria um novo Card no Realm
 export async function createCard(cardData: {
-  _id: string; // Deve vir do backend ou ser gerado se for uma criação offline inicial
-  listId: string; // Manter como string para compatibilidade com backend ObjectId
-  userId: string; // O ID do usuário a quem o card pertence (string para compatibilidade com backend ObjectId)
+  _id: string;
+  listId: string;
+  userId: string;
   title: string;
   priority?: string;
   is_published?: boolean;
   image_url?: string[];
-  pdfs?: IPdfData[]; // Usar um tipo para os dados de entrada dos PDFs
+  pdfs?: IPdfData[];
   likes?: number;
-  comments?: ICommentData[]; // Usar um tipo para os dados de entrada dos Comentários
+  comments?: ICommentData[];
   downloads?: number;
   createdAt: Date;
   updatedAt: Date;
   content?: string;
-  isSynced?: boolean; // Campo para controle de sincronização
+  isSynced?: boolean;
 }): Promise<Card | null> {
-  // Tipagem explícita para a variável realm
-  let realm: Realm | null = null; // Inicializa como null e tipa explicitamente
+  let realm: Realm | null = null;
   try {
     realm = await getRealm();
     let createdCard: Card | null = null;
 
     realm.write(() => {
-      // Antes de criar o card, verifique se o usuário existe no Realm
-      // >>> CORREÇÃO para objectForPrimaryKey: Cast do primaryKey para 'any' <<<
+      // Verifica se o usuário existe
       const user = realm!.objectForPrimaryKey<User>('User', cardData.userId as any);
-
       if (!user) {
-         console.error(`User with ID ${cardData.userId} not found in Realm. Cannot create card.`);
-         return; // Sai do bloco write
+        console.error(`User with ID ${cardData.userId} not found in Realm. Cannot create card.`);
+        return;
       }
 
-      // Cria os objetos aninhados Pdf a partir dos dados de entrada
+      // Verifica se a lista existe
+      const list = realm!.objectForPrimaryKey<List>('List', cardData.listId as any);
+      if (!list) {
+        console.error(`List with ID ${cardData.listId} not found in Realm. Cannot create card.`);
+        return;
+      }
+
+      // Cria os objetos aninhados Pdf
       const realmPdfs = cardData.pdfs ? cardData.pdfs.map(pdfData => {
-           // Garantir que criamos instâncias Realm.Object aninhadas
-           return realm!.create<Pdf>('Pdf', pdfData);
-      }) : [];
-      // Cria os objetos aninhados Comment a partir dos dados de entrada
-      const realmComments = cardData.comments ? cardData.comments.map(commentData => {
-          // Garantir que criamos instâncias Realm.Object aninhadas
-          return realm!.create<Comment>('Comment', {
-              ...commentData,
-              // No schema, _id e userId são strings. Se o backend envia ObjectId, já devem vir como string.
-              _id: commentData._id,
-              userId: commentData.userId
-          });
+        return realm!.create<Pdf>('Pdf', pdfData);
       }) : [];
 
+      // Cria os objetos aninhados Comment
+      const realmComments = cardData.comments ? cardData.comments.map(commentData => {
+        return realm!.create<Comment>('Comment', {
+          ...commentData,
+          _id: commentData._id,
+          userId: commentData.userId
+        });
+      }) : [];
 
       createdCard = realm!.create<Card>('Card', {
         _id: cardData._id,
@@ -81,34 +82,28 @@ export async function createCard(cardData: {
         priority: cardData.priority || 'Baixa',
         is_published: cardData.is_published || false,
         image_url: cardData.image_url || [],
-        pdfs: realmPdfs, // Atribui os objetos Realm aninhados criados
+        pdfs: realmPdfs,
         likes: cardData.likes || 0,
-        comments: realmComments, // Atribui os objetos Realm aninhados criados
+        comments: realmComments,
         downloads: cardData.downloads || 0,
         createdAt: cardData.createdAt,
         updatedAt: cardData.updatedAt,
         content: cardData.content || '',
         isSynced: cardData.isSynced !== undefined ? cardData.isSynced : true,
-        // isDeleted: false, // Já tem default no schema
-        // Se o relacionamento for lista no User:
-        // user.cards.push(createdCard!); // Adiciona o card ao usuário
+        isDeleted: false
       });
 
-      // >>> ACESSO ao _id de createdCard (usando cast para any para resolver erro de tipagem) <<<
-      if (createdCard) { 
-          console.log(`Card criado no Realm com ID: ${(createdCard as any)._id}`); // Cast para any aqui
-      } else {
-          console.warn('Card não foi criado no Realm.');
+      if (createdCard) {
+        console.log(`Card created in Realm with ID: ${(createdCard as any)._id}`);
       }
     });
 
-    return createdCard; // createdCard pode ser null se o usuário não for encontrado
+    return createdCard;
   } catch (error) {
-    console.error('Erro ao criar card no Realm:', error);
+    console.error('Error creating card in Realm:', error);
     throw error;
   }
 }
-
 
 // Busca todos os Cards não deletados no Realm
 // O tipo de retorno é Realm.Results<Card & Realm.Object> para maior compatibilidade com a API do Realm
@@ -158,7 +153,6 @@ export async function searchCardsByTerm(term: string): Promise<Realm.Results<Car
         throw error;
     }
 }
-
 
 // Atualiza um Card existente no Realm
 export async function updateCard(cardId: string, updates: Partial<Card>, markAsUnsynced: boolean = false): Promise<Card | null> {
@@ -308,4 +302,147 @@ export async function getCurrentUser(userId: string): Promise<User & Realm.Objec
       console.error(`Erro ao buscar usuário ${userId} do Realm:`, error);
       throw error;
     }
+}
+
+// --- Funções relacionadas a Lists ---
+
+// Cria uma nova List no Realm
+export async function createList(listData: {
+  _id: string;
+  userId: string;
+  title: string;
+  description?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}): Promise<List | null> {
+  let realm: Realm | null = null;
+  try {
+    realm = await getRealm();
+    let createdList: List | null = null;
+
+    realm.write(() => {
+      const user = realm!.objectForPrimaryKey<User>('User', listData.userId as any);
+
+      if (!user) {
+        console.error(`User with ID ${listData.userId} not found in Realm. Cannot create list.`);
+        return;
+      }
+
+      createdList = realm!.create<List>('List', {
+        _id: listData._id,
+        userId: listData.userId,
+        title: listData.title,
+        description: listData.description || '',
+        createdAt: listData.createdAt,
+        updatedAt: listData.updatedAt,
+        isSynced: true,
+        isDeleted: false
+      });
+
+      if (createdList) {
+        console.log(`List created in Realm with ID: ${(createdList as any)._id}`);
+      }
+    });
+
+    return createdList;
+  } catch (error) {
+    console.error('Error creating list in Realm:', error);
+    throw error;
+  }
+}
+
+// Busca todas as Lists não deletadas
+export async function getAllLists(): Promise<Realm.Results<List & Realm.Object> | null> {
+  let realm: Realm | null = null;
+  try {
+    realm = await getRealm();
+    const lists = realm!.objects<List>('List').filtered('isDeleted == false');
+    console.log(`Retrieved ${lists.length} non-deleted lists from Realm.`);
+    return lists as unknown as Realm.Results<List & Realm.Object>;
+  } catch (error) {
+    console.error('Error fetching all lists from Realm:', error);
+    throw error;
+  }
+}
+
+// Busca Lists por ID de usuário
+export async function getListsByUserId(userId: string): Promise<Realm.Results<List & Realm.Object> | null> {
+  let realm: Realm | null = null;
+  try {
+    realm = await getRealm();
+    const lists = realm!.objects<List>('List').filtered('userId == $0 AND isDeleted == false', userId);
+    console.log(`Retrieved ${lists.length} non-deleted lists for user ${userId}.`);
+    return lists as unknown as Realm.Results<List & Realm.Object>;
+  } catch (error) {
+    console.error(`Error fetching lists for user ${userId} from Realm:`, error);
+    throw error;
+  }
+}
+
+// Atualiza uma List existente
+export async function updateList(listId: string, updates: Partial<List>, markAsUnsynced: boolean = false): Promise<List | null> {
+  let realm: Realm | null = null;
+  try {
+    realm = await getRealm();
+    let updatedList: List | null = null;
+
+    realm!.write(() => {
+      const listToUpdate = realm!.objectForPrimaryKey<List>('List', listId as any);
+      if (!listToUpdate) {
+        console.warn(`List with ID ${listId} not found for update.`);
+        return;
+      }
+
+      Object.keys(updates).forEach(key => {
+        const value = (updates as any)[key];
+        if (value !== undefined && (listToUpdate as any)[key] !== undefined) {
+          (listToUpdate as any)[key] = value;
+        }
+      });
+
+      if (markAsUnsynced) {
+        (listToUpdate as any).isSynced = false;
+      }
+
+      updatedList = listToUpdate;
+      console.log(`List with ID ${listId} updated in Realm.`);
+    });
+
+    return updatedList;
+  } catch (error) {
+    console.error(`Error updating list with ID ${listId} in Realm:`, error);
+    throw error;
+  }
+}
+
+// Marca uma List como deletada
+export async function deleteList(listId: string): Promise<void> {
+  let realm: Realm | null = null;
+  try {
+    realm = await getRealm();
+
+    realm!.write(() => {
+      const listToDelete = realm!.objectForPrimaryKey<List>('List', listId as any);
+      if (!listToDelete) {
+        console.warn(`List with ID ${listId} not found for deletion.`);
+        return;
+      }
+
+      // Marca a lista como deletada
+      (listToDelete as any).isDeleted = true;
+      (listToDelete as any).isSynced = false;
+
+      // Marca todos os cards associados como deletados também
+      const cards = (listToDelete as any).cards;
+      cards.forEach((card: any) => {
+        card.isDeleted = true;
+        card.isSynced = false;
+      });
+
+      console.log(`List with ID ${listId} and its cards marked as deleted in Realm.`);
+    });
+  } catch (error) {
+    console.error(`Error marking list with ID ${listId} as deleted in Realm:`, error);
+    throw error;
+  }
 }

@@ -29,32 +29,49 @@ export class Comment extends Realm.Object {
   };
 }
 
+// Schema para o modelo List
+export class List extends Realm.Object {
+  static schema: Realm.ObjectSchema = {
+    name: 'List',
+    primaryKey: '_id',
+    properties: {
+      _id: 'string',
+      userId: 'string',
+      title: 'string',
+      description: { type: 'string', optional: true },
+      createdAt: 'date',
+      updatedAt: 'date',
+      isSynced: { type: 'bool', default: true },
+      isDeleted: { type: 'bool', default: false },
+      // Relacionamento inverso com Cards
+      cards: { type: 'linkingObjects', objectType: 'Card', property: 'list' }
+    },
+  };
+}
+
 // Schema para o modelo Card
 export class Card extends Realm.Object {
   static schema: Realm.ObjectSchema = {
     name: 'Card',
-    primaryKey: '_id', // Define _id como chave primária
+    primaryKey: '_id',
     properties: {
-      _id: 'string', // Mongoose ObjectId será armazenado como string
-      listId: 'string', // Mongoose ObjectId será armazenado como string
-      userId: 'string', // Mongoose ObjectId será armazenado como string
+      _id: 'string',
+      listId: 'string',
+      list: { type: 'linkingObjects', objectType: 'List', property: 'cards' },
+      userId: 'string',
       title: 'string',
-      priority: { type: 'string', default: 'Baixa' }, // Enum no backend, string com default no Realm
+      priority: { type: 'string', default: 'Baixa' },
       is_published: { type: 'bool', default: false },
-      image_url: { type: 'list', objectType: 'string' }, // Array de strings
-      pdfs: { type: 'list', objectType: 'Pdf' }, // Array de objetos aninhados Pdf
+      image_url: { type: 'list', objectType: 'string' },
+      pdfs: { type: 'list', objectType: 'Pdf' },
       likes: { type: 'int', default: 0 },
-      comments: { type: 'list', objectType: 'Comment' }, // Array de objetos aninhados Comment
+      comments: { type: 'list', objectType: 'Comment' },
       downloads: { type: 'int', default: 0 },
       createdAt: 'date',
       updatedAt: 'date',
       content: { type: 'string', default: '' },
-      // Campo para controle de sincronização
       isSynced: { type: 'bool', default: true },
-      // >>> NOVO CAMPO ADICIONADO: Marcação para exclusão suave <<<
       isDeleted: { type: 'bool', default: false },
-      // Propriedade de relacionamento inverso (opcional, mas útil)
-      // user: { type: 'linkingObjects', objectType: 'User', property: 'cards' },
     },
   };
 }
@@ -89,4 +106,4 @@ export class User extends Realm.Object {
 }
 
 // Array com todos os schemas que serão usados no Realm
-export const realmSchemas = [User, Card, Comment, Pdf];
+export const realmSchemas = [User, List, Card, Comment, Pdf];
