@@ -46,6 +46,109 @@ interface CardData {
   }[];
 }
 
+// Componente de Card memoizado para melhor performance
+const CardItem = React.memo(
+  ({ 
+    item, 
+    index, 
+    listId, 
+    viewMode, 
+    favorites, 
+    onCardPress, 
+    onDeleteCard, 
+    onToggleFavorite 
+  }: { 
+    item: CardData; 
+    index: number; 
+    listId: string;
+    viewMode: 'list' | 'grid';
+    favorites: Set<string>;
+    onCardPress: (item: CardData, listId: string) => void;
+    onDeleteCard: (cardId: string, listId: string) => void;
+    onToggleFavorite: (cardId: string) => void;
+  }) => {
+    const cardAnimation = React.useRef(new Animated.Value(0)).current;
+
+    const animateCard = useCallback(() => {
+      Animated.spring(cardAnimation, {
+        toValue: 1,
+        tension: 100,
+        friction: 8,
+        useNativeDriver: true,
+      }).start();
+    }, [cardAnimation]);
+
+    React.useEffect(() => {
+      const timer = setTimeout(() => animateCard(), index * 50);
+      return () => clearTimeout(timer);
+    }, [animateCard, index]);
+
+    const handlePress = useCallback(() => {
+      onCardPress(item, listId);
+    }, [item, listId, onCardPress]);
+
+    const handleLongPress = useCallback(() => {
+      onDeleteCard(item.id, listId);
+    }, [item.id, listId, onDeleteCard]);
+
+    const handleFavoritePress = useCallback(() => {
+      onToggleFavorite(item.id);
+    }, [item.id, onToggleFavorite]);
+
+    return (
+      <Animated.View
+        style={[
+          styles.cardItem,
+          viewMode === 'grid' && styles.cardItemGrid,
+          {
+            opacity: cardAnimation,
+            transform: [
+              {
+                translateY: cardAnimation.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [20, 0],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        <TouchableOpacity
+          onPress={handlePress}
+          onLongPress={handleLongPress}
+          activeOpacity={0.7}
+          style={styles.cardContent}
+        >
+          <TouchableOpacity style={styles.favoriteButton} onPress={handleFavoritePress}>
+            <Ionicons
+              name={favorites.has(item.id) ? 'heart' : 'heart-outline'}
+              size={20}
+              color={favorites.has(item.id) ? '#ff4444' : colors.gray}
+            />
+          </TouchableOpacity>
+
+          <Text style={styles.cardTitle}>{item.title}</Text>
+
+          <View style={styles.cardFooter}>
+            {item.pdfs && item.pdfs.length > 0 && (
+              <View style={styles.cardPdfIndicator}>
+                <Ionicons name="document-text-outline" size={16} color="#666" />
+                <Text style={styles.cardPdfText}>{item.pdfs.length} arquivo(s)</Text>
+              </View>
+            )}
+
+            {item.createdAt && (
+              <Text style={styles.cardDate}>
+                {new Date(item.createdAt).toLocaleDateString('pt-BR')}
+              </Text>
+            )}
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  }
+);
+
 const EscolarScreen = () => {
   const { user, logout } = useAuth();
   const userId = user?._id || user?.id; // Usar _id do MongoDB ou fallback para id
@@ -65,13 +168,6 @@ const EscolarScreen = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
-  const [achievements, setAchievements] = useState<string[]>([]);
-  const [showAchievement, setShowAchievement] = useState(false);
-  const [currentAchievement, setCurrentAchievement] = useState<{
-    title: string;
-    description: string;
-    icon: string;
-  } | null>(null);
   const [activeFilters, setActiveFilters] = useState({
     onlyFavorites: false,
     onlyWithPdfs: false,
@@ -178,73 +274,10 @@ const EscolarScreen = () => {
   useEffect(() => {
     if (userId) {
       savePreferences();
-      checkAchievements();
     }
   }, [viewMode, activeFilters, favorites, userId, lists, cards]);
 
-  // Sistema de conquistas
-  const checkAchievements = () => {
-    const newAchievements: string[] = [];
 
-    // Primeira lista criada
-    if (stats.totalLists >= 1 && !achievements.includes('first_list')) {
-      newAchievements.push('first_list');
-      showAchievementNotification({
-        title: '🎯 Primeira Lista!',
-        description: 'Você criou sua primeira lista de estudos!',
-        icon: 'trophy',
-      });
-    }
-
-    // Primeiro card favorito
-    if (stats.favoriteCards >= 1 && !achievements.includes('first_favorite')) {
-      newAchievements.push('first_favorite');
-      showAchievementNotification({
-        title: '❤️ Primeiro Favorito!',
-        description: 'Você marcou seu primeiro card como favorito!',
-        icon: 'heart',
-      });
-    }
-
-    // 5 cards criados
-    if (stats.totalCards >= 5 && !achievements.includes('five_cards')) {
-      newAchievements.push('five_cards');
-      showAchievementNotification({
-        title: '📚 Estudioso!',
-        description: 'Você já criou 5 cards de estudo!',
-        icon: 'school',
-      });
-    }
-
-    // 3 listas criadas
-    if (stats.totalLists >= 3 && !achievements.includes('organized_student')) {
-      newAchievements.push('organized_student');
-      showAchievementNotification({
-        title: '🗂️ Estudante Organizado!',
-        description: 'Você tem 3 listas diferentes de estudo!',
-        icon: 'folder-open',
-      });
-    }
-
-    if (newAchievements.length > 0) {
-      setAchievements((prev) => [...prev, ...newAchievements]);
-    }
-  };
-
-  const showAchievementNotification = (achievement: {
-    title: string;
-    description: string;
-    icon: string;
-  }) => {
-    setCurrentAchievement(achievement);
-    setShowAchievement(true);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-    // Auto-hide após 3 segundos
-    setTimeout(() => {
-      setShowAchievement(false);
-    }, 3000);
-  };
 
   const fetchListsAndCards = async () => {
     if (!userId) return;
@@ -555,10 +588,18 @@ const EscolarScreen = () => {
           // Haptic feedback de sucesso
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-          setCards((prev) => ({
-            ...prev,
-            [listId]: prev[listId].filter((card) => card.id !== cardId),
-          }));
+          setCards((prev) => {
+            // Verificar se a lista existe antes de tentar filtrar
+            if (!prev[listId]) {
+              console.warn(`Lista ${listId} não encontrada ao tentar deletar card ${cardId}`);
+              return prev;
+            }
+
+            return {
+              ...prev,
+              [listId]: prev[listId].filter((card) => card.id !== cardId),
+            };
+          });
 
           // Remove dos favoritos se estiver marcado
           setFavorites((prev) => {
@@ -717,98 +758,6 @@ const EscolarScreen = () => {
     setShowCardModal(true);
   };
 
-  // Componente de Card memoizado para melhor performance
-  const CardItem = React.memo(
-    ({ item, index, listId }: { item: CardData; index: number; listId: string }) => {
-      const cardAnimation = React.useRef(new Animated.Value(0)).current;
-
-      const animateCard = useCallback(() => {
-        Animated.spring(cardAnimation, {
-          toValue: 1,
-          tension: 100,
-          friction: 8,
-          useNativeDriver: true,
-        }).start();
-      }, [cardAnimation]);
-
-      React.useEffect(() => {
-        const timer = setTimeout(() => animateCard(), index * 50);
-        return () => clearTimeout(timer);
-      }, [animateCard, index]);
-
-      const handlePress = useCallback(() => {
-        handleCardPress(item, listId);
-      }, [item, listId]);
-
-      const handleLongPress = useCallback(() => {
-        handleDeleteCard(item.id, listId);
-      }, [item.id, listId]);
-
-      const handleFavoritePress = useCallback(() => {
-        toggleFavorite(item.id);
-      }, [item.id]);
-
-      return (
-        <Animated.View
-          style={[
-            styles.cardItem,
-            viewMode === 'grid' && styles.cardItemGrid,
-            {
-              opacity: cardAnimation,
-              transform: [
-                {
-                  translateY: cardAnimation.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [20, 0],
-                  }),
-                },
-              ],
-            },
-          ]}
-        >
-          <TouchableOpacity
-            onPress={handlePress}
-            onLongPress={handleLongPress}
-            activeOpacity={0.7}
-            style={styles.cardContent}
-          >
-            <TouchableOpacity style={styles.favoriteButton} onPress={handleFavoritePress}>
-              <Ionicons
-                name={favorites.has(item.id) ? 'heart' : 'heart-outline'}
-                size={20}
-                color={favorites.has(item.id) ? '#ff4444' : colors.gray}
-              />
-            </TouchableOpacity>
-
-            <Text style={styles.cardTitle}>{item.title}</Text>
-
-            <View style={styles.cardFooter}>
-              {item.pdfs && item.pdfs.length > 0 && (
-                <View style={styles.cardPdfIndicator}>
-                  <Ionicons name="document-text-outline" size={16} color="#666" />
-                  <Text style={styles.cardPdfText}>{item.pdfs.length} arquivo(s)</Text>
-                </View>
-              )}
-
-              {item.createdAt && (
-                <Text style={styles.cardDate}>
-                  {new Date(item.createdAt).toLocaleDateString('pt-BR')}
-                </Text>
-              )}
-            </View>
-          </TouchableOpacity>
-        </Animated.View>
-      );
-    }
-  );
-
-  const renderCard = useCallback(
-    ({ item, index }: { item: CardData; index: number }) => (
-      <CardItem item={item} index={index} listId={selectedListId!} />
-    ),
-    [selectedListId]
-  );
-
   const renderList = ({ item }: { item: Lista }) => {
     const filteredCards = getFilteredCards(item.id);
 
@@ -831,7 +780,18 @@ const EscolarScreen = () => {
 
         <FlatList
           data={filteredCards}
-          renderItem={renderCard}
+          renderItem={({ item: cardItem, index }) => (
+            <CardItem 
+              item={cardItem} 
+              index={index} 
+              listId={item.id}
+              viewMode={viewMode}
+              favorites={favorites}
+              onCardPress={handleCardPress}
+              onDeleteCard={handleDeleteCard}
+              onToggleFavorite={toggleFavorite}
+            />
+          )}
           keyExtractor={(card) => card.id}
           style={styles.cardsList}
           numColumns={viewMode === 'grid' ? 2 : 1}
@@ -1374,34 +1334,7 @@ const EscolarScreen = () => {
           </View>
         </Modal>
 
-        {/* Achievement Notification Modal */}
-        <Modal
-          visible={showAchievement}
-          animationType="fade"
-          transparent={true}
-          onRequestClose={() => setShowAchievement(false)}
-        >
-          <View style={styles.achievementOverlay}>
-            <Animated.View style={[styles.achievementContainer, { opacity: fadeAnim }]}>
-              <View style={styles.achievementIconContainer}>
-                <Text style={styles.achievementIcon}>{currentAchievement?.icon || '🏆'}</Text>
-              </View>
 
-              <Text style={styles.achievementTitle}>Conquista Desbloqueada!</Text>
-
-              <Text style={styles.achievementName}>{currentAchievement?.title}</Text>
-
-              <Text style={styles.achievementDescription}>{currentAchievement?.description}</Text>
-
-              <TouchableOpacity
-                onPress={() => setShowAchievement(false)}
-                style={styles.achievementCloseButton}
-              >
-                <Text style={styles.achievementCloseText}>Fechar</Text>
-              </TouchableOpacity>
-            </Animated.View>
-          </View>
-        </Modal>
 
         {/* Debug: adicionar logs para verificar interações */}
         {/*
@@ -1996,75 +1929,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontFamily: fontNames.semibold,
   },
-  // Achievement Modal Styles
-  achievementOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  achievementContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 32,
-    width: '100%',
-    maxWidth: 320,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  achievementIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#FFD700',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  achievementIcon: {
-    fontSize: 40,
-  },
-  achievementTitle: {
-    fontSize: 18,
-    fontFamily: fontNames.bold,
-    color: colors.primary,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  achievementName: {
-    fontSize: 20,
-    fontFamily: fontNames.bold,
-    color: '#333',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  achievementDescription: {
-    fontSize: 14,
-    fontFamily: fontNames.regular,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 20,
-  },
-  achievementCloseButton: {
-    backgroundColor: colors.button,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  achievementCloseText: {
-    fontSize: 16,
-    fontFamily: fontNames.semibold,
-    color: '#fff',
-  },
+
   // Upload and PDF styles
   uploadSection: {
     marginBottom: 16,
