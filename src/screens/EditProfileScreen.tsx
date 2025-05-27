@@ -1,16 +1,28 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, TextInput } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  Alert,
+  TextInput,
+  ActionSheetIOS,
+  Platform,
+} from 'react-native';
 import { fontNames } from '../styles/fonts';
 import colors from '../styles/colors';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import UserController from '../controllers/UserController';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import * as MediaLibrary from 'expo-media-library';
 
 const EditProfileScreen = () => {
   const navigation = useNavigation();
-  const { user } = useAuth();
-  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const { user, updateUserData } = useAuth();
+  const [profileImage, setProfileImage] = useState<string | null>(user?.profileImage || null);
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
@@ -18,11 +30,114 @@ const EditProfileScreen = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Placeholders para simular troca de imagem
-  const handleChangeProfileImage = () => {
-    setProfileImage('https://via.placeholder.com/120x120?text=Nova+Foto');
-    Alert.alert('Foto de perfil alterada! (dummy)');
+  // Função para solicitar permissões
+  const requestPermissions = async () => {
+    const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
+    const { status: mediaLibraryStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (cameraStatus !== 'granted' || mediaLibraryStatus !== 'granted') {
+      Alert.alert(
+        'Permissões necessárias',
+        'Precisamos de acesso à câmera e galeria para alterar sua foto de perfil.',
+        [{ text: 'OK' }]
+      );
+      return false;
+    }
+    return true;
   };
+
+  // Função para abrir a câmera
+  const openCamera = async () => {
+    const hasPermission = await requestPermissions();
+    if (!hasPermission) return;
+
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        await updateProfileImageWithUri(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Erro ao abrir câmera:', error);
+      Alert.alert('Erro', 'Não foi possível abrir a câmera.');
+    }
+  };
+
+  // Função para abrir a galeria
+  const openGallery = async () => {
+    const hasPermission = await requestPermissions();
+    if (!hasPermission) return;
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        await updateProfileImageWithUri(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Erro ao abrir galeria:', error);
+      Alert.alert('Erro', 'Não foi possível abrir a galeria.');
+    }
+  };
+
+  // Função para atualizar a foto de perfil
+  const updateProfileImageWithUri = async (imageUri: string) => {
+    if (!user) return;
+
+    setLoading(true);
+    try {
+      const updatedUser = await UserController.updateProfileImage(user._id, imageUri);
+      if (updatedUser) {
+        setProfileImage(updatedUser.profileImage);
+        await updateUserData(updatedUser);
+        Alert.alert('Sucesso', 'Foto de perfil atualizada com sucesso!');
+      } else {
+        Alert.alert('Erro', 'Não foi possível atualizar a foto de perfil.');
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar foto de perfil:', error);
+      Alert.alert('Erro', 'Não foi possível atualizar a foto de perfil.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Função para mostrar opções de mudança de foto
+  const handleChangeProfileImage = () => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Cancelar', 'Tirar Foto', 'Escolher da Galeria'],
+          cancelButtonIndex: 0,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) {
+            openCamera();
+          } else if (buttonIndex === 2) {
+            openGallery();
+          }
+        }
+      );
+    } else {
+      Alert.alert('Alterar Foto de Perfil', 'Escolha uma opção:', [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Tirar Foto', onPress: openCamera },
+        { text: 'Escolher da Galeria', onPress: openGallery },
+      ]);
+    }
+  };
+
+  // Placeholders para simular troca de imagem
   const handleChangeBackground = () => {
     setBackgroundImage('https://via.placeholder.com/400x140?text=Novo+Background');
     Alert.alert('Background alterado! (dummy)');
@@ -70,11 +185,20 @@ const EditProfileScreen = () => {
 
       {/* Foto de perfil */}
       <View style={styles.avatarBox}>
-        <Image
-          source={{ uri: profileImage || 'https://via.placeholder.com/120x120?text=Avatar' }}
-          style={styles.avatarImg}
-        />
-        <TouchableOpacity style={styles.fabEditAvatar} onPress={handleChangeProfileImage}>
+        {profileImage ? (
+          <Image source={{ uri: profileImage }} style={styles.avatarImg} />
+        ) : (
+          <View style={styles.avatarPlaceholder}>
+            <Text style={styles.avatarPlaceholderText}>
+              {user?.name ? user.name[0].toUpperCase() : 'U'}
+            </Text>
+          </View>
+        )}
+        <TouchableOpacity
+          style={styles.fabEditAvatar}
+          onPress={handleChangeProfileImage}
+          disabled={loading}
+        >
           <Ionicons name="camera-outline" size={22} color="#181818" />
         </TouchableOpacity>
       </View>
@@ -204,6 +328,21 @@ const styles = StyleSheet.create({
     borderWidth: 4,
     borderColor: '#fff',
     backgroundColor: '#eee',
+  },
+  avatarPlaceholder: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 4,
+    borderColor: '#fff',
+    backgroundColor: '#181818',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarPlaceholderText: {
+    fontSize: 48,
+    fontFamily: fontNames.bold,
+    color: '#fff',
   },
   fabEditAvatar: {
     position: 'absolute',

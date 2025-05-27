@@ -87,38 +87,55 @@ export const AuthService = {
       const { data } = response.data;
       console.log('AuthService - Dados do usuário da API:', data.user);
 
-      const user = mapApiUserToModel(data.user);
-      console.log('AuthService - Usuário mapeado:', user);
-
-      // Armazena o token e informações do usuário
+      // Primeiro, salva o token para poder fazer chamadas autenticadas
       await AsyncStorage.setItem(TOKEN_KEY, data.token);
       console.log('AuthService - Token salvo no storage');
 
-      // Salva o usuário duas vezes para garantir consistência
-      const userJsonString = JSON.stringify(user);
-      console.log('AuthService - String JSON do usuário a ser salva:', userJsonString);
+      // Agora busca os dados completos do usuário usando o ID retornado no login
+      const userId = data.user._id || data.user.id;
+      if (userId) {
+        try {
+          console.log('AuthService - Buscando dados completos do usuário:', userId);
+          const userResponse = await api.get<ApiResponse<ApiUserResponse>>(`/users/${userId}`);
+          console.log('AuthService - Dados completos do usuário:', userResponse.data.data);
 
-      await AsyncStorage.setItem(USER_KEY, userJsonString);
-      console.log('AuthService - Usuário salvo no storage');
+          const completeUser = mapApiUserToModel(userResponse.data.data);
+          console.log('AuthService - Usuário completo mapeado:', completeUser);
 
-      // Verificação imediata: tenta ler o que foi salvo
-      const verificacao = await AsyncStorage.getItem(USER_KEY);
-      console.log('AuthService - Verificação imediata do storage:', verificacao);
+          // Salva o usuário completo
+          const userJsonString = JSON.stringify(completeUser);
+          await AsyncStorage.setItem(USER_KEY, userJsonString);
+          console.log('AuthService - Usuário completo salvo no storage');
 
-      if (verificacao) {
-        const userData = JSON.parse(verificacao);
-        console.log('AuthService - Dados verificados do storage:', {
-          hasId: !!userData._id,
-          hasEmail: !!userData.email,
-          hasName: !!userData.name,
-          campos: Object.keys(userData),
-        });
+          return {
+            user: completeUser,
+            token: data.token,
+          };
+        } catch (userError) {
+          console.log(
+            'AuthService - Erro ao buscar dados completos, usando dados básicos do login'
+          );
+          // Se falhar ao buscar dados completos, usa os dados básicos do login
+          const basicUser = mapApiUserToModel(data.user);
+          const userJsonString = JSON.stringify(basicUser);
+          await AsyncStorage.setItem(USER_KEY, userJsonString);
+
+          return {
+            user: basicUser,
+            token: data.token,
+          };
+        }
+      } else {
+        // Fallback: usa os dados básicos do login
+        const user = mapApiUserToModel(data.user);
+        const userJsonString = JSON.stringify(user);
+        await AsyncStorage.setItem(USER_KEY, userJsonString);
+
+        return {
+          user,
+          token: data.token,
+        };
       }
-
-      return {
-        user,
-        token: data.token,
-      };
     } catch (error) {
       console.error('Erro ao fazer login:', error);
       throw error;

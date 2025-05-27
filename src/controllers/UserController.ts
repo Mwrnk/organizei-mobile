@@ -58,7 +58,7 @@ export class UserController {
       plan: apiUser.plan,
       orgPoints: apiUser.orgPoints,
       profileImage: apiUser.profileImage,
-      loginAttempts: apiUser.loginAttempts,
+      loginAttempts: apiUser.loginAttempts || 0,
       lastLoginAttempt: apiUser.lastLoginAttempt ? new Date(apiUser.lastLoginAttempt) : null,
       createdAt: new Date(apiUser.createdAt),
       updatedAt: new Date(apiUser.updatedAt),
@@ -136,7 +136,8 @@ export class UserController {
    */
   async updateUser(id: string, userData: Partial<User>): Promise<User | null> {
     try {
-      const response = await api.put<ApiResponse<ApiUserResponse>>(`/users/${id}`, userData);
+      // Usa o endpoint correto do backend: PATCH /users/:id
+      const response = await api.patch<ApiResponse<ApiUserResponse>>(`/users/${id}`, userData);
       const updatedUser = this.mapApiUserToModel(response.data.data);
 
       // Atualiza o cache local
@@ -218,19 +219,13 @@ export class UserController {
    */
   async updateProfileImage(id: string, imageUri: string): Promise<User | null> {
     try {
-      const formData = new FormData();
-      formData.append('profileImage', {
-        uri: imageUri,
-        type: 'image/jpeg',
-        name: 'profile-image.jpg',
-      } as any);
-
-      const response = await api.post<ApiResponse<ApiUserResponse>>(
-        `/users/${id}/profile-image`,
-        formData,
+      // Usa o endpoint correto do backend: PATCH /users/:id/image
+      const response = await api.patch<ApiResponse<ApiUserResponse>>(
+        `/users/${id}/image`,
+        { image: imageUri }, // Backend espera campo 'image'
         {
           headers: {
-            'Content-Type': 'multipart/form-data',
+            'Content-Type': 'application/json',
           },
         }
       );

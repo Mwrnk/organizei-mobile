@@ -40,10 +40,13 @@ const ProfileScreen = () => {
 
       {/* Avatar centralizado */}
       <View style={styles.avatarContainer}>
-        <View style={styles.avatar}>
-          {/* Placeholder do avatar */}
-          <Text style={styles.avatarText}>{user?.name ? user.name[0] : 'G'}</Text>
-        </View>
+        {user?.profileImage ? (
+          <Image source={{ uri: user.profileImage }} style={styles.avatar} />
+        ) : (
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{user?.name ? user.name[0].toUpperCase() : 'U'}</Text>
+          </View>
+        )}
       </View>
 
       {/* Nome, pontos e editar */}
@@ -67,7 +70,7 @@ const ProfileScreen = () => {
       </View>
       <FlatList
         data={dummyCards}
-        keyExtractor={item => item.id}
+        keyExtractor={(item) => item.id}
         horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.cardsList}
