@@ -87,76 +87,6 @@ const LoginScreen = () => {
     }
   };
 
-  const clearCache = async () => {
-    try {
-      await AsyncStorage.clear();
-      Alert.alert('Cache limpo', 'Cache do app foi limpo com sucesso. Reinicie o app.');
-      console.log('Cache limpo com sucesso');
-    } catch (error) {
-      console.error('Erro ao limpar cache:', error);
-      Alert.alert('Erro', 'Falha ao limpar cache');
-    }
-  };
-
-  const testLogin = async () => {
-    try {
-      console.log('=== TESTE DE LOGIN DIRETO ===');
-      setEmail('matheusmatheus@teste.com');
-      setPassword('123456');
-
-      // Aguarda um pouco para os campos serem atualizados
-      setTimeout(async () => {
-        await handleLogin();
-      }, 500);
-    } catch (error) {
-      console.error('Erro no teste de login:', error);
-    }
-  };
-
-  const debugCompleteStorage = async () => {
-    try {
-      console.log('=== DEBUG COMPLETO DO STORAGE ===');
-
-      // Lista todas as chaves
-      const keys = await AsyncStorage.getAllKeys();
-      console.log('Todas as chaves no storage:', keys);
-
-      // Pega todos os valores
-      const stores = await AsyncStorage.multiGet(keys);
-      stores.forEach(([key, value]) => {
-        console.log(`${key}: ${value}`);
-      });
-
-      // Debug específico do usuário
-      const userStr = await AsyncStorage.getItem('user');
-      const token = await AsyncStorage.getItem('jwtToken');
-
-      console.log('=== DADOS DO USUÁRIO ===');
-      console.log('String do usuário:', userStr);
-      console.log('Token:', token ? `${token.substring(0, 30)}...` : 'null');
-
-      if (userStr) {
-        try {
-          const userData = JSON.parse(userStr);
-          console.log('Dados parseados:', userData);
-          console.log('Campos disponíveis:', Object.keys(userData));
-          console.log('Validação dos campos essenciais:', {
-            hasId: !!userData._id,
-            hasEmail: !!userData.email,
-            hasName: !!userData.name,
-            id: userData._id,
-            email: userData.email,
-            name: userData.name,
-          });
-        } catch (parseError) {
-          console.error('Erro ao parsear dados do usuário:', parseError);
-        }
-      }
-    } catch (error) {
-      console.error('Erro ao debugar storage:', error);
-    }
-  };
-
   return (
     <SafeAreaProvider>
       <SafeAreaView style={GlobalStyles.container}>
@@ -199,25 +129,6 @@ const LoginScreen = () => {
           onPress={handleLogin}
           buttonStyle={styles.loginButton}
         />
-
-        {/* Botões temporários para desenvolvimento */}
-        <TouchableOpacity onPress={clearCache} style={styles.debugButton}>
-          <Text style={styles.debugText}>Limpar Cache (Debug)</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={testLogin}
-          style={[styles.debugButton, { backgroundColor: '#4caf50' }]}
-        >
-          <Text style={styles.debugText}>Teste Login Automático</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={debugCompleteStorage}
-          style={[styles.debugButton, { backgroundColor: '#2196f3' }]}
-        >
-          <Text style={styles.debugText}>Debug Storage Completo</Text>
-        </TouchableOpacity>
       </SafeAreaView>
     </SafeAreaProvider>
   );
@@ -248,17 +159,6 @@ const styles = StyleSheet.create({
     color: 'red',
     textAlign: 'center',
     marginTop: 8,
-  },
-  debugButton: {
-    marginTop: 20,
-    padding: 10,
-    backgroundColor: '#ff6b6b',
-    borderRadius: 5,
-  },
-  debugText: {
-    color: 'white',
-    textAlign: 'center',
-    fontSize: 12,
   },
 });
 
