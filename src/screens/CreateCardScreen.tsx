@@ -805,46 +805,98 @@ const CreateCardScreen = () => {
 
         {/* Botões de ação atualizados */}
         <View style={styles.actionButtons}>
-          <CustomButton
-            title="Limpar"
-            onPress={() => {
-              if (hasFormData()) {
-                Alert.alert(
-                  'Limpar Formulário',
-                  'Tem certeza que deseja limpar todos os dados do formulário?',
-                  [
-                    { text: 'Cancelar', style: 'cancel' },
-                    {
-                      text: 'Limpar',
-                      style: 'destructive',
-                      onPress: () => {
-                        clearForm();
-                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          <View style={styles.buttonsRow}>
+            <TouchableOpacity
+              style={[
+                styles.actionButton,
+                styles.clearButton,
+                !hasFormData() && styles.buttonDisabled,
+              ]}
+              onPress={() => {
+                if (hasFormData()) {
+                  Alert.alert(
+                    'Limpar Formulário',
+                    'Tem certeza que deseja limpar todos os dados do formulário?',
+                    [
+                      { text: 'Cancelar', style: 'cancel' },
+                      {
+                        text: 'Limpar',
+                        style: 'destructive',
+                        onPress: () => {
+                          clearForm();
+                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        },
                       },
-                    },
-                  ]
-                );
-              } else {
-                Alert.alert('Info', 'O formulário já está vazio.');
-              }
-            }}
-            variant="outline"
-            buttonStyle={[styles.clearButton, !hasFormData() && styles.buttonDisabled]}
-            disabled={!hasFormData()}
-          />
-          <CustomButton
-            title="Rascunho"
-            onPress={handleSaveAsDraft}
-            variant="outline"
-            buttonStyle={styles.draftButton}
-            disabled={!cardTitle.trim() || uploadingFiles}
-          />
-          <CustomButton
-            title={uploadingFiles ? 'Criando...' : 'Criar Card'}
+                    ]
+                  );
+                } else {
+                  Alert.alert('Info', 'O formulário já está vazio.');
+                }
+              }}
+              disabled={!hasFormData()}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name="trash-outline"
+                size={18}
+                color={!hasFormData() ? '#999' : '#FF6B6B'}
+                style={styles.buttonIcon}
+              />
+              <Text
+                style={[
+                  styles.buttonText,
+                  { color: !hasFormData() ? '#999' : '#FF6B6B' },
+                  !hasFormData() && styles.buttonTextDisabled,
+                ]}
+              >
+                Limpar
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.actionButton,
+                styles.draftButton,
+                (!cardTitle.trim() || uploadingFiles) && styles.buttonDisabled,
+              ]}
+              onPress={handleSaveAsDraft}
+              disabled={!cardTitle.trim() || uploadingFiles}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name="document-outline"
+                size={18}
+                color={!cardTitle.trim() || uploadingFiles ? '#999' : colors.button}
+                style={styles.buttonIcon}
+              />
+              <Text
+                style={[
+                  styles.buttonText,
+                  { color: colors.button },
+                  (!cardTitle.trim() || uploadingFiles) && styles.buttonTextDisabled,
+                ]}
+              >
+                Rascunho
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.actionButton, styles.createButton, styles.primaryButton]}
             onPress={handleCreateCard}
-            buttonStyle={styles.createButton}
             disabled={!cardTitle.trim() || uploadingFiles}
-          />
+            activeOpacity={0.8}
+          >
+            <Ionicons
+              name={uploadingFiles ? 'reload-outline' : 'add-circle-outline'}
+              size={20}
+              color="#fff"
+              style={styles.buttonIcon}
+            />
+            <Text style={[styles.buttonText, { color: '#fff' }]}>
+              {uploadingFiles ? 'Criando...' : 'Criar Card'}
+            </Text>
+          </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -1072,22 +1124,45 @@ const styles = StyleSheet.create({
     fontFamily: fontNames.regular,
   },
   actionButtons: {
-    flexDirection: 'row',
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    gap: 12,
+    paddingVertical: 20,
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
+    alignItems: 'center',
+  },
+  buttonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 12,
+    width: '100%',
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 50,
+    borderRadius: 25,
+    paddingHorizontal: 20,
+    borderWidth: 1,
+    borderColor: colors.button,
+    backgroundColor: 'transparent',
   },
   clearButton: {
     flex: 1,
+    marginRight: 6,
+    minWidth: 100,
+    borderColor: '#FF6B6B',
   },
   draftButton: {
     flex: 1,
+    marginLeft: 6,
+    minWidth: 100,
   },
   createButton: {
-    flex: 2,
+    width: '100%',
+    maxWidth: 300,
+    borderColor: colors.button,
   },
   contentInputWrapper: {
     backgroundColor: '#fff',
@@ -1385,7 +1460,23 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   buttonDisabled: {
-    backgroundColor: '#e0e0e0',
+    opacity: 0.7,
+    borderColor: '#e0e0e0',
+  },
+  buttonIcon: {
+    marginRight: 8,
+  },
+  buttonText: {
+    fontSize: 16,
+    fontFamily: fontNames.bold,
+    color: colors.button,
+  },
+  buttonTextDisabled: {
+    color: '#999',
+  },
+  primaryButton: {
+    backgroundColor: colors.button,
+    borderColor: colors.button,
   },
 });
 

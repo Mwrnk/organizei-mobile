@@ -241,6 +241,53 @@ export const AuthService = {
       throw error;
     }
   },
+
+  // Registro de novo usuário
+  async register(userData: {
+    name: string;
+    email: string;
+    password: string;
+    dateOfBirth: string;
+    coduser: string;
+  }): Promise<{ user: User; token: string }> {
+    try {
+      console.log('AuthService - Tentando registrar usuário:', { ...userData, password: '***' });
+
+      const response = await api.post<ApiResponse<{ user: ApiUserResponse; token: string }>>(
+        '/signup',
+        userData
+      );
+
+      if (response.data.status === 'success') {
+        const { user: apiUser, token } = response.data.data;
+
+        // Mapear dados do usuário
+        const user = mapApiUserToModel(apiUser);
+
+        // Salvar token e usuário
+        await AsyncStorage.setItem(TOKEN_KEY, token);
+        await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
+
+        console.log('AuthService - Registro bem-sucedido:', user);
+
+        return { user, token };
+      } else {
+        throw new Error('Resposta inválida do servidor');
+      }
+    } catch (error: any) {
+      console.error('AuthService - Erro no registro:', error);
+
+      if (error.response?.status === 409) {
+        throw new Error('Este email já está cadastrado');
+      } else if (error.response?.status === 400) {
+        throw new Error('Dados inválidos. Verifique os campos preenchidos');
+      } else if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      } else {
+        throw new Error('Erro ao criar conta. Tente novamente');
+      }
+    }
+  },
 };
 
 export default AuthService;

@@ -118,7 +118,14 @@ const LoginScreen = () => {
 
         <View style={styles.createAccountContainer}>
           <Text style={GlobalStyles.textSmall}>Não tem uma conta? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+          <TouchableOpacity
+            onPress={() => {
+              console.log('🔍 LoginScreen - Botão "Crie uma conta" foi pressionado');
+              console.log('🔍 LoginScreen - Tentando navegar para Register');
+              navigation.navigate('Register');
+              console.log('🔍 LoginScreen - Comando de navegação executado');
+            }}
+          >
             <Text style={GlobalStyles.textLink}>Crie uma conta</Text>
           </TouchableOpacity>
         </View>
