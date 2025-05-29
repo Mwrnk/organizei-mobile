@@ -30,17 +30,15 @@ const HomeScreen = () => {
         </View>
 
         <View style={styles.contentContainer}>
-          {/* Conteúdo principal do app irá aqui */}
+          <CustomButton
+            title="Sair"
+            loading={loading}
+            onPress={handleLogout}
+            buttonStyle={styles.logoutButton}
+            variant="outline"
+          />{' '}
           <Text style={GlobalStyles.text}>Seu conteúdo principal aqui</Text>
         </View>
-
-        <CustomButton
-          title="Sair"
-          loading={loading}
-          onPress={handleLogout}
-          buttonStyle={styles.logoutButton}
-          variant="outline"
-        />
       </SafeAreaView>
     </SafeAreaProvider>
   );

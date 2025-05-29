@@ -1,5 +1,6 @@
 import { User } from '../models/User';
 import api from '../services/api';
+import { convertImageToBase64 } from '@utils/imageUtils';
 
 // Interface para mapear a resposta da API
 interface ApiUserResponse {
@@ -219,10 +220,13 @@ export class UserController {
    */
   async updateProfileImage(id: string, imageUri: string): Promise<User | null> {
     try {
+      // Converte a imagem para base64 antes de enviar para a API
+      const base64Image = await convertImageToBase64(imageUri);
+
       // Usa o endpoint correto do backend: PATCH /users/:id/image
       const response = await api.patch<ApiResponse<ApiUserResponse>>(
         `/users/${id}/image`,
-        { image: imageUri }, // Backend espera campo 'image'
+        { image: base64Image }, // Envia a imagem em base64, como a versão web
         {
           headers: {
             'Content-Type': 'application/json',
