@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, FlatList, Image } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, FlatList, Image, ScrollView } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { fontNames } from '../styles/fonts';
 import { useNavigation } from '@react-navigation/native';
@@ -12,6 +12,7 @@ import SuperCheck from 'assets/icons/SuperCheck';
 import ArrowDiag from 'assets/icons/ArrowDiag';
 import AnaliticsIcon from 'assets/icons/AnaliticsIcon';
 import EditIcon from 'assets/icons/EditIcon';
+import UserIcon from 'assets/icons/UserIcon';
 
 const dummyCards = [
   {
@@ -41,7 +42,7 @@ const ProfileScreen = () => {
   const { user } = useAuth();
   const navigation = useNavigation<StackNavigationProp<RootTabParamList>>();
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Banner */}
       <View style={styles.banner} />
 
@@ -97,7 +98,7 @@ const ProfileScreen = () => {
       {/* Botões de menu */}
       <View style={styles.menuBox}>
         <TouchableOpacity style={styles.menuBtn}>
-          <GameIcon color="#222" size={16} />
+          <UserIcon color="#222" size={16} />
           <Text style={styles.menuText}>Informação Pessoal</Text>
           <View style={styles.iconCircle}>
             <ArrowDiag color="#222" size={16} />
@@ -110,9 +111,9 @@ const ProfileScreen = () => {
             <ArrowDiag color="#222" size={16} />
           </View>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate('Plan')}>
-          <GameIcon color="#222" size={16} />
-          <Text style={styles.menuText}>Meu Plano</Text>
+        <TouchableOpacity style={styles.menuBtn}>
+          <RaioIcon color="#222" size={16} />
+          <Text style={styles.menuText}>Meus Pontos</Text>
           <View style={styles.iconCircle}>
             <ArrowDiag color="#222" size={16} />
           </View>
@@ -120,14 +121,14 @@ const ProfileScreen = () => {
       </View>
 
       {/* Botão Premium */}
-      <TouchableOpacity style={styles.premiumBtn}>
+      <TouchableOpacity style={styles.premiumBtn} onPress={() => navigation.navigate('Plan')}>
         <SuperCheck color="#ffffff" size={16} />
         <Text style={styles.premiumBtnText}>Vire Premium</Text>
         <View style={[styles.iconCircle, { backgroundColor: 'rgba(26, 26, 26, 0.1)' }]}>
           <ArrowDiag color="#ffffff" size={16} />
         </View>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 };
 
@@ -136,15 +137,16 @@ export default ProfileScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingHorizontal: 16,
     backgroundColor: '#fff',
   },
   banner: {
     width: '100%',
     height: 140,
     backgroundColor: '#ddd',
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    borderRadius: 24,
     marginBottom: 0,
+    marginTop: 40,
   },
   avatarContainer: {
     alignItems: 'center',
@@ -210,6 +212,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: 6,
     marginTop: 18,
     marginHorizontal: 18,
   },
@@ -227,12 +230,12 @@ const styles = StyleSheet.create({
   cardsList: {
     marginTop: 8,
     minHeight: 140,
-    maxHeight: 160,
+    maxHeight: 300,
   },
   cardBox: {
     backgroundColor: '#fff',
     borderRadius: 16,
-    marginRight: 12,
+    margin: 12,
     padding: 10,
     width: 160,
     shadowColor: '#000',
