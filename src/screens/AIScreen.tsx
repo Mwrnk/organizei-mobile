@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TextInput, ScrollView, ActivityIndicator, Alert, StyleSheet } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { GlobalStyles } from '@styles/global';
 import CustomButton from '@components/CustomButton';
 import colors from '@styles/colors';
 import AIService, { ChatMessage } from '../services/aiService';
+import BotIcon from '@icons/BotIcon';
 
 interface Message {
   id: number;
@@ -77,51 +78,28 @@ const AIScreen = () => {
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+      <SafeAreaView style={styles.container}>
+       
         {/* Header */}
-        <View style={{ alignItems: 'center', marginTop: 36, marginBottom: 12 }}>
-          <Text style={{ fontSize: 32, fontWeight: '600', color: '#1D1B20', letterSpacing: -1 }}>
-            <Text style={{ fontSize: 32 }}>🤖</Text> Organi.ai
-          </Text>
+        <View style={styles.logoIa}>
+          <BotIcon color="#1D1B20" size={20}/>
+          <Text style={styles.nomeIA}>Organi.ai</Text>
         </View>
 
         {/* Título e subtítulo */}
         <View style={{ alignItems: 'center', marginBottom: 24 }}>
-          <Text style={{
-            fontSize: 22,
-            fontWeight: '500',
-            color: '#1D1B20',
-            textAlign: 'center',
-            lineHeight: 28,
-          }}>
-            A <Text style={{ color: '#007AFF', fontStyle: 'italic', fontWeight: '600' }}>ia</Text> que te torna mais{'\n'}produtivo
+          <Text style={styles.titulo}>
+            A <Text style={{ color: '#007AFF', fontStyle: 'italic' }}>ia</Text> que te torna{'\n'}mais produtivo
           </Text>
         </View>
 
         {/* Card de chat */}
         <View
-          style={{
-            backgroundColor: '#F6F6F6',
-            borderRadius: 32,
-            width: '92%',
-            height: 340,
-            alignSelf: 'center',
-            justifyContent: 'flex-end',
-            padding: 0,
-            marginBottom: 0,
-            shadowColor: '#000',
-            shadowOpacity: 0.03,
-            shadowRadius: 8,
-            elevation: 1,
-            overflow: 'hidden',
-          }}
+          style={styles.cardChat}
         >
           {/* Chat messages */}
           <ScrollView
-            style={{
-              flex: 1,
-              padding: 24,
-            }}
+            style={styles.chatMessages}
             contentContainerStyle={{
               flexGrow: 1,
               justifyContent: 'flex-end',
@@ -163,56 +141,23 @@ const AIScreen = () => {
           </ScrollView>
 
           {/* Input area */}
-          <View style={{
-            width: '100%',
-            padding: 24,
-            paddingTop: 0,
-            flexDirection: 'row',
-            alignItems: 'center',
-          }}>
+          <View style={styles.inputArea}>
+
             <TextInput
-              style={{
-                flex: 1,
-                backgroundColor: '#fff',
-                borderRadius: 20,
-                paddingHorizontal: 16,
-                paddingVertical: 10,
-                marginRight: 12,
-                fontSize: 14,
-                color: '#1D1B20',
-                shadowColor: '#000',
-                shadowOpacity: 0.02,
-                shadowRadius: 2,
-                elevation: 1,
-              }}
+              style={styles.txtInput}
               placeholder="Digite sua mensagem..."
               value={inputMessage}
               onChangeText={setInputMessage}
               onSubmitEditing={handleSendMessage}
               editable={!isLoading}
             />
+
+            
             <CustomButton
               title="Enviar"
               variant="primary"
-              buttonStyle={{
-                backgroundColor: '#1D1B20',
-                borderRadius: 20,
-                height: 44,
-                paddingHorizontal: 24,
-                justifyContent: 'center',
-                alignItems: 'center',
-                shadowColor: '#000',
-                shadowOpacity: 0.04,
-                shadowRadius: 2,
-                elevation: 1,
-                opacity: isLoading ? 0.7 : 1,
-              }}
-              textStyle={{
-                color: '#fff',
-                fontWeight: '600',
-                fontSize: 14,
-                letterSpacing: 0.5,
-              }}
+              style={styles.button}
+              textStyle={styles.txtButton}
               onPress={handleSendMessage}
               disabled={isLoading}
             />
@@ -224,3 +169,86 @@ const AIScreen = () => {
 };
 
 export default AIScreen;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 40,
+    paddingBottom: 80,
+    backgroundColor: '#fff',
+  },
+
+  nomeIA: {
+    fontSize: 20,
+
+    fontWeight: '600',
+    color: '#1D1B20',
+  },
+
+  logoIa: {
+    gap: 6,
+    flexDirection: 'row',
+    alignItems: "baseline",
+    justifyContent: 'center',
+  },
+
+  titulo: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1D1B20',
+    textAlign: 'center',
+    lineHeight: 28,
+    marginTop: 32,
+  },
+
+
+  cardChat: {
+    backgroundColor: '#F6F6F6',
+    borderRadius: 32,
+    width: '100%',
+    height: '75%',
+    alignSelf: 'center',
+  },
+
+  chatMessages: {
+    flex: 1,
+    padding: 24,
+  },
+
+  button: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1D1B20',
+    borderRadius: 20,
+    height: 44,
+    paddingHorizontal: 24,
+  },
+
+  txtButton: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+    letterSpacing: 0.5,
+  },
+
+  txtInput: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    height: 44,
+    paddingHorizontal: 24,
+    color: 'rgba(29, 27, 32, 0.5)',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+
+  inputArea: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginHorizontal: 16,
+    marginBottom: 16,
+  },
+});
+
