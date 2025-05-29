@@ -16,8 +16,12 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
+import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
+import { TOKEN_KEY } from '../services/auth';
 import { GlobalStyles } from '@styles/global';
 import { fontNames } from '@styles/fonts';
 import colors from '@styles/colors';
@@ -44,22 +48,26 @@ interface CardData {
     uploaded_at: string;
     size_kb?: number;
   }[];
+  image_url?: string[];
+  content?: string;
+  priority?: 'baixa' | 'media' | 'alta';
+  is_published?: boolean;
 }
 
 // Componente de Card memoizado para melhor performance
 const CardItem = React.memo(
-  ({ 
-    item, 
-    index, 
-    listId, 
-    viewMode, 
-    favorites, 
-    onCardPress, 
-    onDeleteCard, 
-    onToggleFavorite 
-  }: { 
-    item: CardData; 
-    index: number; 
+  ({
+    item,
+    index,
+    listId,
+    viewMode,
+    favorites,
+    onCardPress,
+    onDeleteCard,
+    onToggleFavorite,
+  }: {
+    item: CardData;
+    index: number;
     listId: string;
     viewMode: 'list' | 'grid';
     favorites: Set<string>;
@@ -151,6 +159,7 @@ const CardItem = React.memo(
 
 const EscolarScreen = () => {
   const { user, logout } = useAuth();
+  const navigation = useNavigation<any>();
   const userId = user?._id || user?.id; // Usar _id do MongoDB ou fallback para id
 
   // Estados principais
@@ -180,25 +189,15 @@ const EscolarScreen = () => {
 
   // Estados para modais
   const [showListModal, setShowListModal] = useState(false);
-  const [showCardModal, setShowCardModal] = useState(false);
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
-  const [selectedCard, setSelectedCard] = useState<CardData | null>(null);
 
   // Debug: monitorar mudanças nos modais
   useEffect(() => {
     console.log('🎭 EscolarScreen - showListModal mudou para:', showListModal);
   }, [showListModal]);
 
-  useEffect(() => {
-    console.log('🎭 EscolarScreen - showCardModal mudou para:', showCardModal);
-  }, [showCardModal]);
-
   // Estados para formulários
   const [listName, setListName] = useState('');
-  const [cardTitle, setCardTitle] = useState('');
-
-  // Estados para detalhes do card
-  const [showCardDetails, setShowCardDetails] = useState(false);
 
   // Carrega listas e cards
   useEffect(() => {
@@ -276,8 +275,6 @@ const EscolarScreen = () => {
       savePreferences();
     }
   }, [viewMode, activeFilters, favorites, userId, lists, cards]);
-
-
 
   const fetchListsAndCards = async () => {
     if (!userId) return;
@@ -464,6 +461,42 @@ const EscolarScreen = () => {
       'Funcionalidade em desenvolvimento. Em breve você poderá anexar arquivos PDF aos seus cards.',
       [{ text: 'OK' }]
     );
+  }, []);
+
+  // Função para selecionar imagem
+  const handleSelectImage = useCallback(async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [16, 9],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+    } catch (error) {
+      console.error('Erro ao selecionar imagem:', error);
+      Alert.alert('Erro', 'Não foi possível selecionar a imagem');
+    }
+  }, []);
+
+  // Função para selecionar PDF
+  const handleSelectPdf = useCallback(async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'application/pdf',
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+    } catch (error) {
+      console.error('Erro ao selecionar PDF:', error);
+      Alert.alert('Erro', 'Não foi possível selecionar o PDF');
+    }
   }, []);
 
   // Função para alternar favorito - otimizada com useCallback
@@ -658,56 +691,9 @@ const EscolarScreen = () => {
   };
 
   const handleCreateCard = async () => {
-    if (!cardTitle || !selectedListId) {
-      Alert.alert('Erro', 'Preencha o nome do card.');
-      return;
-    }
-
-    if (offlineMode) {
-      // Modo offline - criar card localmente
-      const newCard: CardData = {
-        id: `card-${Date.now()}`,
-        title: cardTitle,
-        userId: userId || 'demo',
-        createdAt: new Date().toISOString(),
-        pdfs: [],
-      };
-
-      setCards((prev) => ({
-        ...prev,
-        [selectedListId]: [...(prev[selectedListId] || []), newCard],
-      }));
-
-      setShowCardModal(false);
-      setCardTitle('');
-      Alert.alert('Sucesso', 'Card criado com sucesso! (Modo Offline)');
-      return;
-    }
-
-    try {
-      const res = await api.post(`/cards`, {
-        title: cardTitle,
-        listId: selectedListId,
-      });
-
-      const newCard: CardData = {
-        id: res.data.data.id,
-        title: res.data.data.title,
-        userId: res.data.data.userId,
-      };
-
-      setCards((prev) => ({
-        ...prev,
-        [selectedListId]: [...(prev[selectedListId] || []), newCard],
-      }));
-
-      setShowCardModal(false);
-      setCardTitle('');
-      Alert.alert('Sucesso', 'Card criado com sucesso!');
-    } catch (err) {
-      console.error('Erro ao criar card', err);
-      Alert.alert('Erro', 'Não foi possível criar o card');
-    }
+    // Esta função foi movida para CreateCardScreen.tsx
+    // Mantida apenas para compatibilidade temporária
+    console.log('handleCreateCard foi movida para CreateCardScreen');
   };
 
   const handleDeleteList = async (listId: string) => {
@@ -735,27 +721,25 @@ const EscolarScreen = () => {
   };
 
   const handleCardPress = async (card: CardData, listId: string) => {
-    setSelectedCard(card);
-    setSelectedListId(listId);
+    // Navigate to CardDetailScreen instead of showing modal
+    const selectedList = lists.find((list) => list.id === listId);
 
-    try {
-      const res = await api.get(`/cards/${card.id}`);
-      const cardData = res.data.data;
-      setSelectedCard({
-        ...card,
-        pdfs: cardData.pdfs || [],
-      });
-      setShowCardDetails(true);
-    } catch (err) {
-      console.error('Erro ao buscar detalhes do card:', err);
-      setShowCardDetails(true);
-    }
+    navigation.navigate('CardDetail', {
+      card: card,
+      listId: listId,
+      listName: selectedList?.name || 'Lista',
+    });
   };
 
   const openCardModal = (listId: string) => {
     console.log('🔘 EscolarScreen - openCardModal chamado para lista:', listId);
-    setSelectedListId(listId);
-    setShowCardModal(true);
+    const selectedList = lists.find((list) => list.id === listId);
+    if (selectedList) {
+      navigation.navigate('CreateCard', {
+        listId: listId,
+        listName: selectedList.name,
+      });
+    }
   };
 
   const renderList = ({ item }: { item: Lista }) => {
@@ -781,9 +765,9 @@ const EscolarScreen = () => {
         <FlatList
           data={filteredCards}
           renderItem={({ item: cardItem, index }) => (
-            <CardItem 
-              item={cardItem} 
-              index={index} 
+            <CardItem
+              item={cardItem}
+              index={index}
               listId={item.id}
               viewMode={viewMode}
               favorites={favorites}
@@ -985,108 +969,6 @@ const EscolarScreen = () => {
                   buttonStyle={styles.modalButton}
                 />
               </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Modal para criar card */}
-        <Modal
-          visible={showCardModal}
-          animationType="slide"
-          transparent={true}
-          onRequestClose={() => setShowCardModal(false)}
-        >
-          <View
-            style={styles.modalOverlay}
-            onTouchStart={(e) => {
-              console.log('👆 EscolarScreen - Touch no overlay do card:', e.nativeEvent);
-            }}
-          >
-            <View
-              style={styles.modalContent}
-              onTouchStart={(e) => {
-                console.log('👆 EscolarScreen - Touch no conteúdo do card:', e.nativeEvent);
-                e.stopPropagation();
-              }}
-            >
-              <Text style={styles.modalTitle}>Novo Card</Text>
-
-              <Input
-                placeholder="Nome do card"
-                value={cardTitle}
-                onChangeText={(text) => {
-                  console.log('🖊️ EscolarScreen - Input Card onChange:', text);
-                  setCardTitle(text);
-                }}
-                onFocus={() => console.log('🎯 EscolarScreen - Input Card onFocus')}
-                onBlur={() => console.log('👋 EscolarScreen - Input Card onBlur')}
-              />
-
-              <View style={styles.modalButtons}>
-                <CustomButton
-                  title="Cancelar"
-                  onPress={() => {
-                    setShowCardModal(false);
-                    setCardTitle('');
-                  }}
-                  variant="outline"
-                  buttonStyle={styles.modalButton}
-                />
-                <CustomButton
-                  title="Criar"
-                  onPress={handleCreateCard}
-                  buttonStyle={styles.modalButton}
-                />
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Modal para detalhes do card */}
-        <Modal
-          visible={showCardDetails}
-          animationType="slide"
-          transparent={true}
-          onRequestClose={() => setShowCardDetails(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.cardDetailsModal}>
-              <View style={styles.cardDetailsHeader}>
-                <Text style={styles.cardDetailsTitle}>{selectedCard?.title}</Text>
-                <TouchableOpacity
-                  onPress={() => setShowCardDetails(false)}
-                  style={styles.closeButton}
-                >
-                  <Ionicons name="close" size={24} color="#666" />
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView style={styles.cardDetailsContent}>
-                <View style={styles.uploadSection}>
-                  <CustomButton
-                    title="📁 Anexar PDF"
-                    onPress={() => handlePdfUpload()}
-                    style={styles.uploadButton}
-                  />
-                </View>
-
-                {selectedCard?.pdfs && selectedCard.pdfs.length > 0 ? (
-                  <View style={styles.pdfSection}>
-                    <Text style={styles.sectionTitle}>Arquivos anexados:</Text>
-                    {selectedCard.pdfs.map((pdf, index) => (
-                      <View key={index} style={styles.pdfItem}>
-                        <Ionicons name="document-text" size={20} color="#007AFF" />
-                        <Text style={styles.pdfName}>{pdf.filename}</Text>
-                        <Text style={styles.pdfSize}>
-                          {pdf.size_kb ? `${Math.round(pdf.size_kb)}KB` : ''}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                ) : (
-                  <Text style={styles.noPdfsText}>Nenhum arquivo anexado</Text>
-                )}
-              </ScrollView>
             </View>
           </View>
         </Modal>
@@ -1334,8 +1216,6 @@ const EscolarScreen = () => {
           </View>
         </Modal>
 
-
-
         {/* Debug: adicionar logs para verificar interações */}
         {/*
         <View style={{ padding: 16 }}>
@@ -1343,13 +1223,7 @@ const EscolarScreen = () => {
             Debug - Modal de lista: {showListModal ? 'Visível' : 'Oculto'}
           </Text>
           <Text style={{ color: '#fff' }}>
-            Debug - Modal de card: {showCardModal ? 'Visível' : 'Oculto'}
-          </Text>
-          <Text style={{ color: '#fff' }}>
             Debug - Nome da lista: {listName}
-          </Text>
-          <Text style={{ color: '#fff' }}>
-            Debug - Título do card: {cardTitle}
           </Text>
         </View>
         */}
@@ -1513,25 +1387,11 @@ const styles = StyleSheet.create({
   modalButton: {
     flex: 1,
   },
-  cardDetailsModal: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 24,
-    width: '90%',
-    maxHeight: '80%',
-  },
   cardDetailsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
-  },
-  cardDetailsTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.primary,
-    fontFamily: fontNames.bold,
-    flex: 1,
   },
   closeButton: {
     padding: 4,
@@ -1557,21 +1417,284 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 8,
   },
+  pdfItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  pdfItemInfo: {
+    flex: 1,
+    marginLeft: 8,
+  },
   pdfName: {
+    fontSize: 14,
+    color: colors.primary,
+    fontFamily: fontNames.regular,
+    marginBottom: 2,
+  },
+  pdfSize: {
+    fontSize: 12,
+    color: '#666',
+    fontFamily: fontNames.regular,
+  },
+  pdfActionButton: {
+    padding: 8,
+    backgroundColor: colors.lightGray,
+    borderRadius: 6,
+  },
+  pdfViewer: {
+    backgroundColor: '#f8f8f8',
+    borderRadius: 8,
+    padding: 16,
+    marginTop: 12,
+  },
+  pdfViewerTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.primary,
+    fontFamily: fontNames.semibold,
+    marginBottom: 12,
+  },
+  pdfViewerContainer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  pdfViewerPlaceholder: {
+    fontSize: 16,
+    color: '#666',
+    fontFamily: fontNames.regular,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  pdfViewerNote: {
+    fontSize: 12,
+    color: '#999',
+    fontFamily: fontNames.regular,
+    textAlign: 'center',
+    marginBottom: 16,
+    lineHeight: 18,
+  },
+  downloadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.button,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  downloadButtonText: {
+    marginLeft: 8,
+    color: '#fff',
+    fontFamily: fontNames.semibold,
+    fontSize: 14,
+  },
+  noPdfsContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  noPdfsText: {
+    fontSize: 16,
+    color: '#999',
+    fontFamily: fontNames.regular,
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  noPdfsSubtext: {
+    fontSize: 12,
+    color: '#ccc',
+    fontFamily: fontNames.regular,
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 16,
+  },
+  pendingUploadsSection: {
+    backgroundColor: '#f0f8ff',
+    borderRadius: 8,
+    padding: 16,
+    marginTop: 16,
+  },
+  pendingFileItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  pendingFileName: {
+    flex: 1,
     marginLeft: 8,
     fontSize: 14,
     color: colors.primary,
     fontFamily: fontNames.regular,
+  },
+  saveFilesButton: {
+    marginTop: 12,
+  },
+  cardInfoSection: {
+    backgroundColor: '#f8f8f8',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 16,
+  },
+  cardInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  cardInfoText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: colors.primary,
+    fontFamily: fontNames.regular,
+  },
+  uploadSection: {
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  uploadButtonsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  uploadActionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.lightGray,
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: colors.button,
+  },
+  uploadActionText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: colors.button,
+    fontFamily: fontNames.semibold,
+  },
+  selectedImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 8,
+  },
+  imageUploadArea: {
+    height: 120,
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
+    borderStyle: 'dashed',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  imageUploadPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  imageUploadText: {
+    marginTop: 8,
+    color: '#666',
+    fontFamily: fontNames.regular,
+    fontSize: 14,
+  },
+  removeFileButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    backgroundColor: '#fff0f0',
+    borderRadius: 6,
+    marginTop: 8,
+  },
+  removeFileText: {
+    marginLeft: 4,
+    color: '#ff4444',
+    fontFamily: fontNames.regular,
+    fontSize: 12,
+  },
+  titleSection: {
+    marginBottom: 20,
+  },
+  titleInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8f8f8',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 8,
+  },
+  titleIcon: {
+    marginRight: 12,
+  },
+  titleInput: {
+    flex: 1,
+    fontSize: 16,
+    fontFamily: fontNames.regular,
+    color: colors.primary,
+  },
+  characterCount: {
+    textAlign: 'right',
+    fontSize: 12,
+    color: '#999',
+    fontFamily: fontNames.regular,
+  },
+  pdfUploadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.lightGray,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.button,
+    marginBottom: 12,
+  },
+  pdfUploadText: {
+    marginLeft: 12,
+    fontSize: 16,
+    color: colors.button,
+    fontFamily: fontNames.semibold,
+  },
+  selectedFileInfo: {
+    backgroundColor: '#f8f8f8',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+  },
+  fileInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  fileName: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 14,
+    color: colors.primary,
+    fontFamily: fontNames.regular,
+  },
+  fileSize: {
+    fontSize: 12,
+    color: '#666',
+    fontFamily: fontNames.regular,
+  },
+  createCardActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+    gap: 12,
+  },
+  cancelButton: {
     flex: 1,
   },
-  noPdfsText: {
-    fontSize: 14,
-    color: '#999',
-    textAlign: 'center',
-    fontFamily: fontNames.regular,
-    paddingVertical: 20,
+  createButton: {
+    flex: 1,
   },
-  // Novos estilos para busca e melhorias
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1929,24 +2052,18 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontFamily: fontNames.semibold,
   },
-
-  // Upload and PDF styles
-  uploadSection: {
-    marginBottom: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+  createCardModal: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+    width: '90%',
+    maxWidth: 400,
+    maxHeight: '80%',
   },
-  uploadButton: {
-    marginBottom: 8,
+  createCardContent: {
+    flex: 1,
+    paddingVertical: 16,
   },
-  pdfSize: {
-    fontSize: 12,
-    color: '#999',
-    fontFamily: fontNames.regular,
-    marginLeft: 'auto',
-  },
-  // Network Status Indicator
   networkStatus: {
     flexDirection: 'row',
     alignItems: 'center',

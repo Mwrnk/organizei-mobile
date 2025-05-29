@@ -1,6 +1,10 @@
 export type RootTabParamList = {
   Game: undefined;
   Escolar: undefined;
+  CreateCard: {
+    listId: string;
+    listName: string;
+  };
   Comunidade: undefined;
   IA: undefined;
   Eu: undefined;
