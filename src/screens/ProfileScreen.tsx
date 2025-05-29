@@ -5,6 +5,13 @@ import { fontNames } from '../styles/fonts';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import type { RootTabParamList } from '../navigation/types';
+import GameIcon from 'assets/icons/GamesIcon';
+import FogueteIcon from 'assets/icons/FogueteIcon';
+import RaioIcon from 'assets/icons/RaioIcon';
+import SuperCheck from 'assets/icons/SuperCheck';
+import ArrowDiag from 'assets/icons/ArrowDiag';
+import AnaliticsIcon from 'assets/icons/AnaliticsIcon';
+import EditIcon from 'assets/icons/EditIcon';
 
 const dummyCards = [
   {
@@ -53,13 +60,13 @@ const ProfileScreen = () => {
       <View style={styles.nameRow}>
         <Text style={styles.userName}>{user?.name || 'Usuário'}</Text>
         <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('EditProfile')}>
-          <View style={styles.editIconCircle}>
-            <Text style={styles.editIcon}>✎</Text>
+          <View style={styles.iconCircle}>
+          <EditIcon color="#222" size={20} />
           </View>
         </TouchableOpacity>
       </View>
       <View style={styles.pointsRow}>
-        <Text style={styles.pointsIcon}>⚡</Text>
+        <RaioIcon color="#222" size={16} />
         <Text style={styles.pointsText}>+0pts</Text>
       </View>
 
@@ -90,26 +97,35 @@ const ProfileScreen = () => {
       {/* Botões de menu */}
       <View style={styles.menuBox}>
         <TouchableOpacity style={styles.menuBtn}>
-          <Text style={styles.menuIcon}>🔔</Text>
+          <GameIcon color="#222" size={16} />
           <Text style={styles.menuText}>Informação Pessoal</Text>
-          <Text style={styles.menuArrow}>→</Text>
+          <View style={styles.iconCircle}>
+            <ArrowDiag color="#222" size={16} />
+          </View>
         </TouchableOpacity>
         <TouchableOpacity style={styles.menuBtn}>
-          <Text style={styles.menuIcon}>📊</Text>
+          <AnaliticsIcon color="#222" size={16} />
           <Text style={styles.menuText}>Minhas Análises</Text>
-          <Text style={styles.menuArrow}>→</Text>
+          <View style={styles.iconCircle}>
+            <ArrowDiag color="#222" size={16} />
+          </View>
         </TouchableOpacity>
         <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate('Plan')}>
-          <Text style={styles.menuIcon}>💳</Text>
+          <GameIcon color="#222" size={16} />
           <Text style={styles.menuText}>Meu Plano</Text>
-          <Text style={styles.menuArrow}>→</Text>
+          <View style={styles.iconCircle}>
+            <ArrowDiag color="#222" size={16} />
+          </View>
         </TouchableOpacity>
       </View>
 
       {/* Botão Premium */}
       <TouchableOpacity style={styles.premiumBtn}>
+        <SuperCheck color="#ffffff" size={16} />
         <Text style={styles.premiumBtnText}>Vire Premium</Text>
-        <Text style={styles.menuArrow}>→</Text>
+        <View style={[styles.iconCircle, { backgroundColor: 'rgba(26, 26, 26, 0.1)' }]}>
+          <ArrowDiag color="#ffffff" size={16} />
+        </View>
       </TouchableOpacity>
     </View>
   );
@@ -164,13 +180,10 @@ const styles = StyleSheet.create({
   editBtn: {
     marginLeft: 8,
   },
-  editIconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#EAEAEA',
-    alignItems: 'center',
-    justifyContent: 'center',
+  iconCircle: {
+    padding: 10,
+    backgroundColor: '#E9E8E8',
+    borderRadius: 999
   },
   editIcon: {
     fontSize: 18,
@@ -259,15 +272,16 @@ const styles = StyleSheet.create({
   menuBox: {
     marginTop: 18,
     marginHorizontal: 12,
+    gap: 10,
   },
   menuBtn: {
     backgroundColor: '#F7F7F7',
     borderRadius: 16,
     flexDirection: 'row',
+    gap:8,
     alignItems: 'center',
     paddingVertical: 16,
     paddingHorizontal: 18,
-    marginBottom: 10,
   },
   menuIcon: {
     fontSize: 18,
@@ -284,22 +298,30 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#888',
   },
+
+  
+
+
   premiumBtn: {
+    gap:8,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+
     backgroundColor: '#007AFF',
     borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 18,
     marginHorizontal: 8,
     marginTop: 8,
     marginBottom: 18,
   },
   premiumBtnText: {
+    flex: 1,
     color: '#fff',
     fontWeight: '600',
     fontSize: 16,
     marginRight: 8,
     fontFamily: fontNames.bold,
   },
+  
 });
