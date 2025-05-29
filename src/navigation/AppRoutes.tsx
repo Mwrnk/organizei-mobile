@@ -27,11 +27,11 @@ function ProfileStackScreen() {
 
 const AppRoutes = () => (
   <Tab.Navigator
-    initialRouteName="Home"
+    initialRouteName="Game"
     screenOptions={{ headerShown: false }}
     tabBar={(props) => <CustomTabBar {...props} />}
   >
-    <Tab.Screen name="Home" component={HomeScreen} />
+    <Tab.Screen name="Game" component={HomeScreen} />
     <Tab.Screen name="Escolar" component={EscolarScreen} />
     <Tab.Screen name="Comunidade" component={CommunityScreen} />
     <Tab.Screen name="IA" component={AIScreen} />

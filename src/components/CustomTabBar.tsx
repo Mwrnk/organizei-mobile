@@ -4,15 +4,16 @@ import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 // import { Home, Globe, Bot, User } from 'lucide-react-native'; // Remove Lucide imports
 
 import HomeIcon from 'assets/icons/HomeIcon';
+import GameIcon from 'assets/icons/GamesIcon';
 import EscolarIcon from 'assets/icons/EscolarIcon';
 import NetworkIcon from 'assets/icons/NetworkIcon'; // Assuming NetworkIcon for Globe/Comunidade
 import BotIcon from 'assets/icons/BotIcon';
 import UserIcon from 'assets/icons/UserIcon';
 
 const icons: Record<string, React.ElementType> = {
-  Home: HomeIcon,
+  Game: GameIcon,
   Escolar: EscolarIcon,
-  Comunidade: NetworkIcon, // Changed from Globe to NetworkIcon
+  Comunidade: NetworkIcon,
   IA: BotIcon,
   Eu: UserIcon,
 };
@@ -68,7 +69,7 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigat
             onPress={onPress}
             style={{
               paddingVertical: 8,
-              paddingHorizontal: 16,
+              paddingHorizontal: 24,
               borderRadius: 30,
               alignItems: 'center',
               flexDirection: 'column',

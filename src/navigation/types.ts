@@ -1,5 +1,5 @@
 export type RootTabParamList = {
-  Home: undefined;
+  Game: undefined;
   Escolar: undefined;
   Comunidade: undefined;
   IA: undefined;
