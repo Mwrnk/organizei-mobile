@@ -6,6 +6,7 @@ import CustomButton from '@components/CustomButton';
 import colors from '@styles/colors';
 import AIService, { ChatMessage } from '../services/aiService';
 import BotIcon from '@icons/BotIcon';
+import { fontNames } from '../styles/fonts';
 
 interface Message {
   id: number;
@@ -89,7 +90,7 @@ const AIScreen = () => {
         {/* Título e subtítulo */}
         <View style={{ alignItems: 'center', marginBottom: 24 }}>
           <Text style={styles.titulo}>
-            A <Text style={{ color: '#007AFF', fontStyle: 'italic' }}>ia</Text> que te torna{'\n'}mais produtivo
+            A <Text style={{ color: '#007AFF', fontStyle: 'italic', fontFamily: fontNames.bold }}>ia</Text> que te torna{'\n'}mais produtivo
           </Text>
         </View>
 
@@ -127,6 +128,7 @@ const AIScreen = () => {
                     fontSize: 14,
                     color: message.isUser ? '#fff' : '#1D1B20',
                     fontWeight: '500',
+                    fontFamily: fontNames.bold,
                   }}
                 >
                   {message.text}
@@ -135,7 +137,7 @@ const AIScreen = () => {
             ))}
             {isLoading && (
               <View style={{ alignSelf: 'flex-start', marginBottom: 16 }}>
-                <Text style={{ color: '#1D1B20', fontSize: 14 }}>Analisando...</Text>
+                <Text style={{ color: '#1D1B20', fontSize: 14, fontFamily: fontNames.bold }}>Analisando...</Text>
               </View>
             )}
           </ScrollView>
@@ -175,13 +177,13 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     paddingTop: 40,
-    paddingBottom: 80,
+    paddingBottom: 120,
     backgroundColor: '#fff',
   },
 
   nomeIA: {
     fontSize: 20,
-
+    fontFamily: fontNames.bold,
     fontWeight: '600',
     color: '#1D1B20',
   },
@@ -200,14 +202,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 28,
     marginTop: 32,
+    fontFamily: fontNames.bold,
   },
 
 
   cardChat: {
+    flex: 1,
     backgroundColor: '#F6F6F6',
     borderRadius: 32,
     width: '100%',
-    height: '75%',
     alignSelf: 'center',
   },
 
@@ -230,6 +233,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 14,
     letterSpacing: 0.5,
+    fontFamily: fontNames.bold,
   },
 
   txtInput: {
@@ -237,10 +241,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 20,
     height: 44,
-    paddingHorizontal: 24,
+    paddingLeft: 24,
+    paddingRight: 12,
     color: 'rgba(29, 27, 32, 0.5)',
     fontSize: 14,
     fontWeight: '500',
+    fontFamily: fontNames.regular,
   },
 
   inputArea: {
