@@ -23,13 +23,25 @@ import AnaliticsIcon from 'assets/icons/AnaliticsIcon';
 import EditIcon from 'assets/icons/EditIcon';
 import UserIcon from 'assets/icons/UserIcon';
 import { CardService, Card } from '../services/cardService';
+import { GlobalStyles } from '@styles/global';
+import CustomButton from '@components/CustomButton';
 
 const ProfileScreen = () => {
-  const { user } = useAuth();
+  const { logout, user } = useAuth();
   const navigation = useNavigation<StackNavigationProp<RootTabParamList>>();
   const [cards, setCards] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Função para fazer logout
+  const handleLogout = async () => {
+    try {
+      // O contexto agora delega a ação para o controller
+      await logout();
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+    }
+  };
 
   // Função para buscar cards do usuário
   const fetchUserCards = async () => {
@@ -151,6 +163,17 @@ const ProfileScreen = () => {
 
       {/* Botões de menu */}
       <View style={styles.menuBox}>
+        <View style={styles.contentContainer}>
+          {/* button logout */}
+          <CustomButton
+            title="Sair da conta"
+            loading={loading}
+            onPress={handleLogout}
+            buttonStyle={styles.logoutButton}
+            variant="outline"
+          />{' '}
+        </View>
+
         <TouchableOpacity style={styles.menuBtn}>
           <UserIcon color="#222" size={16} />
           <Text style={styles.menuText}>Informação Pessoal</Text>
@@ -428,5 +451,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginRight: 8,
     fontFamily: fontNames.bold,
+  },
+
+  contentContainer: {
+    flex: 1,
+    width: '80%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  logoutButton: {
+    width: '80%',
+    marginBottom: 20,
   },
 });

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, View, StyleSheet, TouchableOpacity } from 'react-native';
+import { Text, View, StyleSheet, TouchableOpacity, ImageBackground } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { GlobalStyles } from '@styles/global';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -20,19 +20,20 @@ const HomeScreen = () => {
     <SafeAreaProvider>
       <SafeAreaView style={GlobalStyles.container}>
         <View style={styles.header}>
-          <ArrowBack color="#222" size={16}/>
           <Text style={styles.headerTitle}>Games</Text>
-          <ArrowBack color="transparent" size={16}/>
         </View>
 
         <View style={styles.cardsContainer}>
-          <View style={styles.mainCard}>
+          <ImageBackground
+            source={require('../../assets/banners/bannerGames.png')}
+            style={styles.mainCard}
+          >
             <Text style={styles.mainCardTitle}>O que vai jogar hoje?</Text>
             <View style={styles.pointsContainer}>
               <Ionicons name="flash" size={20} color="white" />
               <Text style={styles.pointsText}>30pts</Text>
             </View>
-          </View>
+          </ImageBackground>
 
           <TouchableOpacity 
             style={styles.gameCard}
@@ -78,9 +79,10 @@ const styles = StyleSheet.create({
 
   cardsContainer: {
     flex: 1,
-    paddingTop: 100,
+    justifyContent: 'center',
     paddingBottom: 130,
-    gap: 1,
+    gap: 16,
+    paddingHorizontal: 16,
   },
 
   header: {
@@ -88,8 +90,7 @@ const styles = StyleSheet.create({
     height: 44,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    justifyContent: 'center',
     marginTop: 40,
   },
 
@@ -100,50 +101,51 @@ const styles = StyleSheet.create({
   },
 
   mainCard: {
-    backgroundColor: '#007AFF',
+    width: '100%',
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
-    margin: 16,
-    height: 150,
+    paddingVertical: 64,
+    gap: 12,
+    overflow: 'hidden',
+    resizeMode: 'cover'
   },
+
   mainCardTitle: {
     color: 'white',
+    fontFamily: fontNames.regular,
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 10,
   },
+
   pointsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#003D80',
+    backgroundColor: 'rgba(0, 61, 128, 0.1)',
     borderRadius: 100,
     paddingHorizontal: 10,
     paddingVertical: 6,
     gap: 6,
   },
+
   pointsText: {
     color: 'white',
     fontSize: 12,
     fontFamily: fontNames.regular,
   },
+
   gameCard: {
     backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 16,
-    margin: 16,
+    borderRadius: 24,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 61, 128, 0.1)',
+    paddingHorizontal: 16,
+    paddingVertical: 32,
   },
+
   gameIconContainer: {
     width: 50,
     height: 50,
@@ -153,6 +155,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 16,
   },
+  
   gameIcon: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -161,12 +164,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   gameTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontFamily: fontNames.bold,
     marginBottom: 4,
   },
   gameDescription: {
-    fontSize: 14,
+    fontSize: 12,
+    fontFamily: fontNames.regular,
     color: '#8E8E93',
   },
   bottomNav: {
