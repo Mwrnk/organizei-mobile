@@ -12,4 +12,6 @@ export type RootTabParamList = {
   Register: undefined;
   Plan: undefined;
   EditProfile: undefined;
+  FlashCards: undefined;
+  JogoDoMilhao: undefined;
 };

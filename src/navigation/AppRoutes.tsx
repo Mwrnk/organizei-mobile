@@ -13,10 +13,13 @@ import AIScreen from '@screens/AIScreen';
 import ProfileScreen from '@screens/ProfileScreen';
 import PlanScreen from '@screens/PlanScreen';
 import EditProfileScreen from '@screens/EditProfileScreen';
+import FlashCardsScreen from '@screens/FlashCardsScreen';
+import JogoDoMilhaoScreen from '@screens/JogoDoMilhaoScreen';
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
 const ProfileStack = createStackNavigator();
 const EscolarStack = createStackNavigator();
+const GameStack = createStackNavigator();
 
 function ProfileStackScreen() {
   return (
@@ -38,15 +41,24 @@ function EscolarStackScreen() {
   );
 }
 
+function GameStackScreen() {
+  return (
+    <GameStack.Navigator screenOptions={{ headerShown: false }}>
+      <GameStack.Screen name="GameHome" component={HomeScreen} />
+      <GameStack.Screen name="FlashCards" component={FlashCardsScreen} />
+      <GameStack.Screen name="JogoDoMilhao" component={JogoDoMilhaoScreen} />
+    </GameStack.Navigator>
+  );
+}
+
 const AppRoutes = () => (
   <Tab.Navigator
     initialRouteName="Escolar"
     screenOptions={{ headerShown: false }}
     tabBar={(props) => <CustomTabBar {...props} />}
   >
-    
     <Tab.Screen name="Escolar" component={EscolarScreen} />
-    <Tab.Screen name="Game" component={HomeScreen} />
+    <Tab.Screen name="Game" component={GameStackScreen} />
     <Tab.Screen name="Comunidade" component={CommunityScreen} />
     <Tab.Screen name="IA" component={AIScreen} />
     <Tab.Screen name="Eu" component={ProfileStackScreen} />

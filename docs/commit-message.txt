@@ -1,0 +1,11 @@
+feat(games): implementa tela de jogos com navegação
+
+- Adiciona nova tela principal de jogos com design moderno
+- Cria componentes para Flash Cards e Jogo do Milhão
+- Implementa navegação Stack para os jogos
+- Adiciona tipagem para as novas rotas
+- Estiliza cards com sombras e bordas arredondadas
+- Integra ícones da biblioteca Ionicons
+- Implementa layout responsivo com SafeAreaView
+
+Resolves: #[número-da-issue] 
