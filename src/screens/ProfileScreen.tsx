@@ -1,8 +1,17 @@
-import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, FlatList, Image, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  FlatList,
+  Image,
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { fontNames } from '../styles/fonts';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import type { RootTabParamList } from '../navigation/types';
 import GameIcon from 'assets/icons/GamesIcon';
@@ -13,34 +22,65 @@ import ArrowDiag from 'assets/icons/ArrowDiag';
 import AnaliticsIcon from 'assets/icons/AnaliticsIcon';
 import EditIcon from 'assets/icons/EditIcon';
 import UserIcon from 'assets/icons/UserIcon';
-
-const dummyCards = [
-  {
-    id: '1',
-    title: 'Citações Fisioterapia',
-    date: '11/01/01',
-    type: 'Escolar',
-    image: 'https://via.placeholder.com/80x60',
-  },
-  {
-    id: '2',
-    title: 'Banco de Dados...',
-    date: '11/01/01',
-    type: 'Profissional',
-    image: 'https://via.placeholder.com/80x60',
-  },
-  {
-    id: '3',
-    title: 'Boas Práticas Front...',
-    date: '11/01/01',
-    type: 'Profissional',
-    image: 'https://via.placeholder.com/80x60',
-  },
-];
+import { CardService, Card } from '../services/cardService';
 
 const ProfileScreen = () => {
   const { user } = useAuth();
   const navigation = useNavigation<StackNavigationProp<RootTabParamList>>();
+  const [cards, setCards] = useState<Card[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Função para buscar cards do usuário
+  const fetchUserCards = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const userCards = await CardService.getUserCards();
+      setCards(userCards);
+    } catch (err) {
+      console.error('Erro ao buscar cards:', err);
+      setError('Erro ao carregar seus cards');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Buscar cards quando a tela é focada
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchUserCards();
+    }, [])
+  );
+
+  // Função para formatar data
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit',
+    });
+  };
+
+  // Função para renderizar card
+  const renderCard = ({ item }: { item: Card }) => (
+    <View style={styles.cardBox}>
+      {item.image_url && item.image_url.length > 0 ? (
+        <Image source={{ uri: item.image_url[0] }} style={styles.cardImage} />
+      ) : (
+        <View style={[styles.cardImage, { backgroundColor: '#eee' }]} />
+      )}
+      <Text style={styles.cardTitle} numberOfLines={2}>
+        {item.title}
+      </Text>
+      <View style={styles.cardFooter}>
+        <Text style={styles.cardDate}>{formatDate(item.createdAt)}</Text>
+        <Text style={styles.cardType}>{item.priority}</Text>
+      </View>
+    </View>
+  );
+
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Banner */}
@@ -62,7 +102,7 @@ const ProfileScreen = () => {
         <Text style={styles.userName}>{user?.name || 'Usuário'}</Text>
         <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('EditProfile')}>
           <View style={styles.iconCircle}>
-          <EditIcon color="#222" size={20} />
+            <EditIcon color="#222" size={20} />
           </View>
         </TouchableOpacity>
       </View>
@@ -74,26 +114,40 @@ const ProfileScreen = () => {
       {/* Cards */}
       <View style={styles.cardsHeaderRow}>
         <Text style={styles.cardsTitle}>#meus cards</Text>
-        <Text style={styles.cardsSeeAll}>Ver todos</Text>
+        <TouchableOpacity>
+          <Text style={styles.cardsSeeAll}>Ver todos</Text>
+        </TouchableOpacity>
       </View>
-      <FlatList
-        data={dummyCards}
-        keyExtractor={(item) => item.id}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.cardsList}
-        contentContainerStyle={{ paddingLeft: 12, paddingRight: 12 }}
-        renderItem={({ item }) => (
-          <View style={styles.cardBox}>
-            <Image source={{ uri: item.image }} style={styles.cardImage} />
-            <Text style={styles.cardTitle}>{item.title}</Text>
-            <View style={styles.cardFooter}>
-              <Text style={styles.cardDate}>{item.date}</Text>
-              <Text style={styles.cardType}>{item.type}</Text>
-            </View>
-          </View>
-        )}
-      />
+
+      {/* Loading ou Lista de Cards */}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+          <Text style={styles.loadingText}>Carregando seus cards...</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={fetchUserCards}>
+            <Text style={styles.retryButtonText}>Tentar novamente</Text>
+          </TouchableOpacity>
+        </View>
+      ) : cards.length > 0 ? (
+        <FlatList
+          data={cards.slice(0, 10)} // Limita a 10 cards para não sobrecarregar
+          keyExtractor={(item) => item._id}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.cardsList}
+          contentContainerStyle={{ paddingLeft: 12, paddingRight: 12 }}
+          renderItem={renderCard}
+        />
+      ) : (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Você ainda não criou nenhum card</Text>
+          <Text style={styles.emptySubText}>Comece criando seu primeiro card de estudos!</Text>
+        </View>
+      )}
 
       {/* Botões de menu */}
       <View style={styles.menuBox}>
@@ -185,7 +239,7 @@ const styles = StyleSheet.create({
   iconCircle: {
     padding: 10,
     backgroundColor: '#E9E8E8',
-    borderRadius: 999
+    borderRadius: 999,
   },
   editIcon: {
     fontSize: 18,
@@ -272,6 +326,58 @@ const styles = StyleSheet.create({
     color: '#888',
     fontFamily: fontNames.regular,
   },
+  // Novos estilos para loading e erro
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#666',
+    fontFamily: fontNames.regular,
+  },
+  errorContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#FF3B30',
+    fontFamily: fontNames.regular,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  retryButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontFamily: fontNames.semibold,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#222',
+    fontFamily: fontNames.semibold,
+    marginBottom: 8,
+  },
+  emptySubText: {
+    fontSize: 14,
+    color: '#666',
+    fontFamily: fontNames.regular,
+    textAlign: 'center',
+  },
   menuBox: {
     marginTop: 18,
     marginHorizontal: 12,
@@ -281,7 +387,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F7F7F7',
     borderRadius: 16,
     flexDirection: 'row',
-    gap:8,
+    gap: 8,
     alignItems: 'center',
     paddingVertical: 16,
     paddingHorizontal: 18,
@@ -302,11 +408,8 @@ const styles = StyleSheet.create({
     color: '#888',
   },
 
-  
-
-
   premiumBtn: {
-    gap:8,
+    gap: 8,
     paddingVertical: 16,
     paddingHorizontal: 18,
 
@@ -326,5 +429,4 @@ const styles = StyleSheet.create({
     marginRight: 8,
     fontFamily: fontNames.bold,
   },
-  
 });
