@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Image, FlatList, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Image, FlatList } from 'react-native';
 import { fontNames } from '../styles/fonts';
 import colors from '../styles/colors';
 import { Ionicons } from '@expo/vector-icons';
-import SearchIcon from '../../assets/icons/SearchIcon';
-import ArrowDownIcon from '../../assets/icons/arrowDownIcon';
 
 const recommendedCards = [
   {
@@ -40,10 +38,8 @@ const CommunityScreen = () => {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
       {/* Título */}
-      
-      <Text style={styles.title}>O que está{'\n'} procurando hoje?</Text>
+      <Text style={styles.title}>O que está procurando hoje?</Text>
 
       {/* Barra de busca */}
       <View style={styles.searchBox}>
@@ -55,8 +51,7 @@ const CommunityScreen = () => {
           onChangeText={setSearch}
         />
         <TouchableOpacity style={styles.searchBtn}>
-          <SearchIcon color="white" size={20}/>
-          
+          <Ionicons name="search" size={22} color="#181818" />
         </TouchableOpacity>
       </View>
 
@@ -96,7 +91,7 @@ const CommunityScreen = () => {
       <Text style={styles.publishTitle}>Publique os seus cards{"\n"}mais fácil!</Text>
       <TouchableOpacity style={styles.dropdown}>
         <Text style={styles.dropdownText}>Selecionar o card</Text>
-        <ArrowDownIcon color="#888" size={20}/>
+        <Ionicons name="chevron-down" size={20} color="#888" />
       </TouchableOpacity>
       <View style={styles.radioRow}>
         <TouchableOpacity style={styles.radioBtn} onPress={() => setSelectedType('Escolar')}>
@@ -111,8 +106,6 @@ const CommunityScreen = () => {
       <TouchableOpacity style={styles.publishBtn}>
         <Text style={styles.publishBtnText}>Publicar</Text>
       </TouchableOpacity>
-
-      </ScrollView>
     </View>
   );
 };
@@ -123,12 +116,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-    paddingTop: 64,
+    paddingTop: 36,
     paddingHorizontal: 16,
-    paddingBottom: 130,
   },
   title: {
-    fontSize: 24,
+    fontSize: 26,
     fontFamily: fontNames.bold,
     color: colors.primary,
     marginBottom: 18,
@@ -138,21 +130,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#F4F4F4',
     borderRadius: 24,
-    paddingLeft: 24,
+    paddingHorizontal: 18,
     marginBottom: 18,
-    height: 56,
+    height: 48,
   },
   searchInput: {
     flex: 1,
-    fontSize: 12,
+    fontSize: 15,
     fontFamily: fontNames.regular,
     color: colors.primary,
   },
   searchBtn: {
     backgroundColor: '#181818',
-    borderRadius: 24,
-    width: 56,
-    height: 56,
+    borderRadius: 20,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 8,
@@ -166,7 +158,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontFamily: fontNames.regular,
     color: '#222',
-    fontSize: 12,
+    fontSize: 14,
     marginRight: 8,
   },
   sectionLine: {
@@ -179,7 +171,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 16,
     marginBottom: 12,
-    gap: 16,
     padding: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -191,12 +182,14 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 80,
     borderRadius: 12,
+    marginBottom: 8,
     backgroundColor: '#eee',
   },
   cardTitle: {
     fontFamily: fontNames.bold,
     fontSize: 16,
     color: colors.primary,
+    marginBottom: 6,
   },
   cardFooterRow: {
     flexDirection: 'row',
@@ -223,9 +216,9 @@ const styles = StyleSheet.create({
   },
   publishTitle: {
     fontFamily: fontNames.bold,
-    fontSize: 24,
+    fontSize: 20,
     color: colors.primary,
-    marginBottom: 16,
+    marginBottom: 12,
     marginTop: 8,
   },
   dropdown: {
