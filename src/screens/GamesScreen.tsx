@@ -15,7 +15,7 @@ import { RootTabParamList } from '../navigation/types';
 import ArrowBack from 'assets/icons/ArrowBack';
 import { fontNames } from '../styles/fonts';
 import colors from '../styles/colors';
-import CapaFlashCards from 'assets/banners/capaFlashCards';
+import CapaFlashCards from 'assets/banners/CapaFlashCards';
 import RaioIcon from 'assets/icons/RaioIcon';
 
 // Definição do tipo de navegação para tipagem do TypeScript
@@ -53,9 +53,10 @@ const GamesScreen = () => {
           </TouchableOpacity>
 
           {/* Card do jogo Flash Cards */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.gameCard}
-            onPress={() => navigation.navigate('FlashCards')}>
+            onPress={() => navigation.navigate('FlashCards')}
+          >
             <View style={styles.gameIconContainer}>
               <CapaFlashCards size={130} />
             </View>
@@ -68,21 +69,19 @@ const GamesScreen = () => {
           </TouchableOpacity>
 
           {/* Card do jogo do Milhão */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.gameCard}
-            onPress={() => navigation.navigate('JogoDoMilhao')}>
+            onPress={() => navigation.navigate('JogoDoMilhao')}
+          >
             <View style={styles.gameIconContainer}>
               <CapaFlashCards size={130} />
             </View>
             <View style={styles.gameInfo}>
               <Text style={styles.gameTitle}>Jogo do milhão</Text>
-              <Text style={styles.gameDescription}>
-                Inúmeras perguntas com temas diversos.
-              </Text>
+              <Text style={styles.gameDescription}>Inúmeras perguntas com temas diversos.</Text>
             </View>
           </TouchableOpacity>
         </View>
-        
       </SafeAreaView>
     </SafeAreaProvider>
   );
@@ -128,7 +127,7 @@ const styles = StyleSheet.create({
     paddingVertical: 64,
     gap: 12,
     overflow: 'hidden',
-    resizeMode: 'cover'
+    resizeMode: 'cover',
   },
 
   mainCardTitle: {
@@ -171,7 +170,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  
+
   gameIcon: {
     fontSize: 24,
     fontWeight: 'bold',
