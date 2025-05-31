@@ -4,7 +4,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { RootTabParamList } from './types';
 import CustomTabBar from '@components/CustomTabBar';
 
-import HomeScreen from '@screens/HomeScreen';
+import GamesScreen from '@screens/GamesScreen';
 import EscolarScreen from '@screens/EscolarScreen';
 import CreateCardScreen from '@screens/CreateCardScreen';
 import CardDetailScreen from '@screens/CardDetailScreen';
@@ -44,7 +44,7 @@ function EscolarStackScreen() {
 function GameStackScreen() {
   return (
     <GameStack.Navigator screenOptions={{ headerShown: false }}>
-      <GameStack.Screen name="GameHome" component={HomeScreen} />
+      <GameStack.Screen name="GameHome" component={GamesScreen} />
       <GameStack.Screen name="FlashCards" component={FlashCardsScreen} />
       <GameStack.Screen name="JogoDoMilhao" component={JogoDoMilhaoScreen} />
     </GameStack.Navigator>

@@ -1,5 +1,8 @@
+// Importações de bibliotecas React e React Native
 import React from 'react';
 import { Text, View, StyleSheet, TouchableOpacity, ImageBackground } from 'react-native';
+
+// Importações de contextos, estilos e componentes de navegação
 import { useAuth } from '../contexts/AuthContext';
 import { GlobalStyles } from '@styles/global';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -7,53 +10,67 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootTabParamList } from '../navigation/types';
+
+// Importações de componentes e assets customizados
 import ArrowBack from 'assets/icons/ArrowBack';
 import { fontNames } from '../styles/fonts';
 import colors from '../styles/colors';
+import CapaFlashCards from 'assets/banners/capaFlashCards';
+import RaioIcon from 'assets/icons/RaioIcon';
+
+// Definição do tipo de navegação para tipagem do TypeScript
 type GameStackNavigationProp = StackNavigationProp<RootTabParamList>;
 
-const HomeScreen = () => {
+const GamesScreen = () => {
+  // Hooks para autenticação e navegação
   const { user } = useAuth();
   const navigation = useNavigation<GameStackNavigationProp>();
 
   return (
     <SafeAreaProvider>
+      {/* Container principal com área segura para notch e barra de status */}
       <SafeAreaView style={GlobalStyles.container}>
+        {/* Cabeçalho da tela */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Games</Text>
         </View>
 
+        {/* Container principal dos cards de jogos */}
         <View style={styles.cardsContainer}>
+          {/* Banner principal com background */}
           <ImageBackground
             source={require('../../assets/banners/bannerGames.png')}
             style={styles.mainCard}
           >
             <Text style={styles.mainCardTitle}>O que vai jogar hoje?</Text>
+            {/* Container de pontuação com ícone */}
             <View style={styles.pointsContainer}>
-              <Ionicons name="flash" size={20} color="white" />
-              <Text style={styles.pointsText}>30pts</Text>
+              <RaioIcon color="#ffffff" size={16} />
+              <Text style={styles.pointsText}>{user?.orgPoints || 0}pts</Text>
             </View>
           </ImageBackground>
 
+          {/* Card do jogo Flash Cards */}
           <TouchableOpacity 
             style={styles.gameCard}
             onPress={() => navigation.navigate('FlashCards')}>
             <View style={styles.gameIconContainer}>
-              <Text style={styles.gameIcon}>?</Text>
+              <CapaFlashCards size={130} />
             </View>
             <View style={styles.gameInfo}>
               <Text style={styles.gameTitle}>Flash Cards</Text>
               <Text style={styles.gameDescription}>
-                Perguntas geradas por IA com o tema da matéria escolhida
+                Perguntas geradas por IA com o tema da matéria escolhida.
               </Text>
             </View>
           </TouchableOpacity>
 
+          {/* Card do jogo do Milhão */}
           <TouchableOpacity 
             style={styles.gameCard}
             onPress={() => navigation.navigate('JogoDoMilhao')}>
             <View style={styles.gameIconContainer}>
-              <Text style={styles.gameIcon}>?</Text>
+              <CapaFlashCards size={130} />
             </View>
             <View style={styles.gameInfo}>
               <Text style={styles.gameTitle}>Jogo do milhão</Text>
@@ -135,6 +152,7 @@ const styles = StyleSheet.create({
     fontFamily: fontNames.regular,
   },
 
+  // Estilos dos cards de jogos
   gameCard: {
     backgroundColor: 'white',
     borderRadius: 24,
@@ -144,16 +162,12 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0, 61, 128, 0.1)',
     paddingHorizontal: 16,
     paddingVertical: 32,
+    gap: 16,
   },
 
   gameIconContainer: {
-    width: 50,
-    height: 50,
-    backgroundColor: '#F2F2F7',
-    borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
   },
   
   gameIcon: {
@@ -186,6 +200,7 @@ const styles = StyleSheet.create({
   navItem: {
     alignItems: 'center',
   },
+
   navText: {
     fontSize: 12,
     marginTop: 4,
@@ -193,4 +208,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default HomeScreen;
+export default GamesScreen;
