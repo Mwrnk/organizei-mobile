@@ -68,28 +68,29 @@ const PointsScreen = () => {
             <Text style={styles.pointsDescription}>por card criado</Text>
           </View>
         </View>
+      </View>
 
-        <View style={styles.buttonContainer}>
+      <View style={styles.buttonContainer}>
             <CustomButton
-                title="TROCAR MEUS PONTOS"
+                title="Trocar meus pontos"
                 variant="primary"
-                style={styles.btn}
-                textStyle={styles.txtButton}
+                style={styles.primaryButton}
+                textStyle={styles.txtButtonPrimary}
                 onPress={handleExchangePoints}
                 
             />
 
             <CustomButton
-                title="IR PARA OS GAMES"
+                title="Ir para os games"
                 variant="secondary"
-                style={styles.btn}
-                textStyle={styles.txtButton}
+                style={styles.secondaryButton}
+                textStyle={styles.txtButtonSecondary}
                 onPress={handleNavigateToGames}
-                icon={<GameIcon color="#fff" size={16} />}
+                icon={<GameIcon color={colors.primary} size={24} />}
                 iconPosition="left"
             />
         </View>
-      </View>
+
     </SafeAreaView>
   );
 };
@@ -117,17 +118,29 @@ const styles = StyleSheet.create({
   },
 
   buttonContainer: {
+    position: 'absolute',
+    bottom: 115,
+    left: 16,
+    right: 16,
     flexDirection: 'column',
-    gap: 16,
+    gap: 12,
   },
 
   primaryButton: {
     backgroundColor: colors.primary,
     borderRadius: 999,
-    paddingVertical: 24,
-    marginTop: 20,
+    paddingVertical: 20,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+
+  secondaryButton: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 999,
+    paddingVertical: 20,  
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
   },
 
   txtButton: {
@@ -138,7 +151,7 @@ const styles = StyleSheet.create({
 
   pointsMainContainer: {
     alignItems: 'center',
-    marginTop: 40,
+    marginTop: 60,
     gap: 12,
   },
   pointsValue: {
@@ -152,7 +165,7 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
   },
   howToContainer: {
-    marginTop: 48,
+    marginTop: 64,
     paddingHorizontal: 16,
   },
   sectionTitle: {
@@ -163,17 +176,16 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   pointsCard: {
-    backgroundColor: '#fff',
     borderRadius: 24,
-    padding: 24,
+    padding: 16,
     gap: 16,
     borderWidth: 1,
     borderColor: 'rgba(0, 61, 128, 0.1)',
   },
   pointsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    alignItems: 'baseline',
+    gap: 4,
   },
   pointsText: {
     fontSize: 14,
@@ -186,13 +198,12 @@ const styles = StyleSheet.create({
     fontFamily: fontNames.regular,
     color: '#8E8E93',
   },
-  btn: {
-    backgroundColor: colors.primary,
-    borderRadius: 999,
-    paddingVertical: 24,
-    marginTop: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+  txtButtonPrimary: {
+    color: '#fff',
+  },
+  
+  txtButtonSecondary: {
+    color: colors.primary,
   },
 });
 
