@@ -70,6 +70,11 @@ const CardDetailScreen = () => {
   const [showCommentModal, setShowCommentModal] = useState(false);
   const [comment, setComment] = useState('');
   const [activeTab, setActiveTab] = useState<'escolar' | 'exercicio'>('escolar');
+  const [selectedPdf, setSelectedPdf] = useState<string | null>(null);
+  const [loadingPdf, setLoadingPdf] = useState(false);
+  const [pdfViewerUrl, setPdfViewerUrl] = useState<string | null>(null);
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
+  const [imageModalVisible, setImageModalVisible] = useState(false);
 
   // Carregar dados completos do card
   useEffect(() => {
@@ -181,6 +186,33 @@ const CardDetailScreen = () => {
     );
   };
 
+  const loadPdfWithAuth = async (pdfUrl: string) => {
+    try {
+      setLoadingPdf(true);
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      if (!token) {
+        throw new Error('Token não encontrado');
+      }
+
+      const pdfViewUrl = `${api.defaults.baseURL}/cards/pdf/${encodeURIComponent(
+        pdfUrl
+      )}?token=${encodeURIComponent(token)}`;
+
+      setPdfViewerUrl(pdfViewUrl);
+    } catch (error) {
+      console.error('Erro ao carregar PDF:', error);
+      Alert.alert('Erro', 'Não foi possível carregar o PDF');
+    } finally {
+      setLoadingPdf(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedPdf) {
+      // PDF carregado com sucesso
+    }
+  }, [selectedPdf]);
+
   // Renderizar conteúdo da aba Escolar
   const renderEscolarContent = () => (
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
@@ -269,21 +301,21 @@ const CardDetailScreen = () => {
               return (
                 <TouchableOpacity
                   key={index}
+                  style={styles.imageContainer}
                   onPress={() => {
-                    // Implementar visualização em tela cheia futuramente
-                    console.log('Abrir imagem em tela cheia:', fullImageUrl);
+                    setSelectedImageIndex(index);
+                    setImageModalVisible(true);
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   }}
                 >
                   <Image
                     source={{ uri: fullImageUrl }}
                     style={styles.cardImage}
-                    onLoad={() => console.log(`✅ Imagem ${index + 1} carregada com sucesso`)}
+                    onLoad={() => {
+                      // Imagem carregada com sucesso
+                    }}
                     onError={(error) => {
-                      console.error(
-                        `❌ Erro ao carregar imagem ${index + 1}:`,
-                        error.nativeEvent.error
-                      );
-                      console.error(`🔗 URL que falhou:`, fullImageUrl);
+                      console.error('Erro ao carregar imagem:', error.nativeEvent.error);
                     }}
                   />
                 </TouchableOpacity>
@@ -1008,6 +1040,9 @@ const styles = StyleSheet.create({
     color: colors.gray,
     fontFamily: fontNames.regular,
     marginHorizontal: 16,
+  },
+  imageContainer: {
+    padding: 8,
   },
 });
 

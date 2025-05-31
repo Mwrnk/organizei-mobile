@@ -5,7 +5,7 @@ import AppRoutes from './AppRoutes';
 import AuthRoutes from './AuthRoutes';
 
 const Routes = () => {
-  const { signed, loading } = useAuth();
+  const { user, loading } = useAuth();
 
   if (loading) {
     return (
@@ -15,7 +15,7 @@ const Routes = () => {
     );
   }
 
-  return signed ? <AppRoutes /> : <AuthRoutes />;
+  return user ? <AppRoutes /> : <AuthRoutes />;
 };
 
 export default Routes;

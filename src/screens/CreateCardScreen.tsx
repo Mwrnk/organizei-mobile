@@ -162,9 +162,6 @@ const CreateCardScreen = () => {
 
     setUploadingFiles(true);
     try {
-      console.log('🚀 Iniciando criação do card...');
-      console.log('📍 PASSO 1: Preparando dados básicos do card');
-
       // Passo 1: Criar o card básico (apenas com campos aceitos pelo backend)
       const createPayload = {
         title: cardTitle.trim(),
@@ -172,16 +169,11 @@ const CreateCardScreen = () => {
         content: content.trim(),
       };
 
-      console.log('📦 Payload de criação:', createPayload);
-      console.log('📍 PASSO 1: Enviando requisição POST /cards');
-
       const createRes = await api.post(`/cards`, createPayload, {
         headers: {
           'Content-Type': 'application/json',
         },
       });
-
-      console.log('📍 PASSO 1: ✅ Card criado com sucesso');
 
       const newCard = {
         id: createRes.data.data.id,
@@ -192,12 +184,8 @@ const CreateCardScreen = () => {
         listId: createRes.data.data.listId,
       };
 
-      console.log('✅ Card criado com sucesso:', newCard);
-
       // Passo 2: Atualizar o card com priority e is_published (se diferentes dos padrões)
       if (priority !== 'Baixa' || isPublished !== false) {
-        console.log('📍 PASSO 2: Atualizando prioridade e configurações');
-
         const updatePayload = {
           title: cardTitle.trim(),
           content: content.trim(),
@@ -205,40 +193,18 @@ const CreateCardScreen = () => {
           is_published: isPublished,
         };
 
-        console.log('📝 Payload de atualização:', updatePayload);
-        console.log('📍 PASSO 2: Enviando requisição PATCH /cards/:id');
-
         await api.patch(`/cards/${newCard.id}`, updatePayload, {
           headers: {
             'Content-Type': 'application/json',
           },
         });
-
-        console.log('📍 PASSO 2: ✅ Card atualizado com prioridade e configurações');
-      } else {
-        console.log('📍 PASSO 2: ⏭️ Pulando atualização (valores padrão)');
       }
 
       // Passo 3: Upload de arquivos se houver (rota separada)
       if (selectedImage || selectedPdf) {
-        console.log('📍 PASSO 3: Iniciando upload de arquivos');
-        console.log(
-          `📊 Arquivos selecionados: ${selectedImage ? '1 imagem' : 'nenhuma imagem'} ${
-            selectedPdf ? '1 PDF' : 'nenhum PDF'
-          }`
-        );
-
         // Upload da imagem primeiro (se houver)
         if (selectedImage) {
-          console.log('📍 PASSO 3A: Fazendo upload da imagem');
           const imageFormData = new FormData();
-
-          console.log(`🖼️ Adicionando imagem:`, {
-            uri: selectedImage.uri,
-            type: selectedImage.mimeType || 'image/jpeg',
-            name: selectedImage.fileName || 'image.jpg',
-            size: selectedImage.fileSize || 'desconhecido',
-          });
 
           imageFormData.append('files', {
             uri: selectedImage.uri,
@@ -246,32 +212,21 @@ const CreateCardScreen = () => {
             name: selectedImage.fileName || 'image.jpg',
           } as any);
 
-          console.log('📤 Enviando imagem para:', `/cards/${newCard.id}/files`);
-
           try {
             await api.post(`/cards/${newCard.id}/files`, imageFormData, {
               headers: {
                 'Content-Type': 'multipart/form-data',
               },
             });
-            console.log('📍 PASSO 3A: ✅ Upload da imagem concluído');
           } catch (imageError) {
-            console.error('📍 PASSO 3A: ❌ Erro no upload da imagem:', imageError);
+            console.error('Erro no upload da imagem:', imageError);
             throw imageError;
           }
         }
 
         // Upload do PDF depois (se houver)
         if (selectedPdf) {
-          console.log('📍 PASSO 3B: Fazendo upload do PDF');
           const pdfFormData = new FormData();
-
-          console.log(`📄 Adicionando PDF:`, {
-            uri: selectedPdf.uri,
-            type: selectedPdf.mimeType || 'application/pdf',
-            name: selectedPdf.name || 'document.pdf',
-            size: selectedPdf.size || 'desconhecido',
-          });
 
           pdfFormData.append('files', {
             uri: selectedPdf.uri,
@@ -279,24 +234,17 @@ const CreateCardScreen = () => {
             name: selectedPdf.name || 'document.pdf',
           } as any);
 
-          console.log('📤 Enviando PDF para:', `/cards/${newCard.id}/files`);
-
           try {
             await api.post(`/cards/${newCard.id}/files`, pdfFormData, {
               headers: {
                 'Content-Type': 'multipart/form-data',
               },
             });
-            console.log('📍 PASSO 3B: ✅ Upload do PDF concluído');
           } catch (pdfError) {
-            console.error('📍 PASSO 3B: ❌ Erro no upload do PDF:', pdfError);
+            console.error('Erro no upload do PDF:', pdfError);
             throw pdfError;
           }
         }
-
-        console.log('📍 PASSO 3: ✅ Upload de todos os arquivos concluído');
-      } else {
-        console.log('📍 PASSO 3: ⏭️ Pulando upload (nenhum arquivo selecionado)');
       }
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -325,24 +273,22 @@ const CreateCardScreen = () => {
         },
       ]);
     } catch (err: any) {
-      console.error('💥 Erro ao criar card:', err);
+      console.error('Erro ao criar card:', err);
 
       // Log detalhado do erro
       if (err.response) {
-        console.error('📋 Status do erro:', err.response.status);
-        console.error('📋 Dados do erro:', err.response.data);
-        console.error('📋 Headers da resposta:', err.response.headers);
-        console.error('📋 URL da requisição:', err.config?.url);
-        console.error('📋 Método da requisição:', err.config?.method);
-        console.error('📋 Headers da requisição:', err.config?.headers);
+        console.error('Status do erro:', err.response.status);
+        console.error('Dados do erro:', err.response.data);
+        console.error('URL da requisição:', err.config?.url);
+        console.error('Método da requisição:', err.config?.method);
 
         // Verificar se é um MulterError
         if (
           err.response.data?.message?.includes('MulterError') ||
           err.response.data?.message?.includes('Unexpected field')
         ) {
-          console.error('🚨 MULTER ERROR DETECTADO!');
-          console.error('🔍 Detalhes específicos do MulterError:', {
+          console.error('MULTER ERROR DETECTADO!');
+          console.error('Detalhes específicos do MulterError:', {
             url: err.config?.url,
             method: err.config?.method,
             headers: err.config?.headers,
@@ -350,9 +296,9 @@ const CreateCardScreen = () => {
           });
         }
       } else if (err.request) {
-        console.error('📡 Erro de rede - sem resposta:', err.request);
+        console.error('Erro de rede - sem resposta:', err.request);
       } else {
-        console.error('⚙️ Erro de configuração:', err.message);
+        console.error('Erro de configuração:', err.message);
       }
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

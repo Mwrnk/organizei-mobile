@@ -191,11 +191,6 @@ const EscolarScreen = () => {
   const [showListModal, setShowListModal] = useState(false);
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
 
-  // Debug: monitorar mudanças nos modais
-  useEffect(() => {
-    console.log('🎭 EscolarScreen - showListModal mudou para:', showListModal);
-  }, [showListModal]);
-
   // Estados para formulários
   const [listName, setListName] = useState('');
 
@@ -251,7 +246,7 @@ const EscolarScreen = () => {
         setTimeout(() => setShowTutorial(true), 1000);
       }
     } catch (error) {
-      console.log('Erro ao carregar preferências:', error);
+      console.error('Erro ao carregar preferências:', error);
     }
   };
 
@@ -265,7 +260,7 @@ const EscolarScreen = () => {
       };
       await AsyncStorage.setItem(`escolar_preferences_${userId}`, JSON.stringify(preferences));
     } catch (error) {
-      console.log('Erro ao salvar preferências:', error);
+      console.error('Erro ao salvar preferências:', error);
     }
   };
 
@@ -577,7 +572,7 @@ const EscolarScreen = () => {
     try {
       await AsyncStorage.setItem(`escolar_tutorial_${userId}`, 'completed');
     } catch (error) {
-      console.log('Erro ao salvar status do tutorial:', error);
+      console.error('Erro ao salvar status do tutorial:', error);
     }
 
     // Oferecer carregar dados demo após tutorial
@@ -693,7 +688,6 @@ const EscolarScreen = () => {
   const handleCreateCard = async () => {
     // Esta função foi movida para CreateCardScreen.tsx
     // Mantida apenas para compatibilidade temporária
-    console.log('handleCreateCard foi movida para CreateCardScreen');
   };
 
   const handleDeleteList = async (listId: string) => {
@@ -732,7 +726,6 @@ const EscolarScreen = () => {
   };
 
   const openCardModal = (listId: string) => {
-    console.log('🔘 EscolarScreen - openCardModal chamado para lista:', listId);
     const selectedList = lists.find((list) => list.id === listId);
     if (selectedList) {
       navigation.navigate('CreateCard', {
@@ -883,7 +876,6 @@ const EscolarScreen = () => {
             <CustomButton
               title="+ Criar nova lista"
               onPress={() => {
-                console.log('🔘 EscolarScreen - Botão criar lista pressionado');
                 setShowListModal(true);
               }}
               buttonStyle={styles.createListButton}
@@ -927,16 +919,10 @@ const EscolarScreen = () => {
           transparent={true}
           onRequestClose={() => setShowListModal(false)}
         >
-          <View
-            style={styles.modalOverlay}
-            onTouchStart={(e) => {
-              console.log('👆 EscolarScreen - Touch no overlay da lista:', e.nativeEvent);
-            }}
-          >
+          <View style={styles.modalOverlay}>
             <View
               style={styles.modalContent}
               onTouchStart={(e) => {
-                console.log('👆 EscolarScreen - Touch no conteúdo da lista:', e.nativeEvent);
                 e.stopPropagation();
               }}
             >
@@ -946,11 +932,8 @@ const EscolarScreen = () => {
                 placeholder="Nome da lista"
                 value={listName}
                 onChangeText={(text) => {
-                  console.log('🖊️ EscolarScreen - Input Lista onChange:', text);
                   setListName(text);
                 }}
-                onFocus={() => console.log('🎯 EscolarScreen - Input Lista onFocus')}
-                onBlur={() => console.log('👋 EscolarScreen - Input Lista onBlur')}
               />
 
               <View style={styles.modalButtons}>

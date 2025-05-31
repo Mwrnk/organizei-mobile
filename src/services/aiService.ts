@@ -28,11 +28,10 @@ class AIService {
 
   async sendMessage(message: string): Promise<ChatResponse> {
     try {
-      console.log('Enviando mensagem para a IA:', message);
-      const response = await api.post<ChatResponse>('/chat', {
-        message,
+      const response = await api.post('/ai/chat', {
+        message: message,
       });
-      console.log('Resposta da API:', response.data);
+
       return response.data;
     } catch (error) {
       console.error('Erro ao enviar mensagem para a IA:', error);
@@ -57,4 +56,4 @@ class AIService {
   }
 }
 
-export default AIService.getInstance(); 
+export default AIService.getInstance();

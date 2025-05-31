@@ -28,8 +28,6 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ source, style, onLoad, onError })
       setLoading(true);
       setError(null);
 
-      console.log('📄 Iniciando download do PDF:', source.uri);
-
       // Obter token de autenticação
       const token = await AsyncStorage.getItem(TOKEN_KEY);
       if (!token) {
@@ -46,19 +44,14 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ source, style, onLoad, onError })
         ...source.headers,
       };
 
-      console.log('📄 Fazendo download para:', fileUri);
-
       // Download do arquivo
       const downloadResult = await FileSystem.downloadAsync(source.uri, fileUri, {
         headers,
       });
 
-      console.log('📄 Download concluído:', downloadResult);
-
       if (downloadResult.status === 200) {
         // Verificar se o arquivo foi baixado corretamente
         const fileInfo = await FileSystem.getInfoAsync(fileUri);
-        console.log('📄 Informações do arquivo:', fileInfo);
 
         if (fileInfo.exists && fileInfo.size && fileInfo.size > 0) {
           // Converter para base64 para usar no WebView
@@ -68,7 +61,6 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ source, style, onLoad, onError })
 
           const dataUri = `data:application/pdf;base64,${base64}`;
           setPdfUri(dataUri);
-          console.log('📄 PDF convertido para base64, tamanho:', base64.length);
 
           // Limpar arquivo temporário
           await FileSystem.deleteAsync(fileUri, { idempotent: true });
@@ -256,45 +248,30 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ source, style, onLoad, onError })
               loadPdf();
             }
             
-            function loadPdf() {
-              const pdfObject = document.getElementById('pdf-object');
-              
-              // Timeout para detectar falha no carregamento
-              loadTimeout = setTimeout(function() {
-                if (!hasLoaded) {
-                  console.log('PDF load timeout');
-                  showError();
-                }
-              }, 15000);
-              
-              // Tentar mostrar o PDF imediatamente
-              setTimeout(function() {
-                if (!hasLoaded) {
-                  console.log('Showing PDF after delay');
-                  showPdf();
-                }
-              }, 2000);
-            }
-            
-            // Iniciar carregamento quando a página estiver pronta
-            document.addEventListener('DOMContentLoaded', function() {
-              console.log('DOM loaded, starting PDF load');
+            setTimeout(() => {
+              if (!hasLoaded) {
+                setError('Tempo limite para carregar PDF excedido');
+                setLoading(false);
+              }
+            }, 30000);
+
+            // Mostrar PDF após um pequeno delay para garantir que está carregado
+            setTimeout(() => {
+              setWebViewLoading(false);
+            }, 2000);
+
+            // Aguardar o DOM carregar
+            window.addEventListener('DOMContentLoaded', function() {
               loadPdf();
             });
-            
-            // Detectar quando o objeto PDF carrega
-            document.getElementById('pdf-object').addEventListener('load', function() {
-              console.log('PDF object loaded');
-              clearTimeout(loadTimeout);
-              showPdf();
-            });
-            
-            // Detectar erro no objeto PDF
-            document.getElementById('pdf-object').addEventListener('error', function() {
-              console.log('PDF object error');
-              clearTimeout(loadTimeout);
-              showError();
-            });
+
+            function loadPdf() {
+              if (typeof pdfjsLib !== 'undefined') {
+                // PDF.js carregado
+              } else {
+                // Erro ao carregar PDF.js
+              }
+            }
           </script>
         </body>
       </html>
@@ -352,24 +329,23 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ source, style, onLoad, onError })
         startInLoadingState={false}
         onMessage={(event) => {
           const message = event.nativeEvent.data;
-          console.log('📄 WebView message:', message);
-
-          if (message === 'pdf_loaded') {
-            console.log('📄 PDF carregado com sucesso no WebView');
-            setWebViewLoading(false);
-          } else if (message === 'pdf_error') {
-            console.error('📄 Erro ao carregar PDF no WebView');
-            setError('Erro ao exibir o PDF');
-            setWebViewLoading(false);
+          try {
+            const data = JSON.parse(message);
+            if (data.type === 'pdfLoaded') {
+              // PDF carregado com sucesso
+              setError(null);
+            } else if (data.type === 'pdfError') {
+              setError('Erro ao carregar PDF no WebView');
+            }
+          } catch (e) {
+            // Mensagem não é JSON válido, ignorar
           }
         }}
         onLoadStart={() => {
-          console.log('📄 WebView load start');
-          setWebViewLoading(true);
+          // WebView começou a carregar
         }}
         onLoadEnd={() => {
-          console.log('📄 WebView load end');
-          // Não definir loading como false aqui, esperar pela mensagem do PDF
+          // WebView terminou de carregar
         }}
         onError={(syntheticEvent) => {
           const { nativeEvent } = syntheticEvent;

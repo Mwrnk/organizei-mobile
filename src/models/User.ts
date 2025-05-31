@@ -14,19 +14,4 @@ export interface User {
   createdAt: string | Date; // Pode ser string ISO ou Date
   updatedAt: string | Date; // Pode ser string ISO ou Date
   __v?: number; // Campo opcional do MongoDB
-} User {
-  id: string; // Equivalente ao _id da API
-  _id: string; // ID original do MongoDB para chamadas da API
-  coduser: string;
-  name: string;
-  email: string;
-  dateOfBirth?: Date;
-  role: string;
-  plan: any | null;
-  orgPoints: number;
-  profileImage: string | null;
-  loginAttempts?: number;
-  lastLoginAttempt?: Date | null;
-  createdAt?: Date;
-  updatedAt?: Date;
 }

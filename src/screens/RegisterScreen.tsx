@@ -13,23 +13,19 @@ import { Ionicons } from '@expo/vector-icons';
 import colors from '@styles/colors';
 
 const RegisterScreen = () => {
-  const navigation = useNavigation<StackNavigationProp<RootTabParamList>>();
-
-  // Estados do formulário
   const [etapa, setEtapa] = useState(1);
-  const [coduser, setCoduser] = useState('');
   const [name, setName] = useState('');
-  const [dateOfBirth, setDateOfBirth] = useState('');
-  const [dateOfBirthFormatted, setDateOfBirthFormatted] = useState(''); // Para exibir DD/MM/YYYY
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [dateOfBirthFormatted, setDateOfBirthFormatted] = useState('');
+  const [coduser, setCoduser] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Debug log
-  React.useEffect(() => {
-    console.log('🔍 RegisterScreen - Tela de registro renderizada - Etapa:', etapa);
-  }, [etapa]);
+  const navigation = useNavigation<StackNavigationProp<RootTabParamList>>();
 
   // Função para formatar a data enquanto o usuário digita (DD/MM/YYYY)
   const formatDateInput = (text: string) => {
@@ -73,7 +69,6 @@ const RegisterScreen = () => {
     if (formatted.length === 10) {
       const isoDate = convertDateToISO(formatted);
       setDateOfBirth(isoDate);
-      console.log('📅 Data formatada:', formatted, '-> ISO:', isoDate);
     } else {
       setDateOfBirth('');
     }
@@ -166,54 +161,55 @@ const RegisterScreen = () => {
     return true;
   };
 
-  const registrar = async () => {
-    console.log('🔍 RegisterScreen - Iniciando registro...');
+  const handleDateConfirm = (date: Date) => {
+    const formatted = date.toLocaleDateString('pt-BR');
+    const isoDate = date.toISOString().split('T')[0];
+    setDateOfBirth(isoDate);
+    setDatePickerVisibility(false);
+    setErrors((prev) => ({ ...prev, dateOfBirth: '' }));
+  };
 
+  const handleRegister = async () => {
     if (!validateEtapa2()) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return;
     }
 
     setLoading(true);
-    setError('');
-
     try {
+      // Preparar payload com validação
       const payload = {
-        coduser: coduser.trim(),
         name: name.trim(),
-        dateOfBirth: dateOfBirth.trim(),
-        email: email.trim().toLowerCase(),
-        password: password.trim(),
+        email: email.toLowerCase().trim(),
+        password: password,
+        dateOfBirth: dateOfBirth,
+        coduser: coduser.trim(),
       };
-
-      console.log('📤 RegisterScreen - Enviando dados:', { ...payload, password: '***' });
 
       const response = await api.post('/signup', payload);
 
-      console.log('✅ RegisterScreen - Registro bem-sucedido:', response.data);
-
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      // Mostra mensagem de sucesso e volta automaticamente para login
       Alert.alert(
-        'Conta criada com sucesso! 🎉',
-        `Olá ${name.split(' ')[0]}! Sua conta foi criada.\n\nVoltando para o login...`,
-        [],
-        { cancelable: false }
+        'Conta criada! 🎉',
+        `Bem-vindo, ${response.data.name}! Sua conta foi criada com sucesso.`,
+        [
+          {
+            text: 'Continuar',
+            onPress: () => {
+              // Voltar para a tela de login automaticamente
+              limparCampos();
+              navigation.navigate('Login');
+            },
+          },
+        ]
       );
-
-      // Volta automaticamente para login após 2 segundos
-      setTimeout(() => {
-        console.log('🔍 RegisterScreen - Voltando para login automaticamente...');
-        limparCampos();
-        navigation.navigate('Login');
-      }, 2000);
     } catch (error: any) {
-      console.error('❌ RegisterScreen - Erro ao registrar:', error);
+      console.error('RegisterScreen - Erro ao registrar:', error);
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
 
-      let errorMessage = 'Erro no registro. Tente novamente.';
+      // Tratamento de erros específicos
+      let errorMessage = 'Erro inesperado. Tente novamente.';
 
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
@@ -225,7 +221,7 @@ const RegisterScreen = () => {
         errorMessage = 'Erro interno do servidor. Tente novamente mais tarde.';
       }
 
-      setError(errorMessage);
+      Alert.alert('Erro no cadastro', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -235,7 +231,7 @@ const RegisterScreen = () => {
     if (etapa === 1) {
       proximaEtapa();
     } else {
-      registrar();
+      handleRegister();
     }
   };
 

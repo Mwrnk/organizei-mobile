@@ -70,13 +70,11 @@ async function getAuthToken(): Promise<string | null> {
     // Primeiro, vamos verificar se existe algum usuário
     const users = realm.objects('User');
     if (users.length === 0) {
-      console.log('Nenhum usuário encontrado no banco local');
       return null;
     }
 
     // Se existir usuário, vamos usar o primeiro como autenticado
     const currentUser = users[0];
-    console.log('Usuário encontrado:', currentUser._id);
     return currentUser._id;
   } catch (error) {
     console.error('Erro ao obter token de autenticação:', error);
@@ -87,14 +85,14 @@ async function getAuthToken(): Promise<string | null> {
 // Função para fazer requisições autenticadas
 async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
   const token = await getAuthToken();
-  
+
   if (!token) {
     throw new Error('Usuário não autenticado');
   }
 
   const headers = {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`,
+    Authorization: `Bearer ${token}`,
     ...options.headers,
   };
 
@@ -114,14 +112,12 @@ async function syncWithServer() {
 
     // 1. Sincronizar Lists
     await syncLists();
-    
+
     // 2. Sincronizar Cards
     await syncCards();
-    
+
     // 3. Sincronizar Users
     await syncUsers();
-    
-    console.log('Sincronização concluída com sucesso');
   } catch (error) {
     console.error('Erro durante a sincronização:', error);
     throw error;
@@ -131,11 +127,11 @@ async function syncWithServer() {
 // Função para sincronizar Lists
 async function syncLists() {
   const realm = await getRealm();
-  
+
   try {
     // Buscar todas as lists não sincronizadas
     const unsyncedLists = realm.objects('List').filtered('isSynced == false');
-    
+
     for (const list of unsyncedLists) {
       try {
         // Se a list foi marcada como deletada, enviar para o servidor
@@ -145,7 +141,7 @@ async function syncLists() {
           // Se é uma nova list ou foi atualizada
           await syncListWithServer(list);
         }
-        
+
         // Marcar como sincronizada
         realm.write(() => {
           list.isSynced = true;
@@ -155,7 +151,7 @@ async function syncLists() {
         // Não marcar como sincronizada em caso de erro
       }
     }
-    
+
     // Buscar lists do servidor que não existem localmente
     await fetchNewListsFromServer();
   } catch (error) {
@@ -167,11 +163,11 @@ async function syncLists() {
 // Função para sincronizar Cards
 async function syncCards() {
   const realm = await getRealm();
-  
+
   try {
     // Buscar todos os cards não sincronizados
     const unsyncedCards = realm.objects('Card').filtered('isSynced == false');
-    
+
     for (const card of unsyncedCards) {
       try {
         // Se o card foi marcado como deletado, enviar para o servidor
@@ -181,7 +177,7 @@ async function syncCards() {
           // Se é um novo card ou foi atualizado
           await syncCardWithServer(card);
         }
-        
+
         // Marcar como sincronizado
         realm.write(() => {
           card.isSynced = true;
@@ -191,7 +187,7 @@ async function syncCards() {
         // Não marcar como sincronizado em caso de erro
       }
     }
-    
+
     // Buscar cards do servidor que não existem localmente
     await fetchNewCardsFromServer();
   } catch (error) {
@@ -203,15 +199,15 @@ async function syncCards() {
 // Função para sincronizar Users
 async function syncUsers() {
   const realm = await getRealm();
-  
+
   try {
     // Buscar todos os users não sincronizados
     const unsyncedUsers = realm.objects('User').filtered('isSynced == false');
-    
+
     for (const user of unsyncedUsers) {
       try {
         await syncUserWithServer(user);
-        
+
         // Marcar como sincronizado
         realm.write(() => {
           user.isSynced = true;
@@ -242,7 +238,7 @@ async function syncListWithServer(list: IRealmList): Promise<IServerResponse> {
         updatedAt: list.updatedAt,
       }),
     });
-    
+
     return await response.json();
   } catch (error) {
     console.error('Erro ao sincronizar list com servidor:', error);
@@ -271,7 +267,7 @@ async function syncCardWithServer(card: IRealmCard): Promise<IServerResponse> {
         content: card.content,
       }),
     });
-    
+
     return await response.json();
   } catch (error) {
     console.error('Erro ao sincronizar card com servidor:', error);
@@ -297,7 +293,7 @@ async function syncUserWithServer(user: IRealmUser): Promise<IServerResponse> {
         updatedAt: user.updatedAt,
       }),
     });
-    
+
     return await response.json();
   } catch (error) {
     console.error('Erro ao sincronizar user com servidor:', error);
@@ -310,7 +306,7 @@ async function deleteListOnServer(listId: string): Promise<IServerResponse> {
     const response = await fetchWithAuth(`${API_URL}/lists/${listId}`, {
       method: 'DELETE',
     });
-    
+
     return await response.json();
   } catch (error) {
     console.error('Erro ao deletar list no servidor:', error);
@@ -323,7 +319,7 @@ async function deleteCardOnServer(cardId: string): Promise<IServerResponse> {
     const response = await fetchWithAuth(`${API_URL}/cards/${cardId}`, {
       method: 'DELETE',
     });
-    
+
     return await response.json();
   } catch (error) {
     console.error('Erro ao deletar card no servidor:', error);
@@ -335,16 +331,20 @@ async function fetchNewListsFromServer() {
   try {
     const response = await fetchWithAuth(`${API_URL}/lists`);
     const data = await response.json();
-    
+
     if (data.success && data.data) {
       const realm = await getRealm();
       realm.write(() => {
         data.data.forEach((listData: any) => {
-          realm.create('List', {
-            ...listData,
-            isSynced: true,
-            isDeleted: false,
-          }, Realm.UpdateMode.Modified);
+          realm.create(
+            'List',
+            {
+              ...listData,
+              isSynced: true,
+              isDeleted: false,
+            },
+            Realm.UpdateMode.Modified
+          );
         });
       });
     }
@@ -358,16 +358,20 @@ async function fetchNewCardsFromServer() {
   try {
     const response = await fetchWithAuth(`${API_URL}/cards`);
     const data = await response.json();
-    
+
     if (data.success && data.data) {
       const realm = await getRealm();
       realm.write(() => {
         data.data.forEach((cardData: any) => {
-          realm.create('Card', {
-            ...cardData,
-            isSynced: true,
-            isDeleted: false,
-          }, Realm.UpdateMode.Modified);
+          realm.create(
+            'Card',
+            {
+              ...cardData,
+              isSynced: true,
+              isDeleted: false,
+            },
+            Realm.UpdateMode.Modified
+          );
         });
       });
     }
@@ -388,5 +392,5 @@ module.exports = {
   deleteListOnServer,
   deleteCardOnServer,
   fetchNewListsFromServer,
-  fetchNewCardsFromServer
-}; 
+  fetchNewCardsFromServer,
+};

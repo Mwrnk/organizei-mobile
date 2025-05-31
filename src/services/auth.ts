@@ -41,15 +41,8 @@ export const USER_KEY = 'user';
 
 // Função para converter a resposta da API para o modelo User
 const mapApiUserToModel = (apiUser: ApiUserResponse): User => {
-  console.log('AuthService - Mapeando usuário da API:', apiUser);
-
   // A API pode retornar tanto 'id' quanto '_id', vamos lidar com ambos
   const userId = apiUser._id || apiUser.id || '';
-  console.log('AuthService - ID detectado:', {
-    _id: apiUser._id,
-    id: apiUser.id,
-    userIdFinal: userId,
-  });
 
   if (!userId) {
     console.error('AuthService - ERRO: Nenhum ID encontrado no usuário da API!');
@@ -78,43 +71,30 @@ export const AuthService = {
   // Login e armazenamento do token
   async login(credentials: LoginCredentials): Promise<{ user: User; token: string }> {
     try {
-      console.log('AuthService - Fazendo login com:', { email: credentials.email });
       const response = await api.post<ApiResponse<AuthResponse>>('/login', credentials);
-
-      console.log('AuthService - Resposta da API recebida:', response.data);
 
       // Extraindo os dados da estrutura de resposta
       const { data } = response.data;
-      console.log('AuthService - Dados do usuário da API:', data.user);
 
       // Primeiro, salva o token para poder fazer chamadas autenticadas
       await AsyncStorage.setItem(TOKEN_KEY, data.token);
-      console.log('AuthService - Token salvo no storage');
 
       // Agora busca os dados completos do usuário usando o ID retornado no login
       const userId = data.user._id || data.user.id;
       if (userId) {
         try {
-          console.log('AuthService - Buscando dados completos do usuário:', userId);
           const userResponse = await api.get<ApiResponse<ApiUserResponse>>(`/users/${userId}`);
-          console.log('AuthService - Dados completos do usuário:', userResponse.data.data);
-
           const completeUser = mapApiUserToModel(userResponse.data.data);
-          console.log('AuthService - Usuário completo mapeado:', completeUser);
 
           // Salva o usuário completo
           const userJsonString = JSON.stringify(completeUser);
           await AsyncStorage.setItem(USER_KEY, userJsonString);
-          console.log('AuthService - Usuário completo salvo no storage');
 
           return {
             user: completeUser,
             token: data.token,
           };
         } catch (userError) {
-          console.log(
-            'AuthService - Erro ao buscar dados completos, usando dados básicos do login'
-          );
           // Se falhar ao buscar dados completos, usa os dados básicos do login
           const basicUser = mapApiUserToModel(data.user);
           const userJsonString = JSON.stringify(basicUser);
@@ -168,62 +148,32 @@ export const AuthService = {
   async getCurrentUser(): Promise<User | null> {
     try {
       const userStr = await AsyncStorage.getItem(USER_KEY);
-      console.log('AuthService - getUserStr from storage:', userStr);
 
       if (!userStr) {
-        console.log('AuthService - Nenhum usuário encontrado no storage');
         return null;
       }
 
       const userData = JSON.parse(userStr);
-      console.log('AuthService - Dados do usuário do storage:', userData);
-      console.log('AuthService - Tipo dos dados:', typeof userData);
-      console.log('AuthService - É array?', Array.isArray(userData));
-      console.log('AuthService - Chaves do objeto:', userData ? Object.keys(userData) : []);
 
       // Validação menos restritiva: verifica apenas se tem dados básicos
       if (!userData) {
-        console.log('AuthService - Dados do usuário são null/undefined');
         return null;
       }
 
-      // Verificação de campos essenciais com logs detalhados
+      // Verificação de campos essenciais
       const hasId = !!(userData._id || userData.id);
       const hasEmail = !!userData.email;
       const hasName = !!userData.name;
 
-      console.log('AuthService - Verificação de campos essenciais:', {
-        hasId,
-        hasEmail,
-        hasName,
-        _id: userData._id,
-        id: userData.id,
-        email: userData.email,
-        name: userData.name,
-      });
-
       if (!hasId || !hasEmail || !hasName) {
-        console.log(
-          'AuthService - Usuário inválido detectado, mas NÃO limpando storage automaticamente'
-        );
-        console.log('AuthService - Para limpar manualmente, use o botão de debug');
         return null;
       }
 
       // Migração: garantir que id esteja presente (compatibilidade)
       if (userData && !userData.id && userData._id) {
         userData.id = userData._id;
-        console.log('AuthService - Adicionando campo id para compatibilidade');
         await this.updateCurrentUser(userData);
       }
-
-      console.log('AuthService - Usuário válido carregado:', {
-        _id: userData._id,
-        id: userData.id,
-        email: userData.email,
-        name: userData.name,
-        hasAllFields: !!(userData._id && userData.email && userData.name),
-      });
 
       return userData;
     } catch (error) {
@@ -251,41 +201,27 @@ export const AuthService = {
     coduser: string;
   }): Promise<{ user: User; token: string }> {
     try {
-      console.log('AuthService - Tentando registrar usuário:', { ...userData, password: '***' });
+      const response = await api.post<ApiResponse<AuthResponse>>('/register', userData);
 
-      const response = await api.post<ApiResponse<{ user: ApiUserResponse; token: string }>>(
-        '/signup',
-        userData
-      );
+      // Extraindo os dados da estrutura de resposta
+      const { data } = response.data;
 
-      if (response.data.status === 'success') {
-        const { user: apiUser, token } = response.data.data;
+      // Salva o token
+      await AsyncStorage.setItem(TOKEN_KEY, data.token);
 
-        // Mapear dados do usuário
-        const user = mapApiUserToModel(apiUser);
+      // Mapeia o usuário
+      const user = mapApiUserToModel(data.user);
 
-        // Salvar token e usuário
-        await AsyncStorage.setItem(TOKEN_KEY, token);
-        await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
+      // Salva o usuário
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
 
-        console.log('AuthService - Registro bem-sucedido:', user);
-
-        return { user, token };
-      } else {
-        throw new Error('Resposta inválida do servidor');
-      }
-    } catch (error: any) {
+      return {
+        user,
+        token: data.token,
+      };
+    } catch (error) {
       console.error('AuthService - Erro no registro:', error);
-
-      if (error.response?.status === 409) {
-        throw new Error('Este email já está cadastrado');
-      } else if (error.response?.status === 400) {
-        throw new Error('Dados inválidos. Verifique os campos preenchidos');
-      } else if (error.response?.data?.message) {
-        throw new Error(error.response.data.message);
-      } else {
-        throw new Error('Erro ao criar conta. Tente novamente');
-      }
+      throw error;
     }
   },
 };
