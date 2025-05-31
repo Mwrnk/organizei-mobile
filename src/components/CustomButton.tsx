@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { ReactNode } from 'react';
 import { 
   TouchableOpacity, 
   Text, 
@@ -7,7 +7,8 @@ import {
   TouchableOpacityProps, 
   StyleProp, 
   ViewStyle, 
-  TextStyle 
+  TextStyle,
+  View 
 } from 'react-native';
 import colors from '@styles/colors';
 import { fontNames } from '@styles/fonts';
@@ -18,6 +19,8 @@ interface CustomButtonProps extends TouchableOpacityProps {
   variant?: 'primary' | 'secondary' | 'outline';
   buttonStyle?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
+  icon?: ReactNode;
+  iconPosition?: 'left' | 'right';
 }
 
 const CustomButton: React.FC<CustomButtonProps> = ({ 
@@ -27,6 +30,8 @@ const CustomButton: React.FC<CustomButtonProps> = ({
   buttonStyle, 
   textStyle,
   disabled,
+  icon,
+  iconPosition = 'left',
   ...rest 
 }) => {
   const getButtonStyle = () => {
@@ -49,6 +54,26 @@ const CustomButton: React.FC<CustomButtonProps> = ({
     }
   };
 
+  const renderContent = () => {
+    if (loading) {
+      return <ActivityIndicator color={variant === 'outline' ? colors.button : '#FFFFFF'} />;
+    }
+
+    const textComponent = <Text style={[getTextStyle(), textStyle]}>{title}</Text>;
+
+    if (!icon) {
+      return textComponent;
+    }
+
+    return (
+      <View style={styles.contentContainer}>
+        {iconPosition === 'left' && <View style={styles.iconContainer}>{icon}</View>}
+        {textComponent}
+        {iconPosition === 'right' && <View style={styles.iconContainer}>{icon}</View>}
+      </View>
+    );
+  };
+
   return (
     <TouchableOpacity 
       style={[
@@ -60,11 +85,7 @@ const CustomButton: React.FC<CustomButtonProps> = ({
       disabled={disabled || loading}
       {...rest}
     >
-      {loading ? (
-        <ActivityIndicator color={variant === 'outline' ? colors.button : '#FFFFFF'} />
-      ) : (
-        <Text style={[getTextStyle(), textStyle]}>{title}</Text>
-      )}
+      {renderContent()}
     </TouchableOpacity>
   );
 };
@@ -101,6 +122,14 @@ const styles = StyleSheet.create({
     color: colors.button,
     fontSize: 16,
     fontFamily: fontNames.bold,
+  },
+  contentContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconContainer: {
+    marginHorizontal: 8,
   },
 });
 

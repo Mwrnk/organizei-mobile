@@ -21,6 +21,7 @@ const Tab = createBottomTabNavigator<RootTabParamList>();
 const ProfileStack = createStackNavigator();
 const EscolarStack = createStackNavigator();
 const GameStack = createStackNavigator();
+const PointStack = createStackNavigator();
 
 function ProfileStackScreen() {
   return (
@@ -53,6 +54,16 @@ function GameStackScreen() {
     </GameStack.Navigator>
   );
 }
+
+function PointStackScreen() {
+  return (
+    <PointStack.Navigator screenOptions={{ headerShown: false }}>
+      <PointStack.Screen name="Points" component={PointsScreen} />
+      <PointStack.Screen name="Game" component={GameStackScreen} />
+    </PointStack.Navigator>
+  );
+}
+
 
 const AppRoutes = () => (
   <Tab.Navigator

@@ -10,7 +10,8 @@ import colors from '../styles/colors';
 import ArrowBack from 'assets/icons/ArrowBack';
 import RaioIcon from 'assets/icons/RaioIcon';
 import CustomButton from '@components/CustomButton';
-
+import ArrowDiag from 'assets/icons/ArrowDiag';
+import GameIcon from 'assets/icons/GamesIcon';
 type PointsScreenNavigationProp = StackNavigationProp<RootTabParamList>;
 
 const PointsScreen = () => {
@@ -19,6 +20,11 @@ const PointsScreen = () => {
 
   const handleExchangePoints = () => {
     navigation.navigate('Plan');
+  };
+
+
+  const handleNavigateToGames = () => {
+    navigation.navigate('GameHome'); //apresenta erro, porem esta funcionando
   };
 
   return (
@@ -63,14 +69,26 @@ const PointsScreen = () => {
           </View>
         </View>
 
-        <CustomButton
-              title="TROCAR MEUS PONTOS"
-              variant="primary"
-              style={styles.button}
-              textStyle={styles.txtButton}
-              onPress={handleExchangePoints}
-        />
+        <View style={styles.buttonContainer}>
+            <CustomButton
+                title="TROCAR MEUS PONTOS"
+                variant="primary"
+                style={styles.btn}
+                textStyle={styles.txtButton}
+                onPress={handleExchangePoints}
+                
+            />
 
+            <CustomButton
+                title="IR PARA OS GAMES"
+                variant="secondary"
+                style={styles.btn}
+                textStyle={styles.txtButton}
+                onPress={handleNavigateToGames}
+                icon={<GameIcon color="#fff" size={16} />}
+                iconPosition="left"
+            />
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -98,11 +116,15 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
 
-  button: {
+  buttonContainer: {
+    flexDirection: 'column',
+    gap: 16,
+  },
+
+  primaryButton: {
     backgroundColor: colors.primary,
     borderRadius: 999,
-    paddingVertical: 12,
-    paddingHorizontal: 32,
+    paddingVertical: 24,
     marginTop: 20,
     alignItems: 'center',
     justifyContent: 'center',
@@ -134,9 +156,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontFamily: fontNames.bold,
+    fontSize: 16,
+    fontFamily: fontNames.regular,
     color: colors.primary,
+    marginLeft: 6,
     marginBottom: 16,
   },
   pointsCard: {
@@ -162,6 +185,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: fontNames.regular,
     color: '#8E8E93',
+  },
+  btn: {
+    backgroundColor: colors.primary,
+    borderRadius: 999,
+    paddingVertical: 24,
+    marginTop: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 
