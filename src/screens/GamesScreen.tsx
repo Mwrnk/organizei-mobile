@@ -37,18 +37,20 @@ const GamesScreen = () => {
 
         {/* Container principal dos cards de jogos */}
         <View style={styles.cardsContainer}>
-          {/* Banner principal com background */}
-          <ImageBackground
-            source={require('../../assets/banners/bannerGames.png')}
-            style={styles.mainCard}
-          >
-            <Text style={styles.mainCardTitle}>O que vai jogar hoje?</Text>
-            {/* Container de pontuação com ícone */}
-            <View style={styles.pointsContainer}>
-              <RaioIcon color="#ffffff" size={16} />
-              <Text style={styles.pointsText}>{user?.orgPoints || 0}pts</Text>
-            </View>
-          </ImageBackground>
+          {/* Banner principal que leva para a tela de pontos */}
+          <TouchableOpacity onPress={() => navigation.navigate('Points')}>
+            <ImageBackground
+              source={require('../../assets/banners/bannerGames.png')}
+              style={styles.mainCard}
+            >
+              <Text style={styles.mainCardTitle}>O que vai jogar hoje?</Text>
+              {/* Container de pontuação com ícone */}
+              <View style={styles.pointsContainer}>
+                <RaioIcon color="#ffffff" size={16} />
+                <Text style={styles.pointsText}>{user?.orgPoints || 0}pts</Text>
+              </View>
+            </ImageBackground>
+          </TouchableOpacity>
 
           {/* Card do jogo Flash Cards */}
           <TouchableOpacity 
@@ -108,12 +110,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 40,
+    marginTop: 20,
   },
 
   headerTitle: {
     fontSize: 16,
-    fontFamily: fontNames.regular,
+    fontFamily: fontNames.bold,
     color: colors.primary,
   },
 

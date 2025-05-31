@@ -14,4 +14,5 @@ export type RootTabParamList = {
   EditProfile: undefined;
   FlashCards: undefined;
   JogoDoMilhao: undefined;
+  Points: undefined;
 };
