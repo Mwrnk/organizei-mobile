@@ -29,6 +29,9 @@ import Input from '@components/Input';
 import CustomButton from '@components/CustomButton';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
+import FilterIcon from 'assets/icons/FilterIcon';
+import NotificationIcon from 'assets/icons/NotificationIcon';
+import AnaliticsIcon from 'assets/icons/AnaliticsIcon';
 
 // Interfaces baseadas na versão web
 interface Lista {
@@ -952,7 +955,7 @@ const EscolarScreen = () => {
   return (
     <SafeAreaProvider>
       <SafeAreaView
-        style={[GlobalStyles.container, { backgroundColor: 'transparent' }]}
+        style={[GlobalStyles.container]}
         pointerEvents="box-none"
       >
         {/* Network Status Indicator */}
@@ -967,7 +970,14 @@ const EscolarScreen = () => {
           <View style={styles.headerTop}>
             <View style={styles.userSection}>
               <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{user?.name?.charAt(0) || 'U'}</Text>
+                {user?.profileImage ? (
+                  <Image 
+                    source={{ uri: user.profileImage }} 
+                    style={styles.avatarImage}
+                  />
+                ) : (
+                  <Text style={styles.avatarText}>{user?.name?.charAt(0) || 'U'}</Text>
+                )}
               </View>
               <Text style={styles.username}>{user?.name || 'username'}</Text>
             </View>
@@ -983,11 +993,11 @@ const EscolarScreen = () => {
                 onPress={() => setShowFilters(true)}
                 style={styles.headerIconButton}
               >
-                <Ionicons name="options-outline" size={24} color="#999" />
+                <FilterIcon size={24} color={colors.primary} />
               </TouchableOpacity>
 
               <TouchableOpacity onPress={() => setShowStats(true)} style={styles.headerIconButton}>
-                <Ionicons name="notifications-outline" size={24} color="#999" />
+                <AnaliticsIcon size={24} color={colors.primary}/>
               </TouchableOpacity>
             </View>
           </View>
@@ -1007,7 +1017,7 @@ const EscolarScreen = () => {
           renderItem={renderList}
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listsContainer}
+          contentContainerStyle={styles.listEmptyContainer}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
@@ -1393,9 +1403,11 @@ const styles = StyleSheet.create({
   header: {
     width: '100%',
     paddingHorizontal: 20,
-    paddingTop: 20,
+    marginTop: 40,
     paddingBottom: 16,
+    flexDirection: 'column',
     alignItems: 'center',
+    gap: 24,
   },
   subtitle: {
     fontSize: 16,
@@ -1415,13 +1427,14 @@ const styles = StyleSheet.create({
     width: '80%',
     marginBottom: 16,
   },
-  listsContainer: {
+  listEmptyContainer: {
     paddingHorizontal: 16,
     paddingBottom: 100, // espaço para o floating button
   },
   listContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 0,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 24,
     padding: 20,
     marginBottom: 20,
   },
@@ -1569,19 +1582,23 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     width: '100%',
-    marginBottom: 16,
   },
   userSection: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   avatar: {
-    width: 40,
-    height: 40,
+    width: 34,
+    height: 34,
     borderRadius: 20,
     backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  avatarImage: {
+    width: 34,
+    height: 34,
+    borderRadius: 20,
   },
   avatarText: {
     fontSize: 18,
@@ -1615,19 +1632,19 @@ const styles = StyleSheet.create({
   headerIconButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: colors.lightGray,
   },
   organizationSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
+    gap: 16,
     width: '100%',
   },
   organizationButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.lightGray,
   },
   organizationText: {
     fontSize: 14,
