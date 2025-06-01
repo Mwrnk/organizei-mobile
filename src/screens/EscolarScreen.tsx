@@ -54,109 +54,6 @@ interface CardData {
   is_published?: boolean;
 }
 
-// Componente de Card memoizado para melhor performance
-const CardItem = React.memo(
-  ({
-    item,
-    index,
-    listId,
-    viewMode,
-    favorites,
-    onCardPress,
-    onDeleteCard,
-    onToggleFavorite,
-  }: {
-    item: CardData;
-    index: number;
-    listId: string;
-    viewMode: 'list' | 'grid';
-    favorites: Set<string>;
-    onCardPress: (item: CardData, listId: string) => void;
-    onDeleteCard: (cardId: string, listId: string) => void;
-    onToggleFavorite: (cardId: string) => void;
-  }) => {
-    const cardAnimation = React.useRef(new Animated.Value(0)).current;
-
-    const animateCard = useCallback(() => {
-      Animated.spring(cardAnimation, {
-        toValue: 1,
-        tension: 100,
-        friction: 8,
-        useNativeDriver: true,
-      }).start();
-    }, [cardAnimation]);
-
-    React.useEffect(() => {
-      const timer = setTimeout(() => animateCard(), index * 50);
-      return () => clearTimeout(timer);
-    }, [animateCard, index]);
-
-    const handlePress = useCallback(() => {
-      onCardPress(item, listId);
-    }, [item, listId, onCardPress]);
-
-    const handleLongPress = useCallback(() => {
-      onDeleteCard(item.id, listId);
-    }, [item.id, listId, onDeleteCard]);
-
-    const handleFavoritePress = useCallback(() => {
-      onToggleFavorite(item.id);
-    }, [item.id, onToggleFavorite]);
-
-    return (
-      <Animated.View
-        style={[
-          styles.cardItem,
-          viewMode === 'grid' && styles.cardItemGrid,
-          {
-            opacity: cardAnimation,
-            transform: [
-              {
-                translateY: cardAnimation.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [20, 0],
-                }),
-              },
-            ],
-          },
-        ]}
-      >
-        <TouchableOpacity
-          onPress={handlePress}
-          onLongPress={handleLongPress}
-          activeOpacity={0.7}
-          style={styles.cardContent}
-        >
-          <TouchableOpacity style={styles.favoriteButton} onPress={handleFavoritePress}>
-            <Ionicons
-              name={favorites.has(item.id) ? 'heart' : 'heart-outline'}
-              size={20}
-              color={favorites.has(item.id) ? '#ff4444' : colors.gray}
-            />
-          </TouchableOpacity>
-
-          <Text style={styles.cardTitle}>{item.title}</Text>
-
-          <View style={styles.cardFooter}>
-            {item.pdfs && item.pdfs.length > 0 && (
-              <View style={styles.cardPdfIndicator}>
-                <Ionicons name="document-text-outline" size={16} color="#666" />
-                <Text style={styles.cardPdfText}>{item.pdfs.length} arquivo(s)</Text>
-              </View>
-            )}
-
-            {item.createdAt && (
-              <Text style={styles.cardDate}>
-                {new Date(item.createdAt).toLocaleDateString('pt-BR')}
-              </Text>
-            )}
-          </View>
-        </TouchableOpacity>
-      </Animated.View>
-    );
-  }
-);
-
 const EscolarScreen = () => {
   const { user, logout } = useAuth();
   const navigation = useNavigation<any>();
@@ -189,7 +86,9 @@ const EscolarScreen = () => {
 
   // Estados para modais
   const [showListModal, setShowListModal] = useState(false);
+  const [showEditListModal, setShowEditListModal] = useState(false);
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
+  const [editingListName, setEditingListName] = useState('');
 
   // Estados para formulários
   const [listName, setListName] = useState('');
@@ -200,6 +99,17 @@ const EscolarScreen = () => {
       fetchListsAndCards();
     }
   }, [userId]);
+
+  // Listener para atualizar quando voltar de outras telas
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      if (userId) {
+        fetchListsAndCards();
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation, userId]);
 
   // Animações iniciais
   useEffect(() => {
@@ -276,8 +186,9 @@ const EscolarScreen = () => {
 
     setLoading(true);
     try {
-      const res = await api.get(`/lists/user/${userId}`);
-      const listas = res.data.data || [];
+      // Buscar listas do usuário
+      const listsRes = await api.get(`/lists/user/${userId}`);
+      const listas = listsRes.data.data || [];
       setLists(listas);
 
       if (listas.length === 0) {
@@ -285,35 +196,51 @@ const EscolarScreen = () => {
         return;
       }
 
+      // Buscar cards para cada lista
       const cardsPorLista: Record<string, CardData[]> = {};
       await Promise.all(
         listas.map(async (list: Lista) => {
-          const cardsRes = await api.get(`/lists/${list.id}/cards`);
-          cardsPorLista[list.id] = cardsRes.data.data.map((card: any) => ({
-            id: card.id,
-            title: card.title,
-            userId: card.userId,
-            createdAt: card.createdAt,
-            pdfs: card.pdfs || [],
-          }));
+          try {
+            const cardsRes = await api.get(`/lists/${list.id}/cards`);
+            cardsPorLista[list.id] = cardsRes.data.data.map((card: any) => ({
+              id: card.id || card._id,
+              title: card.title,
+              userId: card.userId,
+              createdAt: card.createdAt,
+              pdfs: card.pdfs || [],
+              image_url: card.image_url || [],
+              content: card.content || '',
+              priority: card.priority || 'media',
+              is_published: card.is_published || false,
+            }));
+          } catch (cardError) {
+            console.error(`Erro ao buscar cards da lista ${list.id}:`, cardError);
+            cardsPorLista[list.id] = [];
+          }
         })
       );
 
       setCards(cardsPorLista);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao buscar listas ou cards', err);
 
-      // Modo offline com dados simulados para demonstração
-      Alert.alert(
-        'Modo Offline',
-        'Não foi possível conectar ao servidor. Carregando dados de demonstração.',
-        [
-          {
-            text: 'OK',
-            onPress: () => loadDemoData(),
-          },
-        ]
-      );
+      // Verificar se é erro de rede ou servidor
+      if (err.code === 'NETWORK_ERROR' || err.response?.status >= 500) {
+        Alert.alert(
+          'Erro de Conexão',
+          'Não foi possível conectar ao servidor. Deseja carregar dados de demonstração?',
+          [
+            { text: 'Tentar Novamente', onPress: () => fetchListsAndCards() },
+            { text: 'Modo Demo', onPress: () => loadDemoData() },
+          ]
+        );
+      } else {
+        Alert.alert(
+          'Erro',
+          'Ocorreu um erro ao carregar os dados. Carregando dados de demonstração.',
+          [{ text: 'OK', onPress: () => loadDemoData() }]
+        );
+      }
       setOfflineMode(true);
     } finally {
       setLoading(false);
@@ -604,41 +531,66 @@ const EscolarScreen = () => {
 
   // Função para deletar card com swipe
   const handleDeleteCard = (cardId: string, listId: string) => {
+    const cardToDelete = cards[listId]?.find((card) => card.id === cardId);
+
     // Haptic feedback forte para ação destrutiva
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    Alert.alert('Excluir Card', 'Tem certeza que deseja excluir este card?', [
+    Alert.alert('Excluir Card', `Tem certeza que deseja excluir o card "${cardToDelete?.title}"?`, [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Excluir',
         style: 'destructive',
-        onPress: () => {
-          // Haptic feedback de sucesso
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        onPress: async () => {
+          if (offlineMode) {
+            setCards((prev) => {
+              if (!prev[listId]) return prev;
+              return {
+                ...prev,
+                [listId]: prev[listId].filter((card) => card.id !== cardId),
+              };
+            });
 
-          setCards((prev) => {
-            // Verificar se a lista existe antes de tentar filtrar
-            if (!prev[listId]) {
-              console.warn(`Lista ${listId} não encontrada ao tentar deletar card ${cardId}`);
-              return prev;
-            }
+            setFavorites((prev) => {
+              const newFavorites = new Set(prev);
+              newFavorites.delete(cardId);
+              return newFavorites;
+            });
 
-            return {
-              ...prev,
-              [listId]: prev[listId].filter((card) => card.id !== cardId),
-            };
-          });
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            Alert.alert('Sucesso', 'Card excluído com sucesso! (Modo Offline)');
+            return;
+          }
 
-          // Remove dos favoritos se estiver marcado
-          setFavorites((prev) => {
-            const newFavorites = new Set(prev);
-            newFavorites.delete(cardId);
-            return newFavorites;
-          });
+          try {
+            await api.delete(`/cards/${cardId}`);
+
+            setCards((prev) => {
+              if (!prev[listId]) return prev;
+              return {
+                ...prev,
+                [listId]: prev[listId].filter((card) => card.id !== cardId),
+              };
+            });
+
+            setFavorites((prev) => {
+              const newFavorites = new Set(prev);
+              newFavorites.delete(cardId);
+              return newFavorites;
+            });
+
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            Alert.alert('Sucesso', 'Card excluído com sucesso!');
+          } catch (err: any) {
+            console.error('Erro ao excluir card', err);
+            const errorMessage = err.response?.data?.message || 'Não foi possível excluir o card';
+            Alert.alert('Erro', errorMessage);
+          }
         },
       },
     ]);
   };
+
   const handleCreateList = async () => {
     if (!userId || !listName.trim()) {
       Alert.alert('Erro', 'Preencha o nome da lista corretamente.');
@@ -661,57 +613,153 @@ const EscolarScreen = () => {
       return;
     }
 
-    const payload = {
-      name: listName.trim(),
-      userId,
-    };
-
+    setLoading(true);
     try {
+      const payload = {
+        name: listName.trim(),
+        userId,
+      };
+
       const res = await api.post(`/lists`, payload);
 
       const novaLista: Lista = {
         id: res.data.data.id || res.data.data._id,
         name: res.data.data.name,
-        userId: res.data.data.userId,
+        userId: res.data.data.userId || userId,
       };
 
       setLists((prev) => [...prev, novaLista]);
+      setCards((prev) => ({ ...prev, [novaLista.id]: [] }));
       setListName('');
       setShowListModal(false);
+
+      // Haptic feedback de sucesso
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Sucesso', 'Lista criada com sucesso!');
     } catch (err: any) {
       console.error('Erro ao criar lista', err);
-      Alert.alert('Erro', 'Não foi possível criar a lista');
+      const errorMessage = err.response?.data?.message || 'Não foi possível criar a lista';
+      Alert.alert('Erro', errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleCreateCard = async () => {
-    // Esta função foi movida para CreateCardScreen.tsx
-    // Mantida apenas para compatibilidade temporária
+  const handleEditList = async (listId: string, newName: string) => {
+    if (!newName.trim()) {
+      Alert.alert('Erro', 'O nome da lista não pode estar vazio.');
+      return;
+    }
+
+    if (offlineMode) {
+      setLists((prev) =>
+        prev.map((list) => (list.id === listId ? { ...list, name: newName.trim() } : list))
+      );
+      Alert.alert('Sucesso', 'Lista editada com sucesso! (Modo Offline)');
+      return;
+    }
+
+    try {
+      const payload = { name: newName.trim() };
+      await api.put(`/lists/${listId}`, payload);
+
+      setLists((prev) =>
+        prev.map((list) => (list.id === listId ? { ...list, name: newName.trim() } : list))
+      );
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Sucesso', 'Lista editada com sucesso!');
+    } catch (err: any) {
+      console.error('Erro ao editar lista', err);
+      const errorMessage = err.response?.data?.message || 'Não foi possível editar a lista';
+      Alert.alert('Erro', errorMessage);
+    }
   };
 
   const handleDeleteList = async (listId: string) => {
-    Alert.alert('Confirmar Exclusão', 'Tem certeza que deseja excluir esta lista?', [
+    const listToDelete = lists.find((list) => list.id === listId);
+    const cardsInList = cards[listId] || [];
+
+    const confirmMessage =
+      cardsInList.length > 0
+        ? `Tem certeza que deseja excluir a lista "${listToDelete?.name}"? Isso também excluirá ${cardsInList.length} card(s).`
+        : `Tem certeza que deseja excluir a lista "${listToDelete?.name}"?`;
+
+    Alert.alert('Confirmar Exclusão', confirmMessage, [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Excluir',
         style: 'destructive',
         onPress: async () => {
-          try {
-            await api.delete(`/lists/${listId}`);
+          if (offlineMode) {
             setLists((prev) => prev.filter((list) => list.id !== listId));
             setCards((prev) => {
               const updated = { ...prev };
               delete updated[listId];
               return updated;
             });
-          } catch (err) {
+            Alert.alert('Sucesso', 'Lista excluída com sucesso! (Modo Offline)');
+            return;
+          }
+
+          try {
+            await api.delete(`/lists/${listId}`);
+
+            setLists((prev) => prev.filter((list) => list.id !== listId));
+            setCards((prev) => {
+              const updated = { ...prev };
+              delete updated[listId];
+              return updated;
+            });
+
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            Alert.alert('Sucesso', 'Lista excluída com sucesso!');
+          } catch (err: any) {
             console.error('Erro ao excluir lista', err);
-            Alert.alert('Erro', 'Não foi possível excluir a lista');
+            const errorMessage = err.response?.data?.message || 'Não foi possível excluir a lista';
+            Alert.alert('Erro', errorMessage);
           }
         },
       },
     ]);
+  };
+
+  // Função para editar card
+  const handleEditCard = async (cardId: string, listId: string, updatedData: Partial<CardData>) => {
+    if (offlineMode) {
+      setCards((prev) => {
+        if (!prev[listId]) return prev;
+        return {
+          ...prev,
+          [listId]: prev[listId].map((card) =>
+            card.id === cardId ? { ...card, ...updatedData } : card
+          ),
+        };
+      });
+      Alert.alert('Sucesso', 'Card editado com sucesso! (Modo Offline)');
+      return;
+    }
+
+    try {
+      const res = await api.patch(`/cards/${cardId}`, updatedData);
+
+      setCards((prev) => {
+        if (!prev[listId]) return prev;
+        return {
+          ...prev,
+          [listId]: prev[listId].map((card) =>
+            card.id === cardId ? { ...card, ...res.data.data } : card
+          ),
+        };
+      });
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Sucesso', 'Card editado com sucesso!');
+    } catch (err: any) {
+      console.error('Erro ao editar card', err);
+      const errorMessage = err.response?.data?.message || 'Não foi possível editar o card';
+      Alert.alert('Erro', errorMessage);
+    }
   };
 
   const handleCardPress = async (card: CardData, listId: string) => {
@@ -739,56 +787,166 @@ const EscolarScreen = () => {
     const filteredCards = getFilteredCards(item.id);
 
     return (
-      <View style={[styles.listContainer, viewMode === 'grid' && styles.listContainerGrid]}>
+      <View style={styles.listContainer}>
         <View style={styles.listHeader}>
-          <Text style={styles.listTitle}>{item.name}</Text>
+          <View style={styles.listTitleContainer}>
+            <Text style={styles.listTitle}>{item.name}</Text>
+            <View style={[styles.listIndicator, { backgroundColor: getListColor(item.id) }]} />
+          </View>
           <View style={styles.listHeaderActions}>
-            <Text style={styles.cardCount}>
-              {filteredCards.length} card{filteredCards.length !== 1 ? 's' : ''}
-            </Text>
             <TouchableOpacity
-              onPress={() => handleDeleteList(item.id)}
-              style={styles.deleteListButton}
+              style={styles.listMoreButton}
+              onPress={() => {
+                setSelectedListId(item.id);
+                setEditingListName(item.name);
+                setShowEditListModal(true);
+              }}
             >
-              <Ionicons name="trash-outline" size={20} color="#ff4444" />
+              <Ionicons name="pencil" size={16} color="#999" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.listMoreButton}
+              onPress={() => handleDeleteList(item.id)}
+            >
+              <Ionicons name="trash-outline" size={16} color="#ff4444" />
             </TouchableOpacity>
           </View>
         </View>
 
-        <FlatList
-          data={filteredCards}
-          renderItem={({ item: cardItem, index }) => (
-            <CardItem
-              item={cardItem}
-              index={index}
-              listId={item.id}
-              viewMode={viewMode}
-              favorites={favorites}
-              onCardPress={handleCardPress}
-              onDeleteCard={handleDeleteCard}
-              onToggleFavorite={toggleFavorite}
-            />
-          )}
-          keyExtractor={(card) => card.id}
-          style={styles.cardsList}
-          numColumns={viewMode === 'grid' ? 2 : 1}
-          key={viewMode} // Force re-render when view mode changes
-          columnWrapperStyle={viewMode === 'grid' ? styles.gridRow : undefined}
-          ListEmptyComponent={
-            <View style={styles.emptyCardsContainer}>
-              <Text style={styles.emptyCardsText}>
-                {searchText ? 'Nenhum card encontrado' : 'Nenhum card ainda'}
-              </Text>
-            </View>
-          }
-        />
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.cardsScrollView}
+          contentContainerStyle={styles.cardsScrollContent}
+        >
+          {filteredCards.map((cardItem, index) => (
+            <View key={cardItem.id} style={styles.cardContainer}>
+              <TouchableOpacity
+                onPress={() => handleCardPress(cardItem, item.id)}
+                onLongPress={() => handleDeleteCard(cardItem.id, item.id)}
+                activeOpacity={0.7}
+                style={styles.cardContent}
+              >
+                <TouchableOpacity
+                  style={styles.favoriteButton}
+                  onPress={() => toggleFavorite(cardItem.id)}
+                >
+                  <View style={styles.favoriteIcon}>
+                    <Ionicons
+                      name={favorites.has(cardItem.id) ? 'heart' : 'heart-outline'}
+                      size={14}
+                      color={favorites.has(cardItem.id) ? '#ff4444' : '#999'}
+                    />
+                  </View>
+                </TouchableOpacity>
 
-        <TouchableOpacity style={styles.addCardButton} onPress={() => openCardModal(item.id)}>
-          <Ionicons name="add" size={20} color="#007AFF" />
-          <Text style={styles.addCardText}>Adicionar Card</Text>
-        </TouchableOpacity>
+                <Text style={styles.cardTitle}>{cardItem.title}</Text>
+
+                <View style={styles.cardProgress}>
+                  <View
+                    style={[styles.progressBar, { backgroundColor: getProgressColor(index) }]}
+                  />
+                  <Text style={styles.progressText}>
+                    {cardItem.createdAt
+                      ? new Date(cardItem.createdAt).toLocaleDateString('pt-BR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                        })
+                      : '11/01'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          ))}
+
+          <TouchableOpacity style={styles.addCardContainer} onPress={() => openCardModal(item.id)}>
+            <View style={styles.addCardIcon}>
+              <Ionicons name="add" size={24} color="#ccc" />
+            </View>
+          </TouchableOpacity>
+        </ScrollView>
       </View>
     );
+  };
+
+  // Helper function to get list colors
+  const getListColor = (listId: string) => {
+    const colors = ['#4CAF50', '#FF9500', '#9C27B0', '#999'];
+    const index = lists.findIndex((list) => list.id === listId);
+    return colors[index % colors.length];
+  };
+
+  // Helper function to get progress colors
+  const getProgressColor = (index: number) => {
+    const colors = ['#ff4444', '#4CAF50', '#FF9500', '#2196F3', '#9C27B0'];
+    return colors[index % colors.length];
+  };
+
+  // Função para criar card diretamente (alternativa ao modal)
+  const handleCreateCard = async (
+    listId: string,
+    cardData: { title: string; content?: string }
+  ) => {
+    if (!cardData.title.trim()) {
+      Alert.alert('Erro', 'O título do card não pode estar vazio.');
+      return;
+    }
+
+    if (offlineMode) {
+      const newCard: CardData = {
+        id: `demo-card-${Date.now()}`,
+        title: cardData.title.trim(),
+        userId: userId || 'demo',
+        createdAt: new Date().toISOString(),
+        content: cardData.content || '',
+        pdfs: [],
+        image_url: [],
+        priority: 'media',
+        is_published: false,
+      };
+
+      setCards((prev) => ({
+        ...prev,
+        [listId]: [...(prev[listId] || []), newCard],
+      }));
+
+      Alert.alert('Sucesso', 'Card criado com sucesso! (Modo Offline)');
+      return;
+    }
+
+    try {
+      const payload = {
+        title: cardData.title.trim(),
+        listId,
+        content: cardData.content || '',
+      };
+
+      const res = await api.post('/cards', payload);
+
+      const newCard: CardData = {
+        id: res.data.data.id || res.data.data._id,
+        title: res.data.data.title,
+        userId: res.data.data.userId,
+        createdAt: res.data.data.createdAt || new Date().toISOString(),
+        content: res.data.data.content || '',
+        pdfs: res.data.data.pdfs || [],
+        image_url: res.data.data.image_url || [],
+        priority: res.data.data.priority || 'media',
+        is_published: res.data.data.is_published || false,
+      };
+
+      setCards((prev) => ({
+        ...prev,
+        [listId]: [...(prev[listId] || []), newCard],
+      }));
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Sucesso', 'Card criado com sucesso!');
+    } catch (err: any) {
+      console.error('Erro ao criar card', err);
+      const errorMessage = err.response?.data?.message || 'Não foi possível criar o card';
+      Alert.alert('Erro', errorMessage);
+    }
   };
 
   return (
@@ -807,9 +965,11 @@ const EscolarScreen = () => {
 
         <View style={styles.header}>
           <View style={styles.headerTop}>
-            <View style={styles.titleContainer}>
-              <Text style={styles.subtitle}>#escolar</Text>
-              <Text style={styles.title}>O que vamos estudar hoje?</Text>
+            <View style={styles.userSection}>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{user?.name?.charAt(0) || 'U'}</Text>
+              </View>
+              <Text style={styles.username}>{user?.name || 'username'}</Text>
             </View>
 
             <View style={styles.headerActions}>
@@ -821,70 +981,24 @@ const EscolarScreen = () => {
 
               <TouchableOpacity
                 onPress={() => setShowFilters(true)}
-                style={[
-                  styles.filterButton,
-                  activeFilters.onlyFavorites || activeFilters.onlyWithPdfs
-                    ? styles.filterButtonActive
-                    : null,
-                ]}
+                style={styles.headerIconButton}
               >
-                <Ionicons
-                  name="filter"
-                  size={24}
-                  color={
-                    activeFilters.onlyFavorites || activeFilters.onlyWithPdfs
-                      ? '#fff'
-                      : colors.button
-                  }
-                />
+                <Ionicons name="options-outline" size={24} color="#999" />
               </TouchableOpacity>
 
-              <TouchableOpacity onPress={() => setShowStats(true)} style={styles.statsButton}>
-                <Ionicons name="stats-chart" size={24} color={colors.button} />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
-                style={styles.viewModeButton}
-              >
-                <Ionicons
-                  name={viewMode === 'list' ? 'grid' : 'list'}
-                  size={24}
-                  color={colors.button}
-                />
+              <TouchableOpacity onPress={() => setShowStats(true)} style={styles.headerIconButton}>
+                <Ionicons name="notifications-outline" size={24} color="#999" />
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* Campo de busca */}
-          <View style={styles.searchContainer}>
-            <Ionicons name="search" size={20} color={colors.gray} style={styles.searchIcon} />
-            <TextInput
-              placeholder="Buscar listas ou cards..."
-              value={searchText}
-              onChangeText={setSearchText}
-              style={styles.searchInputText}
-            />
-            {searchText.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchText('')} style={styles.clearButton}>
-                <Ionicons name="close-circle" size={20} color={colors.gray} />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          <View style={styles.buttonsRow}>
-            <CustomButton
-              title="+ Criar nova lista"
-              onPress={() => {
-                setShowListModal(true);
-              }}
-              buttonStyle={styles.createListButton}
-            />
-            {!offlineMode && (
-              <TouchableOpacity onPress={handleLoadDemo} style={styles.demoButton}>
-                <Text style={styles.demoButtonText}>Demo</Text>
-              </TouchableOpacity>
-            )}
+          <View style={styles.organizationSection}>
+            <TouchableOpacity style={styles.organizationButton}>
+              <Text style={styles.organizationText}>Sua organização</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.comeceiButton}>
+              <Text style={styles.comeceiText}>Comecei</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -892,8 +1006,7 @@ const EscolarScreen = () => {
           data={filteredLists}
           renderItem={renderList}
           keyExtractor={(item) => item.id}
-          horizontal
-          showsHorizontalScrollIndicator={false}
+          showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listsContainer}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
@@ -911,6 +1024,15 @@ const EscolarScreen = () => {
             </View>
           }
         />
+
+        {/* Floating Action Button */}
+        <TouchableOpacity
+          style={styles.floatingActionButton}
+          onPress={() => setShowListModal(true)}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="add" size={28} color="#fff" />
+        </TouchableOpacity>
 
         {/* Modal para criar lista */}
         <Modal
@@ -1199,6 +1321,58 @@ const EscolarScreen = () => {
           </View>
         </Modal>
 
+        {/* Modal para editar lista */}
+        <Modal
+          visible={showEditListModal}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setShowEditListModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View
+              style={styles.modalContent}
+              onTouchStart={(e) => {
+                e.stopPropagation();
+              }}
+            >
+              <Text style={styles.modalTitle}>Editar Lista</Text>
+
+              <Input
+                placeholder="Nome da lista"
+                value={editingListName}
+                onChangeText={(text) => {
+                  setEditingListName(text);
+                }}
+              />
+
+              <View style={styles.modalButtons}>
+                <CustomButton
+                  title="Cancelar"
+                  onPress={() => {
+                    setShowEditListModal(false);
+                    setEditingListName('');
+                    setSelectedListId(null);
+                  }}
+                  variant="outline"
+                  buttonStyle={styles.modalButton}
+                />
+                <CustomButton
+                  title="Salvar"
+                  onPress={async () => {
+                    if (selectedListId) {
+                      await handleEditList(selectedListId, editingListName);
+                      setShowEditListModal(false);
+                      setEditingListName('');
+                      setSelectedListId(null);
+                    }
+                  }}
+                  buttonStyle={styles.modalButton}
+                />
+              </View>
+            </View>
+          </View>
+        </Modal>
+
         {/* Debug: adicionar logs para verificar interações */}
         {/*
         <View style={{ padding: 16 }}>
@@ -1243,49 +1417,136 @@ const styles = StyleSheet.create({
   },
   listsContainer: {
     paddingHorizontal: 16,
+    paddingBottom: 100, // espaço para o floating button
   },
   listContainer: {
-    width: 280,
-    backgroundColor: '#f8f8f8',
-    borderRadius: 12,
-    padding: 16,
-    marginRight: 16,
-    minHeight: 300,
+    backgroundColor: '#fff',
+    borderRadius: 0,
+    padding: 20,
+    marginBottom: 20,
   },
   listHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
+  },
+  listTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   listTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: colors.primary,
     fontFamily: fontNames.bold,
-    flex: 1,
+  },
+  listSubtitle: {
+    fontSize: 14,
+    color: '#999',
+    fontFamily: fontNames.regular,
+  },
+  listIndicator: {
+    width: 60,
+    height: 4,
+    borderRadius: 2,
+    marginLeft: 8,
   },
   deleteListButton: {
     padding: 4,
   },
-  cardsList: {
-    flex: 1,
-    marginBottom: 12,
+  cardsScrollView: {
+    marginBottom: 0,
   },
-  cardItem: {
+  cardsScrollContent: {
+    paddingHorizontal: 0,
+    paddingRight: 20,
+  },
+  cardContainer: {
+    width: 180,
     backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderRadius: 12,
+    padding: 16,
+    marginRight: 16,
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cardContent: {
+    flex: 1,
+  },
+  favoriteButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 1,
+  },
+  favoriteIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#f8f8f8',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
     color: colors.primary,
     fontFamily: fontNames.semibold,
-    marginBottom: 4,
+    marginBottom: 12,
+    marginTop: 8,
+    paddingRight: 30,
+  },
+  cardProgress: {
+    marginTop: 20,
+  },
+  progressBar: {
+    height: 6,
+    borderRadius: 3,
+    marginBottom: 8,
+  },
+  progressText: {
+    fontSize: 12,
+    color: '#999',
+    fontFamily: fontNames.regular,
+  },
+  addCardContainer: {
+    width: 180,
+    height: 120,
+    backgroundColor: '#fafafa',
+    borderRadius: 12,
+    borderStyle: 'dashed',
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  addCardIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  listMoreButton: {
+    padding: 4,
+  },
+  listHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
   },
   cardPdfIndicator: {
     flexDirection: 'row',
@@ -1298,21 +1559,91 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     fontFamily: fontNames.regular,
   },
-  addCardButton: {
+  cardDate: {
+    fontSize: 12,
+    color: '#999',
+    fontFamily: fontNames.regular,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 16,
+  },
+  userSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-    padding: 12,
-    borderStyle: 'dashed',
-    borderWidth: 1,
-    borderColor: '#007AFF',
   },
-  addCardText: {
-    marginLeft: 8,
-    color: '#007AFF',
-    fontWeight: '500',
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.primary,
+    fontFamily: fontNames.bold,
+  },
+  username: {
+    fontSize: 16,
+    color: colors.primary,
+    fontFamily: fontNames.regular,
+    marginLeft: 12,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  offlineBadge: {
+    backgroundColor: colors.warning,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  offlineText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+    fontFamily: fontNames.bold,
+  },
+  headerIconButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: colors.lightGray,
+  },
+  organizationSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  organizationButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
+  },
+  organizationText: {
+    fontSize: 14,
+    color: '#666',
+    fontFamily: fontNames.regular,
+  },
+  comeceiButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
+  },
+  comeceiText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
     fontFamily: fontNames.semibold,
   },
   emptyContainer: {
@@ -1330,15 +1661,6 @@ const styles = StyleSheet.create({
   },
   emptyButton: {
     width: 200,
-  },
-  emptyCardsContainer: {
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  emptyCardsText: {
-    fontSize: 14,
-    color: '#999',
-    fontFamily: fontNames.regular,
   },
   modalOverlay: {
     flex: 1,
@@ -1678,271 +2000,6 @@ const styles = StyleSheet.create({
   createButton: {
     flex: 1,
   },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    width: '100%',
-    marginBottom: 16,
-  },
-  titleContainer: {
-    flex: 1,
-  },
-  offlineBadge: {
-    backgroundColor: colors.warning,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  offlineText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
-    fontFamily: fontNames.bold,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    borderWidth: 0,
-    backgroundColor: 'transparent',
-  },
-  searchInputText: {
-    fontSize: 16,
-    fontFamily: fontNames.regular,
-  },
-  clearButton: {
-    padding: 4,
-  },
-  buttonsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  demoButton: {
-    backgroundColor: colors.lightGray,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.button,
-  },
-  demoButtonText: {
-    color: colors.button,
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: fontNames.semibold,
-  },
-  favoriteButton: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    padding: 4,
-  },
-  cardContent: {
-    flex: 1,
-    paddingRight: 32, // espaço para o botão de favorito
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  cardDate: {
-    fontSize: 12,
-    color: '#999',
-    fontFamily: fontNames.regular,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  filterButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: colors.lightGray,
-  },
-  filterButtonActive: {
-    backgroundColor: colors.button,
-  },
-  statsButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: colors.lightGray,
-  },
-  viewModeButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: colors.lightGray,
-  },
-  statsContent: {
-    flex: 1,
-    padding: 16,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  statCard: {
-    width: '48%',
-    backgroundColor: colors.background,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.primary,
-    fontFamily: fontNames.bold,
-    marginTop: 8,
-  },
-  statLabel: {
-    fontSize: 14,
-    color: '#666',
-    fontFamily: fontNames.regular,
-    marginTop: 4,
-  },
-  progressSection: {
-    marginTop: 16,
-  },
-  progressItem: {
-    marginBottom: 16,
-  },
-  progressText: {
-    fontSize: 16,
-    fontFamily: fontNames.regular,
-    color: colors.primary,
-    marginBottom: 8,
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 4,
-    overflow: 'hidden',
-    marginBottom: 4,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: colors.button,
-    borderRadius: 4,
-  },
-  progressValue: {
-    fontSize: 14,
-    color: '#666',
-    fontFamily: fontNames.regular,
-    textAlign: 'right',
-  },
-  demoNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.lightGray,
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 16,
-  },
-  demoNoticeText: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: colors.button,
-    fontFamily: fontNames.regular,
-  },
-  filtersContent: {
-    flex: 1,
-    padding: 16,
-  },
-  filterSection: {
-    marginBottom: 24,
-  },
-  filterSectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.primary,
-    fontFamily: fontNames.bold,
-    marginBottom: 12,
-  },
-  filterOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    backgroundColor: '#fff',
-    marginBottom: 8,
-  },
-  filterOptionActive: {
-    backgroundColor: colors.button,
-    borderColor: colors.button,
-  },
-  filterOptionText: {
-    marginLeft: 12,
-    fontSize: 16,
-    color: colors.primary,
-    fontFamily: fontNames.regular,
-    flex: 1,
-  },
-  filterOptionTextActive: {
-    color: '#fff',
-  },
-  clearFiltersButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: colors.lightGray,
-    borderWidth: 1,
-    borderColor: colors.button,
-    marginTop: 16,
-  },
-  clearFiltersText: {
-    marginLeft: 8,
-    fontSize: 16,
-    color: colors.button,
-    fontFamily: fontNames.semibold,
-  },
-  listContainerGrid: {
-    width: '100%',
-    marginRight: 0,
-  },
-  listHeaderActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  cardCount: {
-    fontSize: 12,
-    color: '#999',
-    fontFamily: fontNames.regular,
-  },
-  gridRow: {
-    justifyContent: 'space-between',
-    paddingHorizontal: 4,
-  },
-  cardItemGrid: {
-    width: '48%',
-    marginBottom: 8,
-  },
   tutorialOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
@@ -2061,6 +2118,162 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#856404',
     fontFamily: fontNames.regular,
+  },
+  floatingActionButton: {
+    position: 'absolute',
+    bottom: 100,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 12,
+    zIndex: 999,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  // Stats Modal Styles
+  statsContent: {
+    flex: 1,
+    padding: 16,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  statCard: {
+    width: '48%',
+    backgroundColor: colors.background,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: colors.primary,
+    fontFamily: fontNames.bold,
+    marginTop: 8,
+  },
+  statLabel: {
+    fontSize: 14,
+    color: '#666',
+    fontFamily: fontNames.regular,
+    marginTop: 4,
+  },
+  progressSection: {
+    marginTop: 16,
+  },
+  progressItem: {
+    marginBottom: 16,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: colors.button,
+    borderRadius: 4,
+  },
+  progressValue: {
+    fontSize: 14,
+    color: '#666',
+    fontFamily: fontNames.regular,
+    textAlign: 'right',
+  },
+  demoNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.lightGray,
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 16,
+  },
+  demoNoticeText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: colors.button,
+    fontFamily: fontNames.regular,
+  },
+  // Filters Modal Styles
+  filtersContent: {
+    flex: 1,
+    padding: 16,
+  },
+  filterSection: {
+    marginBottom: 24,
+  },
+  filterSectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.primary,
+    fontFamily: fontNames.bold,
+    marginBottom: 12,
+  },
+  filterOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    backgroundColor: '#fff',
+    marginBottom: 8,
+  },
+  filterOptionActive: {
+    backgroundColor: colors.button,
+    borderColor: colors.button,
+  },
+  filterOptionText: {
+    marginLeft: 12,
+    fontSize: 16,
+    color: colors.primary,
+    fontFamily: fontNames.regular,
+    flex: 1,
+  },
+  filterOptionTextActive: {
+    color: '#fff',
+  },
+  clearFiltersButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: colors.lightGray,
+    borderWidth: 1,
+    borderColor: colors.button,
+    marginTop: 16,
+  },
+  clearFiltersText: {
+    marginLeft: 8,
+    fontSize: 16,
+    color: colors.button,
+    fontFamily: fontNames.semibold,
+  },
+  // Grid view styles (kept for compatibility)
+  listContainerGrid: {
+    width: '100%',
+    marginRight: 0,
+  },
+  cardCount: {
+    fontSize: 12,
+    color: '#999',
+    fontFamily: fontNames.regular,
+  },
+  gridRow: {
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+  },
+  cardItemGrid: {
+    width: '48%',
+    marginBottom: 8,
   },
 });
 

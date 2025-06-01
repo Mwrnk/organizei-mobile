@@ -1,7 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
-import { RootTabParamList } from './types';
+import { RootTabParamList, EscolarStackParamList } from './types';
 import CustomTabBar from '@components/CustomTabBar';
 
 import GamesScreen from '@screens/GamesScreen';
@@ -19,9 +19,8 @@ import PointsScreen from '@screens/PointsScreen';
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
 const ProfileStack = createStackNavigator();
-const EscolarStack = createStackNavigator();
+const EscolarStack = createStackNavigator<EscolarStackParamList>();
 const GameStack = createStackNavigator();
-
 
 function ProfileStackScreen() {
   return (
@@ -55,16 +54,13 @@ function GameStackScreen() {
   );
 }
 
-
-
-
 const AppRoutes = () => (
   <Tab.Navigator
     initialRouteName="Escolar"
     screenOptions={{ headerShown: false }}
     tabBar={(props) => <CustomTabBar {...props} />}
   >
-    <Tab.Screen name="Escolar" component={EscolarScreen} />
+    <Tab.Screen name="Escolar" component={EscolarStackScreen} />
     <Tab.Screen name="Game" component={GameStackScreen} />
     <Tab.Screen name="Comunidade" component={CommunityScreen} />
     <Tab.Screen name="IA" component={AIScreen} />

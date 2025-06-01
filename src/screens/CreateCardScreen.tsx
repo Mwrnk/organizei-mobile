@@ -368,8 +368,13 @@ const CreateCardScreen = () => {
       <KeyboardAvoidingView
         style={styles.content}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
           {/* Seção do título */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Nome do Card</Text>
@@ -750,99 +755,101 @@ const CreateCardScreen = () => {
         </ScrollView>
 
         {/* Botões de ação atualizados */}
-        <View style={styles.actionButtons}>
-          <View style={styles.buttonsRow}>
-            <TouchableOpacity
-              style={[
-                styles.actionButton,
-                styles.clearButton,
-                !hasFormData() && styles.buttonDisabled,
-              ]}
-              onPress={() => {
-                if (hasFormData()) {
-                  Alert.alert(
-                    'Limpar Formulário',
-                    'Tem certeza que deseja limpar todos os dados do formulário?',
-                    [
-                      { text: 'Cancelar', style: 'cancel' },
-                      {
-                        text: 'Limpar',
-                        style: 'destructive',
-                        onPress: () => {
-                          clearForm();
-                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                        },
-                      },
-                    ]
-                  );
-                } else {
-                  Alert.alert('Info', 'O formulário já está vazio.');
-                }
-              }}
-              disabled={!hasFormData()}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name="trash-outline"
-                size={18}
-                color={!hasFormData() ? '#999' : '#FF6B6B'}
-                style={styles.buttonIcon}
-              />
-              <Text
+        <View style={styles.actionButtonsContainer}>
+          <View style={styles.actionButtons}>
+            <View style={styles.buttonsRow}>
+              <TouchableOpacity
                 style={[
-                  styles.buttonText,
-                  { color: !hasFormData() ? '#999' : '#FF6B6B' },
-                  !hasFormData() && styles.buttonTextDisabled,
+                  styles.actionButton,
+                  styles.clearButton,
+                  !hasFormData() && styles.buttonDisabled,
                 ]}
+                onPress={() => {
+                  if (hasFormData()) {
+                    Alert.alert(
+                      'Limpar Formulário',
+                      'Tem certeza que deseja limpar todos os dados do formulário?',
+                      [
+                        { text: 'Cancelar', style: 'cancel' },
+                        {
+                          text: 'Limpar',
+                          style: 'destructive',
+                          onPress: () => {
+                            clearForm();
+                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                          },
+                        },
+                      ]
+                    );
+                  } else {
+                    Alert.alert('Info', 'O formulário já está vazio.');
+                  }
+                }}
+                disabled={!hasFormData()}
+                activeOpacity={0.7}
               >
-                Limpar
-              </Text>
-            </TouchableOpacity>
+                <Ionicons
+                  name="trash-outline"
+                  size={18}
+                  color={!hasFormData() ? '#999' : '#FF6B6B'}
+                  style={styles.buttonIcon}
+                />
+                <Text
+                  style={[
+                    styles.buttonText,
+                    { color: !hasFormData() ? '#999' : '#FF6B6B' },
+                    !hasFormData() && styles.buttonTextDisabled,
+                  ]}
+                >
+                  Limpar
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.actionButton,
+                  styles.draftButton,
+                  (!cardTitle.trim() || uploadingFiles) && styles.buttonDisabled,
+                ]}
+                onPress={handleSaveAsDraft}
+                disabled={!cardTitle.trim() || uploadingFiles}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name="document-outline"
+                  size={18}
+                  color={!cardTitle.trim() || uploadingFiles ? '#999' : colors.button}
+                  style={styles.buttonIcon}
+                />
+                <Text
+                  style={[
+                    styles.buttonText,
+                    { color: colors.button },
+                    (!cardTitle.trim() || uploadingFiles) && styles.buttonTextDisabled,
+                  ]}
+                >
+                  Rascunho
+                </Text>
+              </TouchableOpacity>
+            </View>
 
             <TouchableOpacity
-              style={[
-                styles.actionButton,
-                styles.draftButton,
-                (!cardTitle.trim() || uploadingFiles) && styles.buttonDisabled,
-              ]}
-              onPress={handleSaveAsDraft}
+              style={[styles.actionButton, styles.createButton, styles.primaryButton]}
+              onPress={handleCreateCard}
               disabled={!cardTitle.trim() || uploadingFiles}
-              activeOpacity={0.7}
+              activeOpacity={0.8}
             >
               <Ionicons
-                name="document-outline"
-                size={18}
-                color={!cardTitle.trim() || uploadingFiles ? '#999' : colors.button}
+                name={uploadingFiles ? 'reload-outline' : 'add-circle-outline'}
+                size={20}
+                color="#fff"
                 style={styles.buttonIcon}
               />
-              <Text
-                style={[
-                  styles.buttonText,
-                  { color: colors.button },
-                  (!cardTitle.trim() || uploadingFiles) && styles.buttonTextDisabled,
-                ]}
-              >
-                Rascunho
+              <Text style={[styles.buttonText, { color: '#fff' }]}>
+                {uploadingFiles ? 'Criando...' : 'Criar Card'}
               </Text>
             </TouchableOpacity>
           </View>
-
-          <TouchableOpacity
-            style={[styles.actionButton, styles.createButton, styles.primaryButton]}
-            onPress={handleCreateCard}
-            disabled={!cardTitle.trim() || uploadingFiles}
-            activeOpacity={0.8}
-          >
-            <Ionicons
-              name={uploadingFiles ? 'reload-outline' : 'add-circle-outline'}
-              size={20}
-              color="#fff"
-              style={styles.buttonIcon}
-            />
-            <Text style={[styles.buttonText, { color: '#fff' }]}>
-              {uploadingFiles ? 'Criando...' : 'Criar Card'}
-            </Text>
-          </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -891,6 +898,9 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
     paddingHorizontal: 20,
+  },
+  scrollContent: {
+    paddingBottom: 140,
   },
   section: {
     marginVertical: 20,
@@ -1069,12 +1079,17 @@ const styles = StyleSheet.create({
     color: '#666',
     fontFamily: fontNames.regular,
   },
-  actionButtons: {
+  actionButtonsContainer: {
     paddingHorizontal: 20,
     paddingVertical: 20,
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
+    alignItems: 'center',
+    minHeight: 140,
+  },
+  actionButtons: {
+    width: '100%',
     alignItems: 'center',
   },
   buttonsRow: {
@@ -1109,6 +1124,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 300,
     borderColor: colors.button,
+    minHeight: 50,
   },
   contentInputWrapper: {
     backgroundColor: '#fff',

@@ -16,3 +16,16 @@ export type RootTabParamList = {
   JogoDoMilhao: undefined;
   Points: undefined;
 };
+
+export type EscolarStackParamList = {
+  EscolarMain: undefined;
+  CreateCard: {
+    listId: string;
+    listName: string;
+  };
+  CardDetail: {
+    card: any;
+    listId: string;
+    listName: string;
+  };
+};

@@ -48,11 +48,57 @@ const ProfileScreen = () => {
     try {
       setLoading(true);
       setError(null);
+
       const userCards = await CardService.getUserCards();
-      setCards(userCards);
-    } catch (err) {
-      console.error('Erro ao buscar cards:', err);
-      setError('Erro ao carregar seus cards');
+
+      // Validar se retornou dados válidos
+      if (!userCards) {
+        console.log('ProfileScreen: Nenhum card retornado');
+        setCards([]);
+        return;
+      }
+
+      // Garantir que é um array
+      const cardsArray = Array.isArray(userCards) ? userCards : [];
+
+      // Filtrar cards inválidos
+      const validCards = cardsArray.filter((card: any) => {
+        return card && typeof card === 'object' && card._id && card.title;
+      });
+
+      console.log('ProfileScreen: Cards válidos encontrados:', validCards.length);
+
+      // Log detalhado dos cards e suas imagens
+      if (validCards.length > 0) {
+        validCards.forEach((card, index) => {
+          console.log(`ProfileScreen: Card ${index + 1}:`, {
+            id: card._id,
+            title: card.title,
+            hasImages: Boolean(card.image_url?.length),
+            imageCount: card.image_url?.length || 0,
+            firstImage: card.image_url?.[0] || null,
+          });
+        });
+      }
+
+      setCards(validCards);
+    } catch (err: any) {
+      console.error('ProfileScreen: Erro ao buscar cards:', err);
+
+      let errorMessage = 'Erro ao carregar seus cards';
+
+      if (err.response?.status === 401) {
+        errorMessage = 'Erro de autenticação. Faça login novamente.';
+      } else if (err.response?.status === 404) {
+        errorMessage = 'Serviço não encontrado';
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      setError(errorMessage);
+      setCards([]);
     } finally {
       setLoading(false);
     }
@@ -76,22 +122,56 @@ const ProfileScreen = () => {
   };
 
   // Função para renderizar card
-  const renderCard = ({ item }: { item: Card }) => (
-    <View style={styles.cardBox}>
-      {item.image_url && item.image_url.length > 0 ? (
-        <Image source={{ uri: item.image_url[0] }} style={styles.cardImage} />
-      ) : (
-        <View style={[styles.cardImage, { backgroundColor: '#eee' }]} />
-      )}
-      <Text style={styles.cardTitle} numberOfLines={2}>
-        {item.title}
-      </Text>
-      <View style={styles.cardFooter}>
-        <Text style={styles.cardDate}>{formatDate(item.createdAt)}</Text>
-        <Text style={styles.cardType}>{item.priority}</Text>
+  const renderCard = ({ item, index }: { item: Card; index: number }) => {
+    const hasImages = Boolean(
+      item.image_url && Array.isArray(item.image_url) && item.image_url.length > 0
+    );
+    const imageUri = hasImages && item.image_url ? item.image_url[0] : null;
+
+    return (
+      <View style={styles.cardBox}>
+        {imageUri ? (
+          <Image
+            source={{ uri: imageUri }}
+            style={styles.cardImage}
+            onError={() => {
+              console.log('ProfileScreen: Erro ao carregar imagem:', imageUri);
+            }}
+            onLoad={() => {
+              console.log('ProfileScreen: Imagem carregada com sucesso:', imageUri);
+            }}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={[styles.cardImage, styles.placeholderImage]}>
+            <Text style={styles.placeholderText}>📄</Text>
+          </View>
+        )}
+        <Text style={styles.cardTitle} numberOfLines={2}>
+          {item.title || 'Sem título'}
+        </Text>
+        <View style={styles.cardFooter}>
+          <Text style={styles.cardDate}>
+            {item.createdAt ? formatDate(item.createdAt) : '--/--/--'}
+          </Text>
+          <Text style={styles.cardType}>{item.priority || 'N/A'}</Text>
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
+
+  // Função para gerar key única para cada item
+  const getItemKey = (item: Card, index: number): string => {
+    return item._id || `card-${index}-${Date.now()}`;
+  };
+
+  // Preparar dados da lista
+  const listData = React.useMemo(() => {
+    return cards.slice(0, 10).map((card, index) => ({
+      ...card,
+      uniqueKey: getItemKey(card, index),
+    }));
+  }, [cards]);
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -146,13 +226,23 @@ const ProfileScreen = () => {
         </View>
       ) : cards.length > 0 ? (
         <FlatList
-          data={cards.slice(0, 10)} // Limita a 10 cards para não sobrecarregar
-          keyExtractor={(item) => item._id}
+          data={listData}
+          keyExtractor={(item) => item.uniqueKey}
+          renderItem={renderCard}
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.cardsList}
           contentContainerStyle={{ paddingLeft: 12, paddingRight: 12 }}
-          renderItem={renderCard}
+          getItemLayout={(data, index) => ({
+            length: 184, // width + margin
+            offset: 184 * index,
+            index,
+          })}
+          initialNumToRender={5}
+          maxToRenderPerBatch={5}
+          windowSize={10}
+          removeClippedSubviews={true}
+          ItemSeparatorComponent={() => <View style={{ width: 0 }} />}
         />
       ) : (
         <View style={styles.emptyContainer}>
@@ -171,7 +261,7 @@ const ProfileScreen = () => {
             onPress={handleLogout}
             buttonStyle={styles.logoutButton}
             variant="outline"
-          />{' '}
+          />
         </View>
 
         <TouchableOpacity style={styles.menuBtn}>
@@ -463,5 +553,15 @@ const styles = StyleSheet.create({
   logoutButton: {
     width: '80%',
     marginBottom: 20,
+  },
+
+  placeholderImage: {
+    backgroundColor: '#eee',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  placeholderText: {
+    fontSize: 24,
+    color: '#888',
   },
 });
