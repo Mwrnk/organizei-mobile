@@ -32,6 +32,7 @@ import api from '../services/api';
 import FilterIcon from 'assets/icons/FilterIcon';
 import NotificationIcon from 'assets/icons/NotificationIcon';
 import AnaliticsIcon from 'assets/icons/AnaliticsIcon';
+import NewIcon from '@icons/NewIcon';
 
 // Interfaces baseadas na versão web
 interface Lista {
@@ -1041,7 +1042,7 @@ const EscolarScreen = () => {
           onPress={() => setShowListModal(true)}
           activeOpacity={0.8}
         >
-          <Ionicons name="add" size={28} color="#fff" />
+          <NewIcon size={24} color={colors.white} />
         </TouchableOpacity>
 
         {/* Modal para criar lista */}
@@ -1428,6 +1429,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   listEmptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
     paddingHorizontal: 16,
     paddingBottom: 100, // espaço para o floating button
   },
@@ -1665,6 +1668,7 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     flex: 1,
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 40,
@@ -2122,7 +2126,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   networkStatus: {
+    width: '100%',
     flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#FFF3CD',
     paddingHorizontal: 16,
@@ -2138,7 +2144,7 @@ const styles = StyleSheet.create({
   },
   floatingActionButton: {
     position: 'absolute',
-    bottom: 100,
+    bottom: 130,
     right: 20,
     width: 56,
     height: 56,
