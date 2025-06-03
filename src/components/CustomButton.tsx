@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   primaryButton: {
-    backgroundColor: colors.button,
+    backgroundColor: colors.primary,
   },
   secondaryButton: {
     backgroundColor: '#34C759',
@@ -107,18 +107,18 @@ const styles = StyleSheet.create({
   outlineButton: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: colors.button,
+    borderColor: colors.primary,
   },
   disabledButton: {
     opacity: 0.7,
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 16,
     fontFamily: fontNames.bold,
   },
   outlineText: {
-    color: colors.button,
+    color: colors.primary,
     fontSize: 16,
     fontFamily: fontNames.bold,
   },

@@ -25,6 +25,9 @@ import colors from '@styles/colors';
 import CustomButton from '@components/CustomButton';
 import api from '../services/api';
 import apiConfig from '../config/api';
+import ExportIcon from '@icons/ExportIcon';
+import NetworkIcon from '@icons/NetworkIcon';
+import ArrowBack from '@icons/ArrowBack';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -378,13 +381,13 @@ const CardDetailScreen = () => {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.primary} />
+          <ArrowBack color={colors.primary} size={16} />
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>Seu card</Text>
 
         <TouchableOpacity onPress={handleShare} style={styles.shareButton}>
-          <Ionicons name="share-outline" size={24} color={colors.primary} />
+          <ExportIcon size={24} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -395,7 +398,7 @@ const CardDetailScreen = () => {
           onPress={() => setActiveTab('escolar')}
         >
           <Text style={[styles.tabText, activeTab === 'escolar' && styles.activeTabText]}>
-            Escolar
+            Informações
           </Text>
         </TouchableOpacity>
 
@@ -404,7 +407,7 @@ const CardDetailScreen = () => {
           onPress={() => setActiveTab('exercicio')}
         >
           <Text style={[styles.tabText, activeTab === 'exercicio' && styles.activeTabText]}>
-            Exercício
+            Conteúdo
           </Text>
         </TouchableOpacity>
       </View>
@@ -417,10 +420,11 @@ const CardDetailScreen = () => {
       {/* Botão de publicar na comunidade */}
       <View style={styles.bottomActions}>
         <CustomButton
-          title="PUBLICAR NA COMUNIDADE"
+          title="Publicar na comunidade"
           onPress={handlePublishToCommunity}
           buttonStyle={styles.publishButton}
           textStyle={styles.publishButtonText}
+          icon={<NetworkIcon size={24} color={colors.white} />}
         />
       </View>
 
@@ -522,7 +526,7 @@ const CardDetailScreen = () => {
           {/* Header do modal PDF */}
           <View style={styles.pdfModalHeader}>
             <TouchableOpacity onPress={() => setShowPdfModal(false)} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={24} color={colors.primary} />
+              <ArrowBack color={colors.primary} size={16} />
             </TouchableOpacity>
 
             <Text style={styles.pdfModalTitle}>
@@ -638,43 +642,44 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
+
+
   header: {
+    width: '100%',
+    height: 44,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginTop: 20,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   backButton: {
     padding: 8,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 16,
+    fontFamily: fontNames.bold,
     color: colors.primary,
-    fontFamily: fontNames.semibold,
   },
   shareButton: {
     padding: 8,
   },
   tabsContainer: {
     flexDirection: 'row',
-    backgroundColor: '#f8f8f8',
+    backgroundColor: colors.background,
     marginHorizontal: 16,
     marginTop: 16,
-    borderRadius: 8,
-    padding: 4,
+    borderRadius: 999,
+    padding: 6,
   },
   tab: {
     flex: 1,
     paddingVertical: 12,
     alignItems: 'center',
-    borderRadius: 6,
+    borderRadius: 999,
   },
   activeTab: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.primary,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -687,8 +692,7 @@ const styles = StyleSheet.create({
     fontFamily: fontNames.regular,
   },
   activeTabText: {
-    color: colors.primary,
-    fontWeight: '600',
+    color: colors.white,
     fontFamily: fontNames.semibold,
   },
   content: {
@@ -703,7 +707,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   cardHeader: {
-    backgroundColor: '#f8f8f8',
+    backgroundColor: colors.background,
     borderRadius: 12,
     padding: 16,
   },
@@ -741,23 +745,22 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.primary,
-    fontFamily: fontNames.semibold,
+    fontSize: 12,
+    color: colors.gray,
+    fontFamily: fontNames.regular,
     marginBottom: 12,
   },
   contentText: {
-    fontSize: 16,
+    fontSize: 24,
     color: colors.primary,
-    fontFamily: fontNames.regular,
-    lineHeight: 24,
+    fontFamily: fontNames.semibold,
+    lineHeight: 30,
   },
   pdfSection: {
     marginBottom: 24,
   },
   pdfItem: {
-    backgroundColor: '#f8f8f8',
+    backgroundColor: colors.background,
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,
@@ -829,7 +832,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   questionSection: {
-    backgroundColor: '#f8f8f8',
+    backgroundColor: colors.background,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -894,7 +897,7 @@ const styles = StyleSheet.create({
   commentButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8f8f8',
+    backgroundColor: colors.background,
     borderRadius: 8,
     padding: 16,
     borderWidth: 1,
@@ -907,16 +910,22 @@ const styles = StyleSheet.create({
     fontFamily: fontNames.regular,
   },
   bottomActions: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    position: 'absolute',
+    bottom: 130,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingHorizontal: 16,
   },
   publishButton: {
     backgroundColor: colors.button,
+    height: 50,
+    width: '100%',
   },
   publishButtonText: {
+    color: colors.white,
     fontSize: 16,
-    fontWeight: '600',
     fontFamily: fontNames.semibold,
   },
   modalOverlay: {

@@ -1724,6 +1724,7 @@ const styles = StyleSheet.create({
   },
 
   placeholderInput: {
+    width: '100%',
     fontSize: 12,
     fontFamily: fontNames.regular,
     color: colors.gray,

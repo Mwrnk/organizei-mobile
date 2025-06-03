@@ -32,7 +32,7 @@ const PointsScreen = () => {
       {/* Header com botão de voltar */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <ArrowBack color="#222" size={16} />
+          <ArrowBack color={colors.primary} size={16} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Meus Pontos</Text>
         <View style={{ width: 24 }} /> {/* Espaçador para centralizar título */}

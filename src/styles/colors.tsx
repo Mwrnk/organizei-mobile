@@ -1,5 +1,5 @@
 export default {
-  background: '#F4F4F4',
+  background: '#F7F7F7',
   primary: '#1D1B20',
   secondary: '#1a1a1a',
   button: '#007AFF',
