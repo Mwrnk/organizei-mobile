@@ -97,7 +97,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
-    minWidth: 150,
   },
   primaryButton: {
     backgroundColor: colors.button,

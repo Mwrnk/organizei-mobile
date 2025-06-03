@@ -32,7 +32,14 @@ import api from '../services/api';
 import FilterIcon from 'assets/icons/FilterIcon';
 import NotificationIcon from 'assets/icons/NotificationIcon';
 import AnaliticsIcon from 'assets/icons/AnaliticsIcon';
-import NewIcon from '@icons/NewIcon';
+import NewIcon from 'assets/icons/NewIcon';
+import SearchIcon from 'assets/icons/SearchIcon';
+import CloseIcon from 'assets/icons/CloseIcon';
+import RefreshIcon from '@icons/RefreshIcon';
+import FileDocumentIcon from '@icons/FileDocumentIcon';
+import HeartIcon from '@icons/HeartIcon';
+import HeartFillIcon from '@icons/HeartFillIcon';
+import FolderIcon from '@icons/FolderIcon';
 
 // Interfaces baseadas na versão web
 interface Lista {
@@ -1048,7 +1055,7 @@ const EscolarScreen = () => {
         {/* Modal para criar lista */}
         <Modal
           visible={showListModal}
-          animationType="slide"
+          animationType="fade"
           transparent={true}
           onRequestClose={() => setShowListModal(false)}
         >
@@ -1069,7 +1076,7 @@ const EscolarScreen = () => {
                 }}
               />
 
-              <View style={styles.modalButtons}>
+              <View style={styles.modalButtonContainer}>
                 <CustomButton
                   title="Cancelar"
                   onPress={() => {
@@ -1092,41 +1099,44 @@ const EscolarScreen = () => {
         {/* Modal de Estatísticas */}
         <Modal
           visible={showStats}
-          animationType="slide"
+          animationType="fade"
           transparent={true}
           onRequestClose={() => setShowStats(false)}
         >
           <View style={styles.modalOverlay}>
             <Animated.View style={[styles.modalContent, { opacity: fadeAnim }]}>
               <View style={styles.cardDetailsHeader}>
-                <Text style={styles.modalTitle}>📊 Estatísticas Escolar</Text>
+                <View style={styles.titleModalContainer}>
+                  <AnaliticsIcon size={24} color={colors.primary}/>
+                  <Text style={styles.modalTitle}>Estatísticas Escolar</Text>
+                </View>
                 <TouchableOpacity onPress={() => setShowStats(false)} style={styles.closeButton}>
-                  <Ionicons name="close" size={24} color="#666" />
+                  <CloseIcon size={24} color={colors.gray} />
                 </TouchableOpacity>
               </View>
 
               <ScrollView style={styles.statsContent}>
                 <View style={styles.statsGrid}>
                   <View style={styles.statCard}>
-                    <Ionicons name="folder-outline" size={32} color={colors.button} />
+                    <FolderIcon size={32} color={colors.primary} />
                     <Text style={styles.statNumber}>{stats.totalLists}</Text>
                     <Text style={styles.statLabel}>Listas</Text>
                   </View>
 
                   <View style={styles.statCard}>
-                    <Ionicons name="documents-outline" size={32} color="#4CAF50" />
+                    <Ionicons name="documents-outline" size={32} color={colors.primary} />
                     <Text style={styles.statNumber}>{stats.totalCards}</Text>
                     <Text style={styles.statLabel}>Cards</Text>
                   </View>
 
                   <View style={styles.statCard}>
-                    <Ionicons name="document-text-outline" size={32} color="#FF9500" />
+                    <Ionicons name="document-text-outline" size={32} color={colors.primary} />
                     <Text style={styles.statNumber}>{stats.totalPdfs}</Text>
                     <Text style={styles.statLabel}>PDFs</Text>
                   </View>
 
                   <View style={styles.statCard}>
-                    <Ionicons name="heart" size={32} color="#FF4444" />
+                    <HeartIcon size={32} color={colors.primary} />
                     <Text style={styles.statNumber}>{stats.favoriteCards}</Text>
                     <Text style={styles.statLabel}>Favoritos</Text>
                   </View>
@@ -1135,19 +1145,25 @@ const EscolarScreen = () => {
                 <View style={styles.progressSection}>
                   <Text style={styles.sectionTitle}>Progresso de Estudos</Text>
                   <View style={styles.progressItem}>
-                    <Text style={styles.progressText}>Cards estudados hoje</Text>
+                    <View style={styles.progressTxtContent}>
+                      <Text style={styles.progressText}>Cards estudados hoje</Text>
+                      <Text style={styles.progressValue}>65%</Text>
+                    </View>
+                    
                     <View style={styles.progressBar}>
                       <View style={[styles.progressFill, { width: '65%' }]} />
                     </View>
-                    <Text style={styles.progressValue}>65%</Text>
                   </View>
 
                   <View style={styles.progressItem}>
-                    <Text style={styles.progressText}>Meta semanal</Text>
+                    <View style={styles.progressTxtContent}>
+                      <Text style={styles.progressText}>Meta semanal</Text>
+                      <Text style={styles.progressValue}>40%</Text>
+                    </View>
+
                     <View style={styles.progressBar}>
                       <View style={[styles.progressFill, { width: '40%' }]} />
                     </View>
-                    <Text style={styles.progressValue}>40%</Text>
                   </View>
                 </View>
 
@@ -1165,16 +1181,20 @@ const EscolarScreen = () => {
         {/* Modal de Filtros */}
         <Modal
           visible={showFilters}
-          animationType="slide"
+          animationType="fade"
           transparent={true}
           onRequestClose={() => setShowFilters(false)}
         >
           <View style={styles.modalOverlay}>
             <Animated.View style={[styles.modalContent, { opacity: fadeAnim }]}>
               <View style={styles.cardDetailsHeader}>
-                <Text style={styles.modalTitle}>🔍 Filtros</Text>
+                <View style={styles.titleModalContainer}>
+                  <SearchIcon size={24} color={colors.primary}/>
+                  <Text style={styles.modalTitle}>Filtros</Text>
+                </View>
+                
                 <TouchableOpacity onPress={() => setShowFilters(false)} style={styles.closeButton}>
-                  <Ionicons name="close" size={24} color="#666" />
+                  <CloseIcon size={24} color={colors.gray} />
                 </TouchableOpacity>
               </View>
 
@@ -1191,10 +1211,9 @@ const EscolarScreen = () => {
                       setActiveFilters((prev) => ({ ...prev, onlyFavorites: !prev.onlyFavorites }))
                     }
                   >
-                    <Ionicons
-                      name="heart"
+                    <HeartIcon
                       size={20}
-                      color={activeFilters.onlyFavorites ? '#fff' : colors.button}
+                      color={activeFilters.onlyFavorites ? colors.white : colors.primary}
                     />
                     <Text
                       style={[
@@ -1215,10 +1234,9 @@ const EscolarScreen = () => {
                       setActiveFilters((prev) => ({ ...prev, onlyWithPdfs: !prev.onlyWithPdfs }))
                     }
                   >
-                    <Ionicons
-                      name="document-text"
+                    <FileDocumentIcon
                       size={20}
-                      color={activeFilters.onlyWithPdfs ? '#fff' : colors.button}
+                      color={activeFilters.onlyWithPdfs ? colors.white : colors.primary}
                     />
                     <Text
                       style={[
@@ -1252,7 +1270,7 @@ const EscolarScreen = () => {
                       <Ionicons
                         name={option.icon as any}
                         size={20}
-                        color={activeFilters.sortBy === option.key ? '#fff' : colors.button}
+                        color={activeFilters.sortBy === option.key ? '#fff' : colors.primary}
                       />
                       <Text
                         style={[
@@ -1272,7 +1290,7 @@ const EscolarScreen = () => {
                     setActiveFilters({ onlyFavorites: false, onlyWithPdfs: false, sortBy: 'date' })
                   }
                 >
-                  <Ionicons name="refresh" size={20} color={colors.button} />
+                  <RefreshIcon size={20} color={colors.primary} />
                   <Text style={styles.clearFiltersText}>Limpar Filtros</Text>
                 </TouchableOpacity>
               </ScrollView>
@@ -1335,7 +1353,7 @@ const EscolarScreen = () => {
         {/* Modal para editar lista */}
         <Modal
           visible={showEditListModal}
-          animationType="slide"
+          animationType="fade"
           transparent={true}
           onRequestClose={() => setShowEditListModal(false)}
         >
@@ -1354,9 +1372,10 @@ const EscolarScreen = () => {
                 onChangeText={(text) => {
                   setEditingListName(text);
                 }}
+                style={styles.placeholderInput}
               />
 
-              <View style={styles.modalButtons}>
+              <View style={styles.modalButtonContainer}>
                 <CustomButton
                   title="Cancelar"
                   onPress={() => {
@@ -1526,8 +1545,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   progressText: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: 14,
+    color: colors.gray,
     fontFamily: fontNames.regular,
   },
   addCardContainer: {
@@ -1693,25 +1712,32 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 20,
     padding: 24,
-    width: '85%',
-    maxWidth: 400,
+    width: '90%',
+    gap: 16,
+
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: '600',
     color: colors.primary,
     fontFamily: fontNames.bold,
     textAlign: 'center',
-    marginBottom: 20,
   },
-  modalButtons: {
+
+  placeholderInput: {
+    fontSize: 12,
+    fontFamily: fontNames.regular,
+    color: colors.gray,
+  },
+
+  modalButtonContainer: {
+    flex: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 20,
     gap: 12,
   },
   modalButton: {
     flex: 1,
+    width: '100%',
   },
   cardDetailsHeader: {
     flexDirection: 'row',
@@ -1719,6 +1745,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
+  titleModalContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    gap: 6,
+  },
+
   closeButton: {
     padding: 4,
   },
@@ -2199,6 +2232,13 @@ const styles = StyleSheet.create({
   progressItem: {
     marginBottom: 16,
   },
+
+  progressTxtContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  
   progressFill: {
     height: '100%',
     backgroundColor: colors.button,
@@ -2206,7 +2246,7 @@ const styles = StyleSheet.create({
   },
   progressValue: {
     fontSize: 14,
-    color: '#666',
+    color: colors.gray,
     fontFamily: fontNames.regular,
     textAlign: 'right',
   },
@@ -2233,8 +2273,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   filterSectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 16,
     color: colors.primary,
     fontFamily: fontNames.bold,
     marginBottom: 12,
@@ -2250,8 +2289,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   filterOptionActive: {
-    backgroundColor: colors.button,
-    borderColor: colors.button,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   filterOptionText: {
     marginLeft: 12,
@@ -2261,7 +2300,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   filterOptionTextActive: {
-    color: '#fff',
+    color: colors.white,
   },
   clearFiltersButton: {
     flexDirection: 'row',
@@ -2270,14 +2309,12 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     backgroundColor: colors.lightGray,
-    borderWidth: 1,
-    borderColor: colors.button,
     marginTop: 16,
   },
   clearFiltersText: {
     marginLeft: 8,
     fontSize: 16,
-    color: colors.button,
+    color: colors.primary,
     fontFamily: fontNames.semibold,
   },
   // Grid view styles (kept for compatibility)

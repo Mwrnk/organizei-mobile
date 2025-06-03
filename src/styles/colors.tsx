@@ -7,4 +7,5 @@ export default {
   gray: '#666666',
   lightGray: '#f0f0f0',
   warning: '#ff9500',
+  white: '#FFFFFF',
 };
