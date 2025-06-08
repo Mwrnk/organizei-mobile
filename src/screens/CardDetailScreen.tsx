@@ -11,6 +11,7 @@ import {
   Modal,
   Dimensions,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -28,8 +29,20 @@ import apiConfig from '../config/api';
 import ExportIcon from '@icons/ExportIcon';
 import NetworkIcon from '@icons/NetworkIcon';
 import ArrowBack from '@icons/ArrowBack';
+import CloseIcon from '@icons/CloseIcon';
+import ChatIcon from '@icons/ChatIcon';
 
 const { width: screenWidth } = Dimensions.get('window');
+
+// Interfaces para comentários
+interface Comment {
+  _id: string;
+  userId: string;
+  userName: string;
+  content: string;
+  createdAt: string;
+  userProfileImage?: string;
+}
 
 interface CardData {
   id: string;
@@ -46,6 +59,7 @@ interface CardData {
   content?: string;
   priority?: 'baixa' | 'media' | 'alta';
   is_published?: boolean;
+  comments?: Comment[];
 }
 
 interface RouteParams {
@@ -53,6 +67,8 @@ interface RouteParams {
   listId: string;
   listName: string;
 }
+
+const errorColor = '#FF3B30'; // Cor de erro padrão do iOS
 
 const CardDetailScreen = () => {
   const navigation = useNavigation<any>();
@@ -72,12 +88,15 @@ const CardDetailScreen = () => {
   const [userAnswer, setUserAnswer] = useState('');
   const [showCommentModal, setShowCommentModal] = useState(false);
   const [comment, setComment] = useState('');
-  const [activeTab, setActiveTab] = useState<'escolar' | 'exercicio'>('escolar');
+  const [activeTab, setActiveTab] = useState<'escolar' | 'pdf'>('escolar');
   const [selectedPdf, setSelectedPdf] = useState<string | null>(null);
   const [loadingPdf, setLoadingPdf] = useState(false);
   const [pdfViewerUrl, setPdfViewerUrl] = useState<string | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [imageModalVisible, setImageModalVisible] = useState(false);
+  const [failedImages, setFailedImages] = useState<Record<number, boolean>>({});
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [loadingComments, setLoadingComments] = useState(false);
 
   // Carregar dados completos do card
   useEffect(() => {
@@ -123,22 +142,192 @@ const CardDetailScreen = () => {
           throw new Error('Token de autenticação não encontrado');
         }
 
-        // Construir URL para visualização do PDF
-        const pdfViewUrl = `${api.defaults.baseURL}/cards/${cardId}/pdf/${pdfIndex}/view?token=${token}`;
-        setPdfUrl(pdfViewUrl);
-        setCurrentPdfIndex(pdfIndex);
+        // Construir URL base para o PDF
+        const pdfViewUrl = `${api.defaults.baseURL}/cards/${cardId}/pdf/${pdfIndex}/view`;
+        console.log('🔄 Tentando carregar PDF da URL:', pdfViewUrl);
+        
+        if (Platform.OS === 'web') {
+          try {
+            const response = await fetch(pdfViewUrl, {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            });
 
-        console.log('📄 URL do PDF gerada:', pdfViewUrl);
+            if (!response.ok) {
+              throw new Error(`Erro ao carregar PDF: ${response.status} ${response.statusText}`);
+            }
+
+            const contentType = response.headers.get('content-type');
+            console.log('📄 Tipo de conteúdo recebido:', contentType);
+
+            const blob = await response.blob();
+            console.log('📄 Blob criado com sucesso:', blob.size, 'bytes');
+
+            const pdfObjectUrl = URL.createObjectURL(blob);
+            console.log('📄 URL do objeto criada:', pdfObjectUrl);
+
+            setPdfUrl(pdfObjectUrl);
+          } catch (error) {
+            console.error('❌ Erro ao processar PDF no ambiente web:', error);
+            throw error;
+          }
+        } else {
+          // No ambiente mobile, usamos a URL direta com token
+          const fullUrl = `${pdfViewUrl}?token=${encodeURIComponent(token)}`;
+          console.log('📄 URL mobile gerada:', fullUrl);
+          setPdfUrl(fullUrl);
+        }
+
+        setCurrentPdfIndex(pdfIndex);
+        console.log('✅ PDF carregado com sucesso');
       } catch (error) {
-        console.error('Erro ao carregar PDF:', error);
+        console.error('❌ Erro ao carregar PDF:', error);
         setPdfUrl(null);
-        Alert.alert('Erro', 'Não foi possível carregar o PDF');
+        Alert.alert('Erro', 'Não foi possível carregar o PDF. Por favor, tente novamente.');
       } finally {
         setPdfLoading(false);
       }
     },
     [cardData]
   );
+
+  // Componente de visualização do PDF
+  const PdfViewerComponent = () => {
+    const [isLoading, setIsLoading] = useState(true);
+    const [hasError, setHasError] = useState(false);
+
+    useEffect(() => {
+      if (pdfUrl) {
+        setIsLoading(true);
+        setHasError(false);
+      }
+    }, [pdfUrl]);
+
+    if (!pdfUrl) {
+      return (
+        <View style={styles.pdfPlaceholder}>
+          <Ionicons name="document-text-outline" size={48} color={colors.gray} />
+          <Text style={styles.pdfPlaceholderText}>
+            Selecione um arquivo para visualizar
+          </Text>
+        </View>
+      );
+    }
+
+    return Platform.select({
+      web: (
+        <View style={styles.pdfViewerWrapper}>
+          {isLoading && (
+            <View style={styles.pdfLoadingOverlay}>
+              <ActivityIndicator size="large" color={colors.button} />
+              <Text style={styles.pdfLoadingText}>Carregando PDF...</Text>
+            </View>
+          )}
+          <object
+            data={pdfUrl}
+            type="application/pdf"
+            style={{
+              width: '100%',
+              height: '100%',
+              minHeight: 500,
+              border: 'none',
+              backgroundColor: '#fff',
+            }}
+            onLoad={() => {
+              console.log('📄 PDF carregado com sucesso');
+              setIsLoading(false);
+            }}
+            onError={(e) => {
+              console.error('❌ Erro ao carregar PDF:', e);
+              setHasError(true);
+              setIsLoading(false);
+            }}
+          >
+            <iframe
+              src={pdfUrl}
+              style={{
+                width: '100%',
+                height: '100%',
+                minHeight: 500,
+                border: 'none',
+                backgroundColor: '#fff',
+              }}
+              onLoad={() => {
+                console.log('📄 iframe carregado com sucesso');
+                setIsLoading(false);
+              }}
+              onError={(e) => {
+                console.error('❌ Erro ao carregar iframe:', e);
+                setHasError(true);
+                setIsLoading(false);
+              }}
+            />
+          </object>
+          {hasError && (
+            <View style={styles.pdfErrorOverlay}>
+              <Ionicons name="alert-circle-outline" size={48} color={errorColor} />
+              <Text style={styles.pdfErrorText}>
+                Erro ao carregar o PDF. Tente novamente.
+              </Text>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={() => {
+                  setHasError(false);
+                  setIsLoading(true);
+                  loadPdf(cardData.id, currentPdfIndex);
+                }}
+              >
+                <Text style={styles.retryButtonText}>Tentar novamente</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      ),
+      default: (
+        <View style={styles.pdfViewerWrapper}>
+          {isLoading && (
+            <View style={styles.pdfLoadingOverlay}>
+              <ActivityIndicator size="large" color={colors.button} />
+              <Text style={styles.pdfLoadingText}>Carregando PDF...</Text>
+            </View>
+          )}
+          <PdfViewer
+            source={{ uri: pdfUrl }}
+            style={styles.pdfViewer}
+            onLoad={() => {
+              console.log('📄 PDF carregado com sucesso no visualizador nativo');
+              setIsLoading(false);
+            }}
+            onError={(error) => {
+              console.error('❌ Erro ao carregar PDF no visualizador nativo:', error);
+              setHasError(true);
+              setIsLoading(false);
+              Alert.alert('Erro', 'Não foi possível carregar o PDF');
+            }}
+          />
+          {hasError && (
+            <View style={styles.pdfErrorOverlay}>
+              <Ionicons name="alert-circle-outline" size={48} color={errorColor} />
+              <Text style={styles.pdfErrorText}>
+                Erro ao carregar o PDF. Tente novamente.
+              </Text>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={() => {
+                  setHasError(false);
+                  setIsLoading(true);
+                  loadPdf(cardData.id, currentPdfIndex);
+                }}
+              >
+                <Text style={styles.retryButtonText}>Tentar novamente</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      ),
+    });
+  };
 
   // Função para abrir PDF em modal
   const openPdfModal = (pdfIndex: number) => {
@@ -216,6 +405,106 @@ const CardDetailScreen = () => {
     }
   }, [selectedPdf]);
 
+  // Função para carregar comentários
+  const loadComments = useCallback(async () => {
+    if (!cardData.id) return;
+
+    setLoadingComments(true);
+    try {
+      const response = await api.get(`/cards/${cardData.id}/comments`);
+      const commentsData = response.data.data || [];
+      setComments(commentsData);
+    } catch (error) {
+      console.error('Erro ao carregar comentários:', error);
+      Alert.alert('Erro', 'Não foi possível carregar os comentários');
+    } finally {
+      setLoadingComments(false);
+    }
+  }, [cardData.id]);
+
+  // Carregar comentários quando o componente montar
+  useEffect(() => {
+    loadComments();
+  }, [loadComments]);
+
+  // Função para adicionar um novo comentário
+  const handleSubmitComment = async () => {
+    if (!comment.trim()) {
+      Alert.alert('Erro', 'O comentário não pode estar vazio');
+      return;
+    }
+
+    try {
+      const response = await api.post(`/cards/${cardData.id}/comments`, {
+        content: comment.trim()
+      });
+
+      // Atualizar a lista de comentários
+      await loadComments();
+
+      // Limpar o campo e fechar o modal
+      setComment('');
+      setShowCommentModal(false);
+
+      // Feedback visual
+      Alert.alert('Sucesso', 'Comentário adicionado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao adicionar comentário:', error);
+      Alert.alert('Erro', 'Não foi possível adicionar o comentário');
+    }
+  };
+
+  // Renderizar lista de comentários
+  const renderComments = () => {
+    if (loadingComments) {
+      return (
+        <View style={styles.commentsLoadingContainer}>
+          <ActivityIndicator size="large" color={colors.button} />
+          <Text style={styles.commentsLoadingText}>Carregando comentários...</Text>
+        </View>
+      );
+    }
+
+    if (comments.length === 0) {
+      return (
+        <View style={styles.noCommentsContainer}>
+          <Ionicons name="chatbubbles-outline" size={24} color={colors.gray} />
+          <Text style={styles.noCommentsText}>Nenhum comentário ainda. Seja o primeiro a comentar!</Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.commentsList}>
+        {comments.map((comment) => (
+          <View key={comment._id} style={styles.commentItem}>
+            <View style={styles.commentHeader}>
+              {comment.userProfileImage ? (
+                <Image
+                  source={{ uri: comment.userProfileImage }}
+                  style={styles.commentUserImage}
+                />
+              ) : (
+                <View style={styles.commentUserImagePlaceholder}>
+                  <Text style={styles.commentUserImagePlaceholderText}>
+                    {comment.userName.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+              <View style={styles.commentUserInfo}>
+                <Text style={styles.commentUserName}>{comment.userName}</Text>
+                <Text style={styles.commentDate}>
+                  {new Date(comment.createdAt).toLocaleDateString('pt-BR')}
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.commentContent}>{comment.content}</Text>
+          </View>
+        ))}
+      </View>
+    );
+  };
+
   // Renderizar conteúdo da aba Escolar
   const renderEscolarContent = () => (
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
@@ -242,7 +531,7 @@ const CardDetailScreen = () => {
             {cardData.pdfs && cardData.pdfs.length > 0 && (
               <View style={styles.metaItem}>
                 <Ionicons name="document-text-outline" size={16} color={colors.gray} />
-                <Text style={styles.metaText}>{cardData.pdfs.length} arquivo(s)</Text>
+                <Text style={styles.metaText}>{cardData.pdfs.length} pdf(s)</Text>
               </View>
             )}
           </View>
@@ -254,37 +543,6 @@ const CardDetailScreen = () => {
         <View style={styles.contentSection}>
           <Text style={styles.sectionTitle}>Conteúdo</Text>
           <Text style={styles.contentText}>{cardData.content}</Text>
-        </View>
-      )}
-
-      {/* Visualização de PDFs */}
-      {cardData.pdfs && cardData.pdfs.length > 0 && (
-        <View style={styles.pdfSection}>
-          <Text style={styles.sectionTitle}>Arquivos anexados</Text>
-          {cardData.pdfs.map((pdf, index) => (
-            <View key={index} style={styles.pdfItem}>
-              <View style={styles.pdfItemHeader}>
-                <Ionicons name="document-text" size={20} color="#007AFF" />
-                <View style={styles.pdfItemInfo}>
-                  <Text style={styles.pdfName}>{pdf.filename}</Text>
-                  <Text style={styles.pdfSize}>
-                    {pdf.size_kb ? `${Math.round(pdf.size_kb)}KB` : 'Tamanho não disponível'}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.pdfActionButton}
-                  onPress={() => openPdfModal(index)}
-                  disabled={pdfLoading}
-                >
-                  {pdfLoading && currentPdfIndex === index ? (
-                    <ActivityIndicator size="small" color={colors.button} />
-                  ) : (
-                    <Ionicons name="eye-outline" size={16} color={colors.button} />
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))}
         </View>
       )}
 
@@ -306,73 +564,120 @@ const CardDetailScreen = () => {
                   key={index}
                   style={styles.imageContainer}
                   onPress={() => {
-                    setSelectedImageIndex(index);
-                    setImageModalVisible(true);
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    if (!failedImages[index]) {
+                      setSelectedImageIndex(index);
+                      setImageModalVisible(true);
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }
                   }}
                 >
-                  <Image
-                    source={{ uri: fullImageUrl }}
-                    style={styles.cardImage}
-                    onLoad={() => {
-                      // Imagem carregada com sucesso
-                    }}
-                    onError={(error) => {
-                      console.error('Erro ao carregar imagem:', error.nativeEvent.error);
-                    }}
-                  />
+                  {failedImages[index] ? (
+                    <View style={[styles.cardImage, styles.failedImageContainer]}>
+                      <Ionicons name="image-outline" size={24} color={colors.gray} />
+                      <Text style={styles.failedImageText}>Não foi possível carregar a imagem</Text>
+                    </View>
+                  ) : (
+                    <Image
+                      source={{ uri: fullImageUrl }}
+                      style={styles.cardImage}
+                      onLoad={() => {
+                        const newFailedImages = { ...failedImages };
+                        delete newFailedImages[index];
+                        setFailedImages(newFailedImages);
+                      }}
+                      onError={() => {
+                        setFailedImages(prev => ({ ...prev, [index]: true }));
+                      }}
+                    />
+                  )}
                 </TouchableOpacity>
               );
             })}
           </ScrollView>
         </View>
       )}
-    </ScrollView>
-  );
-
-  // Renderizar conteúdo da aba Exercício
-  const renderExercicioContent = () => (
-    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
-      {/* Questão exemplo */}
-      <View style={styles.questionSection}>
-        <Text style={styles.questionTitle}>QUESTÃO 1:</Text>
-
-        {/* Imagem da questão (exemplo) */}
-        <View style={styles.questionImageContainer}>
-          <View style={styles.questionImagePlaceholder}>
-            <Text style={styles.questionImageText}>📐 Diagrama da questão</Text>
-          </View>
-        </View>
-
-        {/* Texto da questão */}
-        <Text style={styles.questionText}>
-          Considere dois círculos concêntricos em um ponto O e de raios distintos, dois segmentos.
-          Sabendo que o ângulo mede 30° e que o segmento PD mede 12, pode-se afirmar que os
-          diâmetros dos círculos medem:
-        </Text>
-
-        {/* Botão para visualizar resposta */}
-        <TouchableOpacity style={styles.answerButton} onPress={handleViewAnswer}>
-          <Text style={styles.answerButtonText}>Visualizar resposta</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Próxima questão */}
-      <View style={styles.questionSection}>
-        <Text style={styles.questionTitle}>QUESTÃO 2:</Text>
-        <View style={styles.questionPlaceholder}>
-          <Ionicons name="add-circle-outline" size={48} color={colors.gray} />
-          <Text style={styles.questionPlaceholderText}>Adicionar nova questão</Text>
-        </View>
-      </View>
 
       {/* Seção de comentários */}
       <View style={styles.commentSection}>
-        <TouchableOpacity style={styles.commentButton} onPress={handleAddComment}>
-          <Ionicons name="chatbubble-outline" size={20} color={colors.gray} />
-          <Text style={styles.commentButtonText}>Escrever um comentário...</Text>
-        </TouchableOpacity>
+        <Text style={styles.sectionTitle}>Comentários</Text>
+        {renderComments()}
+        
       </View>
+    </ScrollView>
+  );
+
+  // Renderizar conteúdo da aba PDF
+  const renderPdfContent = () => (
+    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
+      {/* Visualização de PDFs */}
+      {cardData.pdfs && cardData.pdfs.length > 0 ? (
+        <View style={styles.pdfSection}>
+          <Text style={styles.sectionTitle}>PDFs disponíveis</Text>
+          
+          {/* Lista de PDFs disponíveis */}
+          <View style={styles.pdfListContainer}>
+            {cardData.pdfs.map((pdf, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.pdfListItem,
+                  currentPdfIndex === index && styles.pdfListItemActive
+                ]}
+                onPress={() => {
+                  setCurrentPdfIndex(index);
+                  loadPdf(cardData.id, index);
+                }}
+              >
+                <Ionicons 
+                  name="document-text" 
+                  size={20} 
+                  color={currentPdfIndex === index ? colors.button : colors.gray} 
+                />
+                <Text 
+                  style={[
+                    styles.pdfListItemText,
+                    currentPdfIndex === index && styles.pdfListItemTextActive
+                  ]}
+                  numberOfLines={1}
+                >
+                  {pdf.filename}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Visualizador de PDF */}
+          <View style={styles.pdfViewerContainer}>
+            {pdfLoading ? (
+              <View style={styles.pdfLoadingContainer}>
+                <ActivityIndicator size="large" color={colors.button} />
+                <Text style={styles.pdfLoadingText}>Carregando PDF...</Text>
+              </View>
+            ) : (
+              <PdfViewerComponent />
+            )}
+          </View>
+
+          {/* Informações do PDF atual */}
+          {cardData.pdfs[currentPdfIndex] && (
+            <View style={styles.pdfInfo}>
+              <Text style={styles.pdfInfoText}>
+                {cardData.pdfs[currentPdfIndex].size_kb 
+                  ? `Tamanho: ${Math.round(cardData.pdfs[currentPdfIndex].size_kb)}KB` 
+                  : ''}
+              </Text>
+              <Text style={styles.pdfInfoText}>
+                Enviado em: {new Date(cardData.pdfs[currentPdfIndex].uploaded_at).toLocaleDateString('pt-BR')}
+              </Text>
+            </View>
+          )}
+        </View>
+      ) : (
+        <View style={styles.noPdfContainer}>
+          <Ionicons name="document-text-outline" size={48} color={colors.gray} />
+          <Text style={styles.noPdfText}>Nenhum PDF disponível</Text>
+        </View>
+      )}
     </ScrollView>
   );
 
@@ -403,35 +708,45 @@ const CardDetailScreen = () => {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'exercicio' && styles.activeTab]}
-          onPress={() => setActiveTab('exercicio')}
+          style={[styles.tab, activeTab === 'pdf' && styles.activeTab]}
+          onPress={() => setActiveTab('pdf')}
         >
-          <Text style={[styles.tabText, activeTab === 'exercicio' && styles.activeTabText]}>
-            Conteúdo
+          <Text style={[styles.tabText, activeTab === 'pdf' && styles.activeTabText]}>
+            Visualizar PDF
           </Text>
         </TouchableOpacity>
       </View>
 
       {/* Conteúdo das tabs */}
       <View style={styles.content}>
-        {activeTab === 'escolar' ? renderEscolarContent() : renderExercicioContent()}
+        {activeTab === 'escolar' ? renderEscolarContent() : renderPdfContent()}
       </View>
 
-      {/* Botão de publicar na comunidade */}
-      <View style={styles.bottomActions}>
-        <CustomButton
-          title="Publicar na comunidade"
-          onPress={handlePublishToCommunity}
-          buttonStyle={styles.publishButton}
-          textStyle={styles.publishButtonText}
-          icon={<NetworkIcon size={24} color={colors.white} />}
-        />
-      </View>
+      {/* Botões de ação - apenas na aba de informações */}
+      {activeTab === 'escolar' && (
+        <View style={styles.bottomActions}>
+          <CustomButton
+            title="Adicionar comentário"
+            onPress={handleAddComment}
+            buttonStyle={styles.commentButton}
+            textStyle={styles.commentButtonText}
+            icon={<ChatIcon size={20} color={colors.primary} />}
+          />
+
+          <CustomButton
+            title="Publicar na comunidade"
+            onPress={handlePublishToCommunity}
+            buttonStyle={styles.publishButton}
+            textStyle={styles.publishButtonText}
+            icon={<NetworkIcon size={24} color={colors.white} />}
+          />
+        </View>
+      )}
 
       {/* Modal de resposta */}
       <Modal
         visible={showAnswerModal}
-        animationType="slide"
+        animationType="fade"
         transparent={true}
         onRequestClose={() => setShowAnswerModal(false)}
       >
@@ -440,7 +755,7 @@ const CardDetailScreen = () => {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Resposta da Questão 1</Text>
               <TouchableOpacity onPress={() => setShowAnswerModal(false)}>
-                <Ionicons name="close" size={24} color={colors.gray} />
+                <CloseIcon size={24} color={colors.gray} />
               </TouchableOpacity>
             </View>
 
@@ -468,7 +783,7 @@ const CardDetailScreen = () => {
       {/* Modal de comentário */}
       <Modal
         visible={showCommentModal}
-        animationType="slide"
+        animationType="fade"
         transparent={true}
         onRequestClose={() => setShowCommentModal(false)}
       >
@@ -477,18 +792,19 @@ const CardDetailScreen = () => {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Adicionar Comentário</Text>
               <TouchableOpacity onPress={() => setShowCommentModal(false)}>
-                <Ionicons name="close" size={24} color={colors.gray} />
+                <CloseIcon size={24} color={colors.gray} />
               </TouchableOpacity>
             </View>
 
             <TextInput
-              style={styles.commentInput}
+              style={styles.placeholderCommentInput}
               placeholder="Escreva seu comentário..."
               value={comment}
               onChangeText={setComment}
               multiline
               numberOfLines={4}
               textAlignVertical="top"
+              placeholderTextColor={colors.gray}
             />
 
             <View style={styles.modalActions}>
@@ -503,135 +819,12 @@ const CardDetailScreen = () => {
               />
               <CustomButton
                 title="Publicar"
-                onPress={() => {
-                  setShowCommentModal(false);
-                  setComment('');
-                  Alert.alert('Sucesso', 'Comentário adicionado!');
-                }}
+                onPress={handleSubmitComment}
                 buttonStyle={styles.modalActionButton}
               />
             </View>
           </View>
         </View>
-      </Modal>
-
-      {/* Modal de visualização de PDF */}
-      <Modal
-        visible={showPdfModal}
-        animationType="slide"
-        transparent={false}
-        onRequestClose={() => setShowPdfModal(false)}
-      >
-        <SafeAreaView style={styles.pdfModalContainer}>
-          {/* Header do modal PDF */}
-          <View style={styles.pdfModalHeader}>
-            <TouchableOpacity onPress={() => setShowPdfModal(false)} style={styles.backButton}>
-              <ArrowBack color={colors.primary} size={16} />
-            </TouchableOpacity>
-
-            <Text style={styles.pdfModalTitle}>
-              {(cardData.pdfs && cardData.pdfs[currentPdfIndex]?.filename) || 'Documento PDF'}
-            </Text>
-
-            <TouchableOpacity
-              onPress={() => {
-                // Implementar download/compartilhamento
-                Alert.alert('Download', 'Funcionalidade de download será implementada em breve.');
-              }}
-              style={styles.downloadButton}
-            >
-              <Ionicons name="download-outline" size={24} color={colors.primary} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Visualizador de PDF */}
-          <View style={styles.pdfContainer}>
-            {pdfUrl ? (
-              <PdfViewer
-                source={{
-                  uri: pdfUrl,
-                }}
-                style={styles.pdf}
-                onLoad={() => {
-                  console.log('📄 PDF carregado com sucesso');
-                }}
-                onError={(error) => {
-                  console.error('📄 Erro ao carregar PDF:', error);
-                  Alert.alert('Erro', 'Não foi possível carregar o PDF');
-                  setShowPdfModal(false);
-                }}
-              />
-            ) : (
-              <View style={styles.pdfLoadingContainer}>
-                <ActivityIndicator size="large" color={colors.button} />
-                <Text style={styles.pdfLoadingText}>Carregando PDF...</Text>
-              </View>
-            )}
-          </View>
-
-          {/* Navegação entre PDFs se houver múltiplos */}
-          {cardData.pdfs && cardData.pdfs.length > 1 && (
-            <View style={styles.pdfNavigation}>
-              <TouchableOpacity
-                style={[styles.pdfNavButton, currentPdfIndex === 0 && styles.pdfNavButtonDisabled]}
-                onPress={() => {
-                  if (currentPdfIndex > 0) {
-                    openPdfModal(currentPdfIndex - 1);
-                  }
-                }}
-                disabled={currentPdfIndex === 0}
-              >
-                <Ionicons
-                  name="chevron-back"
-                  size={20}
-                  color={currentPdfIndex === 0 ? colors.gray : colors.button}
-                />
-                <Text
-                  style={[styles.pdfNavText, currentPdfIndex === 0 && styles.pdfNavTextDisabled]}
-                >
-                  Anterior
-                </Text>
-              </TouchableOpacity>
-
-              <Text style={styles.pdfCounter}>
-                {currentPdfIndex + 1} de {cardData.pdfs?.length || 0}
-              </Text>
-
-              <TouchableOpacity
-                style={[
-                  styles.pdfNavButton,
-                  currentPdfIndex === (cardData.pdfs?.length || 1) - 1 &&
-                    styles.pdfNavButtonDisabled,
-                ]}
-                onPress={() => {
-                  if (cardData.pdfs && currentPdfIndex < cardData.pdfs.length - 1) {
-                    openPdfModal(currentPdfIndex + 1);
-                  }
-                }}
-                disabled={currentPdfIndex === (cardData.pdfs?.length || 1) - 1}
-              >
-                <Text
-                  style={[
-                    styles.pdfNavText,
-                    currentPdfIndex === (cardData.pdfs?.length || 1) - 1 &&
-                      styles.pdfNavTextDisabled,
-                  ]}
-                >
-                  Próximo
-                </Text>
-                <Ionicons
-                  name="chevron-forward"
-                  size={20}
-                  color={
-                    currentPdfIndex === (cardData.pdfs?.length || 1) - 1
-                      ? colors.gray
-                      : colors.button
-                  }
-                />
-              </TouchableOpacity>
-            </View>
-          )}
-        </SafeAreaView>
       </Modal>
     </SafeAreaView>
   );
@@ -758,69 +951,84 @@ const styles = StyleSheet.create({
   },
   pdfSection: {
     marginBottom: 24,
-  },
-  pdfItem: {
     backgroundColor: colors.background,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
+    borderRadius: 12,
+    padding: 16,
   },
-  pdfItemHeader: {
+  pdfListContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
+  pdfListItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: colors.white,
+    padding: 8,
+    borderRadius: 8,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: colors.lightGray,
   },
-  pdfItemInfo: {
-    flex: 1,
-    marginLeft: 8,
+  pdfListItemActive: {
+    backgroundColor: colors.background,
+    borderColor: colors.button,
   },
-  pdfName: {
+  pdfListItemText: {
     fontSize: 14,
-    color: colors.primary,
-    fontFamily: fontNames.regular,
-    marginBottom: 2,
-  },
-  pdfSize: {
-    fontSize: 12,
     color: colors.gray,
     fontFamily: fontNames.regular,
+    maxWidth: 150,
   },
-  pdfActionButton: {
-    padding: 8,
-    backgroundColor: colors.lightGray,
-    borderRadius: 6,
-  },
-  pdfViewer: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 16,
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  pdfViewerTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.primary,
-    fontFamily: fontNames.semibold,
-    marginBottom: 12,
+  pdfListItemTextActive: {
+    color: colors.button,
+    fontFamily: fontNames.medium,
   },
   pdfViewerContainer: {
-    alignItems: 'center',
-    paddingVertical: 20,
+    height: 400,
+    backgroundColor: colors.white,
+    borderRadius: 8,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.lightGray,
   },
-  pdfViewerPlaceholder: {
-    fontSize: 16,
+  pdfViewer: {
+    flex: 1,
+  },
+  pdfLoadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pdfLoadingText: {
+    marginTop: 16,
+    fontSize: 14,
     color: colors.gray,
     fontFamily: fontNames.regular,
-    marginBottom: 8,
+  },
+  pdfPlaceholder: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pdfPlaceholderText: {
+    marginTop: 16,
+    fontSize: 14,
+    color: colors.gray,
+    fontFamily: fontNames.regular,
     textAlign: 'center',
   },
-  pdfViewerNote: {
+  pdfInfo: {
+    marginTop: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+  },
+  pdfInfoText: {
     fontSize: 12,
     color: colors.gray,
     fontFamily: fontNames.regular,
-    textAlign: 'center',
-    lineHeight: 18,
   },
   imageSection: {
     marginBottom: 24,
@@ -893,20 +1101,20 @@ const styles = StyleSheet.create({
   },
   commentSection: {
     marginTop: 24,
+    marginBottom: 24,
   },
   commentButton: {
+    height: 50,
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.background,
-    borderRadius: 8,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    backgroundColor: colors.lightGray,
+    borderRadius: 20,
   },
   commentButtonText: {
     marginLeft: 12,
     fontSize: 16,
-    color: colors.gray,
+    color: colors.primary,
     fontFamily: fontNames.regular,
   },
   bottomActions: {
@@ -914,6 +1122,7 @@ const styles = StyleSheet.create({
     bottom: 130,
     left: 0,
     right: 0,
+    gap: 16,
     alignItems: 'center',
     justifyContent: 'flex-start',
     paddingHorizontal: 16,
@@ -967,9 +1176,9 @@ const styles = StyleSheet.create({
   modalButton: {
     marginTop: 8,
   },
-  commentInput: {
+  placeholderCommentInput: {
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.lightGray,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
@@ -984,74 +1193,171 @@ const styles = StyleSheet.create({
   modalActionButton: {
     flex: 1,
   },
-  pdfModalContainer: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  pdfModalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-  },
-  pdfModalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.primary,
-    fontFamily: fontNames.semibold,
-    flex: 1,
-  },
-  downloadButton: {
-    padding: 8,
-  },
-  pdfContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  pdf: {
-    flex: 1,
-    width: Dimensions.get('window').width,
-    height: Dimensions.get('window').height,
-  },
-  pdfLoadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  pdfLoadingText: {
-    fontSize: 16,
-    color: colors.gray,
-    fontFamily: fontNames.regular,
-    marginTop: 16,
-  },
-  pdfNavigation: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-  },
-  pdfNavButton: {
-    padding: 8,
-  },
-  pdfNavButtonDisabled: {
-    opacity: 0.5,
-  },
-  pdfNavText: {
-    fontSize: 16,
-    color: colors.gray,
-    fontFamily: fontNames.regular,
-    marginLeft: 8,
-  },
-  pdfNavTextDisabled: {
-    color: colors.gray,
-  },
-  pdfCounter: {
-    fontSize: 16,
-    color: colors.gray,
-    fontFamily: fontNames.regular,
-    marginHorizontal: 16,
-  },
   imageContainer: {
     padding: 8,
+  },
+  noImagesContainer: {
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noImagesText: {
+    fontSize: 14,
+    color: colors.gray,
+    fontFamily: fontNames.regular,
+    textAlign: 'center',
+  },
+  failedImageContainer: {
+    borderRadius: 8,
+    backgroundColor: colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  failedImageText: {
+    fontSize: 12,
+    color: colors.gray,
+    fontFamily: fontNames.regular,
+    textAlign: 'center',
+    marginTop: 8,
+    paddingHorizontal: 8,
+  },
+  noPdfContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    padding: 48,
+    marginBottom: 24,
+  },
+  noPdfText: {
+    fontSize: 16,
+    color: colors.gray,
+    fontFamily: fontNames.regular,
+    textAlign: 'center',
+    marginTop: 16,
+  },
+  pdfViewerWrapper: {
+    flex: 1,
+    position: 'relative',
+    backgroundColor: colors.white,
+    borderRadius: 8,
+    overflow: 'hidden',
+    minHeight: 500,
+  },
+  pdfLoadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  pdfErrorOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  pdfErrorText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: errorColor,
+    fontFamily: fontNames.medium,
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: 16,
+    backgroundColor: colors.button,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: colors.white,
+    fontSize: 14,
+    fontFamily: fontNames.medium,
+  },
+  commentsLoadingContainer: {
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  commentsLoadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: colors.gray,
+    fontFamily: fontNames.regular,
+  },
+  noCommentsContainer: {
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  noCommentsText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: colors.gray,
+    fontFamily: fontNames.regular,
+    textAlign: 'center',
+  },
+  commentsList: {
+    marginBottom: 16,
+  },
+  commentItem: {
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
+  },
+  commentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  commentUserImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 8,
+  },
+  commentUserImagePlaceholder: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  commentUserImagePlaceholderText: {
+    color: colors.white,
+    fontSize: 16,
+    fontFamily: fontNames.semibold,
+  },
+  commentUserInfo: {
+    flex: 1,
+  },
+  commentUserName: {
+    fontSize: 14,
+    color: colors.primary,
+    fontFamily: fontNames.semibold,
+  },
+  commentDate: {
+    fontSize: 12,
+    color: colors.gray,
+    fontFamily: fontNames.regular,
+  },
+  commentContent: {
+    fontSize: 14,
+    color: colors.primary,
+    fontFamily: fontNames.regular,
+    lineHeight: 20,
   },
 });
 

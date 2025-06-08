@@ -2,6 +2,7 @@ export default {
   background: '#F7F7F7',
   primary: '#1D1B20',
   secondary: '#1a1a1a',
+  secundary10: '#rgba(26, 26, 26, 0.1)',
   button: '#007AFF',
   textLink: '#007AFF',
   gray: '#666666',
