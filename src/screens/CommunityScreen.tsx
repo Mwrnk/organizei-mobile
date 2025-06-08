@@ -1,147 +1,246 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Image, FlatList } from 'react-native';
-import { fontNames } from '../styles/fonts';
-import colors from '../styles/colors';
+import React, { useState, useEffect } from 'react';
+import { SafeAreaView, View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, Image, ActivityIndicator, Modal, Pressable, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import api from '../services/api';
 
-const recommendedCards = [
-  {
-    id: '1',
-    title: 'Citações Fisioterapia',
-    date: '11/01/01',
-    type: 'Escolar',
-    image: 'https://via.placeholder.com/120x80',
-    avatar: null,
-  },
-  {
-    id: '2',
-    title: 'Banco de Dados...',
-    date: '11/01/01',
-    type: 'Profissional',
-    image: 'https://via.placeholder.com/120x80',
-    avatar: 'https://via.placeholder.com/24',
-  },
-  {
-    id: '3',
-    title: 'Boas práticas\nFront End',
-    date: '11/01/01',
-    type: 'Profissional',
-    image: 'https://via.placeholder.com/240x80',
-    avatar: 'https://via.placeholder.com/24',
-  },
-];
+interface Card {
+  _id: string;
+  title: string;
+  image_url?: string[];
+  createdAt?: string;
+  userId?: {
+    avatar?: string;
+  };
+}
 
 const CommunityScreen = () => {
   const [search, setSearch] = useState('');
-  const [selectedType, setSelectedType] = useState('Escolar');
-  const [selectedCard, setSelectedCard] = useState('');
+  const [cards, setCards] = useState<Card[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  // Dropdown de cards do usuário
+  const [userCards, setUserCards] = useState<Card[]>([]);
+  const [dropdownVisible, setDropdownVisible] = useState(false);
+  const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+  const [loadingUserCards, setLoadingUserCards] = useState(false);
+  const [errorUserCards, setErrorUserCards] = useState('');
+
+  const [publishing, setPublishing] = useState(false);
+  const [publishMessage, setPublishMessage] = useState('');
+
+  useEffect(() => {
+    const fetchCards = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const response = await api.get('/comunidade/cards');
+        setCards(response.data.data || []);
+      } catch (err) {
+        setError('Erro ao carregar os cards da comunidade.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCards();
+  }, []);
+
+  // Buscar cards do usuário para o dropdown
+  useEffect(() => {
+    const fetchUserCards = async () => {
+      setLoadingUserCards(true);
+      setErrorUserCards('');
+      try {
+        const response = await api.get('/cards');
+        setUserCards(response.data.data || []);
+      } catch (err) {
+        setErrorUserCards('Erro ao carregar seus cards.');
+      } finally {
+        setLoadingUserCards(false);
+      }
+    };
+    fetchUserCards();
+  }, []);
+
+  const filteredCards = cards.filter(card =>
+    card.title?.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
-    <View style={styles.container}>
-      {/* Título */}
-      <Text style={styles.title}>O que está procurando hoje?</Text>
-
-      {/* Barra de busca */}
-      <View style={styles.searchBox}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Pesquise o nome do card..."
-          placeholderTextColor="#bbb"
-          value={search}
-          onChangeText={setSearch}
-        />
-        <TouchableOpacity style={styles.searchBtn}>
-          <Ionicons name="search" size={22} color="#181818" />
-        </TouchableOpacity>
+    <SafeAreaView style={styles.container}>
+      {/* Header / Título */}
+      <View style={styles.header}>
+        <Text style={styles.title}>O que está procurando hoje?</Text>
       </View>
 
-      {/* Recomendados */}
-      <View style={styles.sectionHeaderRow}>
-        <Text style={styles.sectionTitle}>#recomendados</Text>
-        <View style={styles.sectionLine} />
+      {/* Área de busca */}
+      <View style={styles.searchArea}>
+        <View style={styles.searchBox}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Pesquise o nome do card..."
+            placeholderTextColor="#bbb"
+            value={search}
+            onChangeText={setSearch}
+          />
+          <TouchableOpacity style={styles.searchBtn}>
+            <Ionicons name="search" size={22} color="#181818" />
+          </TouchableOpacity>
+        </View>
       </View>
-      <FlatList
-        data={recommendedCards}
-        keyExtractor={item => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.cardBox}>
-            <Image source={{ uri: item.image }} style={styles.cardImg} />
-            <Text style={styles.cardTitle}>{item.title}</Text>
-            <View style={styles.cardFooterRow}>
-              <Text style={styles.cardDate}>{item.date}</Text>
-              {item.avatar ? (
-                <Image source={{ uri: item.avatar }} style={styles.cardAvatar} />
-              ) : (
-                <Ionicons name="person-circle-outline" size={18} color="#181818" style={{ marginLeft: 4 }} />
-              )}
-              <Text style={styles.cardType}>{item.type}</Text>
-            </View>
-          </View>
+
+      {/* Seção de cards recomendados */}
+      <View style={styles.recommendedSection}>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>#recomendados</Text>
+          <View style={styles.sectionLine} />
+        </View>
+        {loading ? (
+          <ActivityIndicator size="large" color="#007AFF" style={{ marginTop: 24 }} />
+        ) : error ? (
+          <Text style={{ color: 'red', textAlign: 'center', marginTop: 24 }}>{error}</Text>
+        ) : filteredCards.length === 0 ? (
+          <Text style={{ color: '#888', textAlign: 'center', marginTop: 24 }}>Nenhum card encontrado.</Text>
+        ) : (
+          <FlatList
+            data={filteredCards}
+            keyExtractor={(item, index) => item._id || String(index)}
+            renderItem={({ item }) => (
+              <View style={styles.cardBox}>
+                <Image source={{ uri: item.image_url?.[0] || 'https://via.placeholder.com/120x80' }} style={styles.cardImg} />
+                <Text style={styles.cardTitle}>{item.title}</Text>
+                <View style={styles.cardFooterRow}>
+                  <Text style={styles.cardDate}>{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ''}</Text>
+                  {item.userId?.avatar ? (
+                    <Image source={{ uri: item.userId.avatar }} style={styles.cardAvatar} />
+                  ) : (
+                    <Ionicons name="person-circle-outline" size={18} color="#181818" style={{ marginLeft: 4 }} />
+                  )}
+                  <Text style={styles.cardType}>Escolar</Text>
+                </View>
+              </View>
+            )}
+            showsVerticalScrollIndicator={false}
+            style={{ marginBottom: 18 }}
+          />
         )}
-        horizontal={false}
-        showsVerticalScrollIndicator={false}
-        style={{ marginBottom: 18 }}
-      />
+      </View>
 
-      {/* Publique */}
-      <View style={styles.sectionHeaderRow}>
-        <Text style={styles.sectionTitle}>#publique</Text>
-        <View style={styles.sectionLine} />
-      </View>
-      <Text style={styles.publishTitle}>Publique os seus cards{"\n"}mais fácil!</Text>
-      <TouchableOpacity style={styles.dropdown}>
-        <Text style={styles.dropdownText}>Selecionar o card</Text>
-        <Ionicons name="chevron-down" size={20} color="#888" />
-      </TouchableOpacity>
-      <View style={styles.radioRow}>
-        <TouchableOpacity style={styles.radioBtn} onPress={() => setSelectedType('Escolar')}>
-          <View style={[styles.radioCircle, selectedType === 'Escolar' && styles.radioCircleActive]} />
-          <Text style={styles.radioLabel}>Escolar</Text>
+      {/* Seção de publicação */}
+      <View style={styles.publishSection}>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>#publique</Text>
+          <View style={styles.sectionLine} />
+        </View>
+        <Text style={styles.publishTitle}>Publique os seus cards{"\n"}mais fácil!</Text>
+        {/* Dropdown de seleção de card */}
+        <TouchableOpacity style={styles.dropdown} onPress={() => setDropdownVisible(true)}>
+          <Text style={styles.dropdownText}>
+            {selectedCard ? selectedCard.title : 'Selecionar o card'}
+          </Text>
+          <Ionicons name="chevron-down" size={20} color="#888" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.radioBtn} onPress={() => setSelectedType('Profissional')}>
-          <View style={[styles.radioCircle, selectedType === 'Profissional' && styles.radioCircleActive]} />
-          <Text style={styles.radioLabel}>Profissional</Text>
+        {/* Modal do dropdown */}
+        <Modal
+          visible={dropdownVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setDropdownVisible(false)}
+        >
+          <Pressable style={styles.modalOverlay} onPress={() => setDropdownVisible(false)}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Selecione um card</Text>
+              {loadingUserCards ? (
+                <ActivityIndicator size="small" color="#007AFF" style={{ marginVertical: 16 }} />
+              ) : errorUserCards ? (
+                <Text style={{ color: 'red', textAlign: 'center', marginVertical: 16 }}>{errorUserCards}</Text>
+              ) : userCards.length === 0 ? (
+                <Text style={{ color: '#888', textAlign: 'center', marginVertical: 16 }}>Você não possui cards.</Text>
+              ) : (
+                <ScrollView style={{ maxHeight: 300 }}>
+                  {userCards.map((card, index) => (
+                    <TouchableOpacity
+                      key={card._id || String(index)}
+                      style={styles.modalItem}
+                      onPress={() => {
+                        setSelectedCard(card);
+                        setDropdownVisible(false);
+                      }}
+                    >
+                      <Text style={styles.modalItemText}>{card.title}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
+            </View>
+          </Pressable>
+        </Modal>
+        <View style={styles.radioRow}>
+          <TouchableOpacity style={styles.radioBtn}>
+            <View style={[styles.radioCircle, true && styles.radioCircleActive]} />
+            <Text style={styles.radioLabel}>Escolar</Text>
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity
+          style={[styles.publishBtn, (!selectedCard || publishing) && { opacity: 0.6 }]}
+          disabled={!selectedCard || publishing}
+          onPress={async () => {
+            console.log('Card selecionado:', selectedCard);
+            if (!selectedCard || !selectedCard._id) {
+              setPublishMessage('Selecione um card para publicar.');
+              return;
+            }
+            setPublishing(true);
+            setPublishMessage('');
+            try {
+              await api.post(`/comunidade/publish/${selectedCard._id}`);
+              setPublishMessage('Card publicado com sucesso!');
+              // Atualizar cards da comunidade
+              const response = await api.get('/comunidade/cards');
+              setCards(response.data.data || []);
+            } catch (err) {
+              setPublishMessage('Erro ao publicar o card.');
+            } finally {
+              setPublishing(false);
+            }
+          }}
+        >
+          {publishing ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.publishBtnText}>Publicar</Text>
+          )}
         </TouchableOpacity>
+        {!!publishMessage && (
+          <Text style={{ textAlign: 'center', color: publishMessage.includes('sucesso') ? 'green' : 'red', marginBottom: 8 }}>
+            {publishMessage}
+          </Text>
+        )}
       </View>
-      <TouchableOpacity style={styles.publishBtn}>
-        <Text style={styles.publishBtnText}>Publicar</Text>
-      </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 };
 
-export default CommunityScreen;
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    paddingTop: 36,
-    paddingHorizontal: 16,
-  },
-  title: {
-    fontSize: 26,
-    fontFamily: fontNames.bold,
-    color: colors.primary,
-    marginBottom: 18,
-  },
+  container: { flex: 1, backgroundColor: '#fff', paddingBottom: 32 },
+  header: { marginTop: 24, marginBottom: 12, paddingHorizontal: 16 },
+  title: { fontSize: 26, fontWeight: 'bold', color: '#181818' },
+  searchArea: { marginBottom: 16, paddingHorizontal: 16 },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F4F4F4',
     borderRadius: 24,
     paddingHorizontal: 18,
-    marginBottom: 18,
     height: 48,
   },
   searchInput: {
     flex: 1,
     fontSize: 15,
-    fontFamily: fontNames.regular,
-    color: colors.primary,
+    color: '#181818',
   },
   searchBtn: {
-    backgroundColor: '#181818',
+    backgroundColor: '#fff',
     borderRadius: 20,
     width: 40,
     height: 40,
@@ -149,6 +248,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginLeft: 8,
   },
+  recommendedSection: { flex: 1, paddingHorizontal: 16 },
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -156,10 +256,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   sectionTitle: {
-    fontFamily: fontNames.regular,
     color: '#222',
     fontSize: 14,
     marginRight: 8,
+    fontWeight: '500',
   },
   sectionLine: {
     flex: 1,
@@ -186,20 +286,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#eee',
   },
   cardTitle: {
-    fontFamily: fontNames.bold,
+    fontWeight: 'bold',
     fontSize: 16,
-    color: colors.primary,
+    color: '#181818',
     marginBottom: 6,
   },
   cardFooterRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
   },
   cardDate: {
     fontSize: 12,
     color: '#888',
-    fontFamily: fontNames.regular,
     marginRight: 8,
   },
   cardAvatar: {
@@ -211,13 +309,13 @@ const styles = StyleSheet.create({
   cardType: {
     fontSize: 12,
     color: '#888',
-    fontFamily: fontNames.regular,
     marginLeft: 8,
   },
+  publishSection: { paddingHorizontal: 16, paddingBottom: 24 },
   publishTitle: {
-    fontFamily: fontNames.bold,
+    fontWeight: 'bold',
     fontSize: 20,
-    color: colors.primary,
+    color: '#181818',
     marginBottom: 12,
     marginTop: 8,
   },
@@ -232,7 +330,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   dropdownText: {
-    fontFamily: fontNames.regular,
     color: '#888',
     fontSize: 15,
   },
@@ -240,7 +337,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 18,
-    gap: 18,
   },
   radioBtn: {
     flexDirection: 'row',
@@ -257,16 +353,15 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   radioCircleActive: {
-    borderColor: colors.button,
-    backgroundColor: colors.button,
+    borderColor: '#007AFF',
+    backgroundColor: '#007AFF',
   },
   radioLabel: {
-    fontFamily: fontNames.regular,
-    color: colors.primary,
+    color: '#181818',
     fontSize: 15,
   },
   publishBtn: {
-    backgroundColor: colors.button,
+    backgroundColor: '#007AFF',
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
@@ -275,7 +370,40 @@ const styles = StyleSheet.create({
   },
   publishBtnText: {
     color: '#fff',
-    fontFamily: fontNames.bold,
+    fontWeight: 'bold',
     fontSize: 16,
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    width: '80%',
+    maxWidth: 340,
+    elevation: 4,
+  },
+  modalTitle: {
+    fontWeight: 'bold',
+    fontSize: 18,
+    marginBottom: 12,
+    color: '#181818',
+    textAlign: 'center',
+  },
+  modalItem: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  modalItemText: {
+    fontSize: 16,
+    color: '#181818',
+    textAlign: 'center',
+  },
 });
+
+export default CommunityScreen;

@@ -2,7 +2,7 @@
 const API_CONFIG = {
   // Configuração para ambiente de desenvolvimento
   dev: {
-    baseURL: 'http://localhost:3000',
+    baseURL: 'http://192.168.1.12:3000',
   },
   // Configuração para ambiente de produção
   prod: {
