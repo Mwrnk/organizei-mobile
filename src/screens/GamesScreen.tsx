@@ -46,7 +46,7 @@ const GamesScreen = () => {
               <Text style={styles.mainCardTitle}>O que vai jogar hoje?</Text>
               {/* Container de pontuação com ícone */}
               <View style={styles.pointsContainer}>
-                <RaioIcon color="#ffffff" size={16} />
+                <RaioIcon color={colors.white} size={16} />
                 <Text style={styles.pointsText}>{user?.orgPoints || 0}pts</Text>
               </View>
             </ImageBackground>

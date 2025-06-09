@@ -55,7 +55,6 @@ interface CardData {
     uploaded_at: string;
     size_kb?: number;
   }[];
-  image_url?: string[];
   content?: string;
   priority?: 'baixa' | 'media' | 'alta';
   is_published?: boolean;
@@ -84,7 +83,6 @@ const CardDetailScreen = () => {
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [currentPdfIndex, setCurrentPdfIndex] = useState(0);
   const [showAnswerModal, setShowAnswerModal] = useState(false);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [userAnswer, setUserAnswer] = useState('');
   const [showCommentModal, setShowCommentModal] = useState(false);
   const [comment, setComment] = useState('');
@@ -92,9 +90,6 @@ const CardDetailScreen = () => {
   const [selectedPdf, setSelectedPdf] = useState<string | null>(null);
   const [loadingPdf, setLoadingPdf] = useState(false);
   const [pdfViewerUrl, setPdfViewerUrl] = useState<string | null>(null);
-  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
-  const [imageModalVisible, setImageModalVisible] = useState(false);
-  const [failedImages, setFailedImages] = useState<Record<number, boolean>>({});
   const [comments, setComments] = useState<Comment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
 
@@ -111,7 +106,6 @@ const CardDetailScreen = () => {
         ...card,
         ...res.data.data,
         pdfs: res.data.data.pdfs || [],
-        image_url: res.data.data.image_url || [],
         content: res.data.data.content || '',
       };
       setCardData(updatedCard);
@@ -343,17 +337,6 @@ const CardDetailScreen = () => {
     Alert.alert('Favorito', 'Funcionalidade de favoritos será implementada em breve.');
   };
 
-  // Função para compartilhar
-  const handleShare = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    Alert.alert('Compartilhar', 'Funcionalidade de compartilhamento será implementada em breve.');
-  };
-
-  // Função para visualizar resposta
-  const handleViewAnswer = () => {
-    setShowAnswerModal(true);
-  };
-
   // Função para adicionar comentário
   const handleAddComment = () => {
     setShowCommentModal(true);
@@ -538,70 +521,57 @@ const CardDetailScreen = () => {
         </View>
       </View>
 
-      {/* Conteúdo do card */}
-      {cardData.content && (
-        <View style={styles.contentSection}>
-          <Text style={styles.sectionTitle}>Conteúdo</Text>
-          <Text style={styles.contentText}>{cardData.content}</Text>
+      {/* Seção de prioridade e status */}
+      <View style={styles.prioritySection}>
+        <Text style={styles.sectionTitle}>Prioridade</Text>
+        <View style={styles.badgesContainer}>
+          <View style={[
+            styles.priorityBadge,
+            {
+              backgroundColor: cardData.priority ? 
+                (cardData.priority === 'alta' ? colors.highPriority :
+                 cardData.priority === 'media' ? colors.mediumPriority :
+                 colors.lowPriority) : 
+                colors.background
+            }
+          ]}>
+            <Text style={[
+              styles.priorityText,
+              !cardData.priority && styles.undefinedPriorityText
+            ]}>
+              {cardData.priority ? cardData.priority.toUpperCase() : 'NÃO DEFINIDA'}
+            </Text>
+          </View>
+
+          <View style={[
+            styles.publishedBadge,
+            cardData.is_published ? styles.publishedBadgeActive : styles.publishedBadgeInactive
+          ]}>
+            <NetworkIcon size={16} color={cardData.is_published ? colors.white : colors.primary} />
+            <Text style={[
+              styles.publishedText,
+              !cardData.is_published && styles.publishedTextInactive
+            ]}>
+              {cardData.is_published ? 'PUBLICADO' : 'NÃO PUBLICADO'}
+            </Text>
+          </View>
         </View>
-      )}
+      </View>
 
-      {/* Imagens */}
-      {cardData.image_url && cardData.image_url.length > 0 && (
-        <View style={styles.imageSection}>
-          <Text style={styles.sectionTitle}>Imagens</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {cardData.image_url.map((imageUrl, index) => {
-              // Construir URL completa da imagem
-              const fullImageUrl = imageUrl.startsWith('http')
-                ? imageUrl
-                : `${apiConfig.baseURL}${imageUrl}`;
-
-              console.log(`🖼️ Carregando imagem ${index + 1}:`, fullImageUrl);
-
-              return (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.imageContainer}
-                  onPress={() => {
-                    if (!failedImages[index]) {
-                      setSelectedImageIndex(index);
-                      setImageModalVisible(true);
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    }
-                  }}
-                >
-                  {failedImages[index] ? (
-                    <View style={[styles.cardImage, styles.failedImageContainer]}>
-                      <Ionicons name="image-outline" size={24} color={colors.gray} />
-                      <Text style={styles.failedImageText}>Não foi possível carregar a imagem</Text>
-                    </View>
-                  ) : (
-                    <Image
-                      source={{ uri: fullImageUrl }}
-                      style={styles.cardImage}
-                      onLoad={() => {
-                        const newFailedImages = { ...failedImages };
-                        delete newFailedImages[index];
-                        setFailedImages(newFailedImages);
-                      }}
-                      onError={() => {
-                        setFailedImages(prev => ({ ...prev, [index]: true }));
-                      }}
-                    />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+      {/* Seção de descrição */}
+      <View style={styles.descriptionSection}>
+        <Text style={styles.sectionTitle}>Descrição</Text>
+        <View style={styles.descriptionContainer}>
+          <Text style={styles.descriptionText}>
+            {cardData.content || 'Nenhuma descrição disponível'}
+          </Text>
         </View>
-      )}
+      </View>
 
       {/* Seção de comentários */}
       <View style={styles.commentSection}>
         <Text style={styles.sectionTitle}>Comentários</Text>
         {renderComments()}
-        
       </View>
     </ScrollView>
   );
@@ -691,9 +661,7 @@ const CardDetailScreen = () => {
 
         <Text style={styles.headerTitle}>Seu card</Text>
 
-        <TouchableOpacity onPress={handleShare} style={styles.shareButton}>
-          <ExportIcon size={24} color={colors.primary} />
-        </TouchableOpacity>
+        <View style={{ width: 24 }} /> {/* Espaçador para centralizar */}
       </View>
 
       {/* Tabs */}
@@ -734,51 +702,21 @@ const CardDetailScreen = () => {
           />
 
           <CustomButton
-            title="Publicar na comunidade"
+            title={cardData.is_published ? "Publicado na comunidade" : "Publicar na comunidade"}
             onPress={handlePublishToCommunity}
-            buttonStyle={styles.publishButton}
-            textStyle={styles.publishButtonText}
-            icon={<NetworkIcon size={24} color={colors.white} />}
+            buttonStyle={[
+              styles.publishButton,
+              cardData.is_published && styles.publishedButton
+            ]}
+            textStyle={[
+              styles.publishButtonText,
+              cardData.is_published && styles.publishedButtonText
+            ]}
+            icon={<NetworkIcon size={24} color={cardData.is_published ? colors.gray : colors.white} />}
+            disabled={cardData.is_published}
           />
         </View>
       )}
-
-      {/* Modal de resposta */}
-      <Modal
-        visible={showAnswerModal}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={() => setShowAnswerModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Resposta da Questão 1</Text>
-              <TouchableOpacity onPress={() => setShowAnswerModal(false)}>
-                <CloseIcon size={24} color={colors.gray} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.modalBody}>
-              <Text style={styles.answerText}>
-                Para resolver esta questão, precisamos aplicar as propriedades dos círculos
-                concêntricos e trigonometria.
-                {'\n\n'}
-                Dado que o ângulo é de 30° e o segmento PD mede 12, podemos calcular os raios usando
-                as relações trigonométricas.
-                {'\n\n'}
-                Resposta: Os diâmetros medem 24 e 36 unidades.
-              </Text>
-            </ScrollView>
-
-            <CustomButton
-              title="Entendi"
-              onPress={() => setShowAnswerModal(false)}
-              buttonStyle={styles.modalButton}
-            />
-          </View>
-        </View>
-      </Modal>
 
       {/* Modal de comentário */}
       <Modal
@@ -833,9 +771,8 @@ const CardDetailScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
   },
-
 
   header: {
     width: '100%',
@@ -854,9 +791,7 @@ const styles = StyleSheet.create({
     fontFamily: fontNames.bold,
     color: colors.primary,
   },
-  shareButton: {
-    padding: 8,
-  },
+
   tabsContainer: {
     flexDirection: 'row',
     backgroundColor: colors.background,
@@ -1030,75 +965,7 @@ const styles = StyleSheet.create({
     color: colors.gray,
     fontFamily: fontNames.regular,
   },
-  imageSection: {
-    marginBottom: 24,
-  },
-  cardImage: {
-    width: 200,
-    height: 150,
-    borderRadius: 8,
-    marginRight: 12,
-  },
-  questionSection: {
-    backgroundColor: colors.background,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-  },
-  questionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.primary,
-    fontFamily: fontNames.semibold,
-    marginBottom: 16,
-  },
-  questionImageContainer: {
-    marginBottom: 16,
-  },
-  questionImagePlaceholder: {
-    height: 120,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  questionImageText: {
-    fontSize: 16,
-    color: colors.gray,
-    fontFamily: fontNames.regular,
-  },
-  questionText: {
-    fontSize: 14,
-    color: colors.primary,
-    fontFamily: fontNames.regular,
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  answerButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
-  },
-  answerButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: fontNames.semibold,
-  },
-  questionPlaceholder: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  questionPlaceholderText: {
-    fontSize: 16,
-    color: colors.gray,
-    fontFamily: fontNames.regular,
-    marginTop: 8,
-  },
+
   commentSection: {
     marginTop: 24,
     marginBottom: 24,
@@ -1132,10 +999,18 @@ const styles = StyleSheet.create({
     height: 50,
     width: '100%',
   },
+  publishedButton: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.lightGray,
+  },
   publishButtonText: {
     color: colors.white,
     fontSize: 16,
     fontFamily: fontNames.semibold,
+  },
+  publishedButtonText: {
+    color: colors.gray,
   },
   modalOverlay: {
     flex: 1,
@@ -1167,12 +1042,7 @@ const styles = StyleSheet.create({
     maxHeight: 300,
     marginBottom: 16,
   },
-  answerText: {
-    fontSize: 16,
-    color: colors.primary,
-    fontFamily: fontNames.regular,
-    lineHeight: 24,
-  },
+
   modalButton: {
     marginTop: 8,
   },
@@ -1193,36 +1063,7 @@ const styles = StyleSheet.create({
   modalActionButton: {
     flex: 1,
   },
-  imageContainer: {
-    padding: 8,
-  },
-  noImagesContainer: {
-    backgroundColor: colors.background,
-    borderRadius: 8,
-    padding: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  noImagesText: {
-    fontSize: 14,
-    color: colors.gray,
-    fontFamily: fontNames.regular,
-    textAlign: 'center',
-  },
-  failedImageContainer: {
-    borderRadius: 8,
-    backgroundColor: colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  failedImageText: {
-    fontSize: 12,
-    color: colors.gray,
-    fontFamily: fontNames.regular,
-    textAlign: 'center',
-    marginTop: 8,
-    paddingHorizontal: 8,
-  },
+
   noPdfContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -1354,6 +1195,64 @@ const styles = StyleSheet.create({
     fontFamily: fontNames.regular,
   },
   commentContent: {
+    fontSize: 14,
+    color: colors.primary,
+    fontFamily: fontNames.regular,
+    lineHeight: 20,
+  },
+  prioritySection: {
+    marginBottom: 24,
+  },
+  badgesContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  priorityBadge: {
+    width: 150,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 8,
+    borderRadius: 8,
+  },
+  publishedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    borderRadius: 8,
+    gap: 4,
+  },
+  publishedBadgeActive: {
+    backgroundColor: colors.button,
+  },
+  publishedBadgeInactive: {
+    backgroundColor: colors.background,
+  },
+  priorityText: {
+    fontSize: 14,
+    color: colors.white,
+    fontFamily: fontNames.semibold,
+    textAlign: 'center',
+  },
+  publishedText: {
+    fontSize: 14,
+    color: colors.white,
+    fontFamily: fontNames.semibold,
+  },
+  publishedTextInactive: {
+    color: colors.primary,
+  },
+  undefinedPriorityText: {
+    color: colors.primary,
+  },
+  descriptionSection: {
+  },
+  descriptionContainer: {
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    padding: 16,
+  },
+  descriptionText: {
     fontSize: 14,
     color: colors.primary,
     fontFamily: fontNames.regular,

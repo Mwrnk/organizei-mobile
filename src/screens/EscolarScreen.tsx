@@ -1014,9 +1014,6 @@ const EscolarScreen = () => {
             <TouchableOpacity style={styles.organizationButton}>
               <Text style={styles.organizationText}>Sua organização</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.comeceiButton}>
-              <Text style={styles.comeceiText}>Comecei</Text>
-            </TouchableOpacity>
           </View>
         </View>
 
@@ -1673,18 +1670,7 @@ const styles = StyleSheet.create({
     color: '#666',
     fontFamily: fontNames.regular,
   },
-  comeceiButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: colors.primary,
-  },
-  comeceiText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#fff',
-    fontFamily: fontNames.semibold,
-  },
+  
   emptyContainer: {
     flex: 1,
     height: '100%',

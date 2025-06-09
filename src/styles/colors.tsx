@@ -9,4 +9,8 @@ export default {
   lightGray: '#f0f0f0',
   warning: '#ff9500',
   white: '#FFFFFF',
+  // Cores de prioridade
+  highPriority: '#FF3B30',
+  mediumPriority: '#FF9500',
+  lowPriority: '#34C759',
 };
