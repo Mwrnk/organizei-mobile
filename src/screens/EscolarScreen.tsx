@@ -13,6 +13,7 @@ import {
   TextInput,
   Animated,
   Dimensions,
+  Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
@@ -690,51 +691,72 @@ const EscolarScreen = () => {
   };
 
   const handleDeleteList = async (listId: string) => {
+    console.log('Clicou para excluir lista:', listId);
     const listToDelete = lists.find((list) => list.id === listId);
     const cardsInList = cards[listId] || [];
 
-    const confirmMessage =
-      cardsInList.length > 0
-        ? `Tem certeza que deseja excluir a lista "${listToDelete?.name}"? Isso também excluirá ${cardsInList.length} card(s).`
-        : `Tem certeza que deseja excluir a lista "${listToDelete?.name}"?`;
+    const confirmMessage = `Tem certeza que deseja excluir a lista "${listToDelete?.name}"?\n\nEsta ação é permanente e irá excluir também todos os cards que ela possui (${cardsInList.length} card(s)).`;
 
-    Alert.alert('Confirmar Exclusão', confirmMessage, [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Excluir',
-        style: 'destructive',
-        onPress: async () => {
-          if (offlineMode) {
-            setLists((prev) => prev.filter((list) => list.id !== listId));
-            setCards((prev) => {
-              const updated = { ...prev };
-              delete updated[listId];
-              return updated;
-            });
-            Alert.alert('Sucesso', 'Lista excluída com sucesso! (Modo Offline)');
-            return;
-          }
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(confirmMessage);
+      if (!confirmed) return;
+      // Executa a exclusão
+      try {
+        await api.delete(`/lists/${listId}`);
+        setLists((prev) => prev.filter((list) => list.id !== listId));
+        setCards((prev) => {
+          const updated = { ...prev };
+          delete updated[listId];
+          return updated;
+        });
+        alert('Lista e todos os seus cards foram excluídos permanentemente!');
+      } catch (err) {
+        console.error('Erro ao excluir lista', err);
+        alert('Erro ao excluir lista.');
+      }
+      return;
+    }
 
-          try {
-            await api.delete(`/lists/${listId}`);
+    // Mobile: Alert.alert
+    Alert.alert(
+      'Excluir Lista',
+      confirmMessage,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: async () => {
+            if (offlineMode) {
+              setLists((prev) => prev.filter((list) => list.id !== listId));
+              setCards((prev) => {
+                const updated = { ...prev };
+                delete updated[listId];
+                return updated;
+              });
+              Alert.alert('Sucesso', 'Lista excluída com sucesso! (Modo Offline)');
+              return;
+            }
 
-            setLists((prev) => prev.filter((list) => list.id !== listId));
-            setCards((prev) => {
-              const updated = { ...prev };
-              delete updated[listId];
-              return updated;
-            });
-
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            Alert.alert('Sucesso', 'Lista excluída com sucesso!');
-          } catch (err: any) {
-            console.error('Erro ao excluir lista', err);
-            const errorMessage = err.response?.data?.message || 'Não foi possível excluir a lista';
-            Alert.alert('Erro', errorMessage);
-          }
+            try {
+              await api.delete(`/lists/${listId}`);
+              setLists((prev) => prev.filter((list) => list.id !== listId));
+              setCards((prev) => {
+                const updated = { ...prev };
+                delete updated[listId];
+                return updated;
+              });
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              Alert.alert('Sucesso', 'Lista e todos os seus cards foram excluídos permanentemente!');
+            } catch (err: any) {
+              console.error('Erro ao excluir lista', err);
+              const errorMessage = err.response?.data?.message || 'Não foi possível excluir a lista';
+              Alert.alert('Erro', errorMessage);
+            }
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   // Função para editar card
