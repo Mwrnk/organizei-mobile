@@ -626,6 +626,8 @@ const EscolarScreen = () => {
 
     setLoading(true);
     try {
+      // Log dos valores antes do envio
+      console.log('Tentando criar lista:', { userId, listName });
       const payload = {
         name: listName.trim(),
         userId,
@@ -960,12 +962,19 @@ const EscolarScreen = () => {
     }
   };
 
+  // Validação do nome da lista
+  const isListNameValid =
+    listName.trim().length >= 3 &&
+    listName.trim().length <= 50 &&
+    /^[a-zA-Z0-9\s\-_]+$/.test(listName.trim());
+  const listNameError =
+    listName.length > 0 && !isListNameValid
+      ? 'O nome deve ter entre 3 e 50 caracteres e pode conter apenas letras, números, espaço, hífen e underline.'
+      : '';
+
   return (
-    <SafeAreaProvider>
-      <SafeAreaView
-        style={[GlobalStyles.container]}
-        pointerEvents="box-none"
-      >
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
         {/* Network Status Indicator */}
         {offlineMode && (
           <View style={styles.networkStatus}>
@@ -1022,7 +1031,10 @@ const EscolarScreen = () => {
           renderItem={renderList}
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listEmptyContainer}
+          contentContainerStyle={[
+            styles.listEmptyContainer,
+            filteredLists.length === 0 && { flex: 1 }
+          ]}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
@@ -1040,11 +1052,12 @@ const EscolarScreen = () => {
           }
         />
 
-        {/* Floating Action Button */}
+        {/* Floating Action Button - Sempre visível */}
         <TouchableOpacity
           style={styles.floatingActionButton}
           onPress={() => setShowListModal(true)}
           activeOpacity={0.8}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <NewIcon size={24} color={colors.white} />
         </TouchableOpacity>
@@ -1072,6 +1085,12 @@ const EscolarScreen = () => {
                   setListName(text);
                 }}
               />
+              <Text style={{ color: '#888', fontSize: 13, marginTop: 4 }}>
+                O nome deve ter entre 3 e 50 caracteres e pode conter apenas letras, números, espaço, hífen e underline.
+              </Text>
+              {!!listNameError && (
+                <Text style={{ color: 'red', fontSize: 13, marginTop: 2 }}>{listNameError}</Text>
+              )}
 
               <View style={styles.modalButtonContainer}>
                 <CustomButton
@@ -1087,6 +1106,7 @@ const EscolarScreen = () => {
                   title="Criar"
                   onPress={handleCreateList}
                   buttonStyle={styles.modalButton}
+                  disabled={!isListNameValid}
                 />
               </View>
             </View>
@@ -1399,20 +1419,8 @@ const EscolarScreen = () => {
             </View>
           </View>
         </Modal>
-
-        {/* Debug: adicionar logs para verificar interações */}
-        {/*
-        <View style={{ padding: 16 }}>
-          <Text style={{ color: '#fff' }}>
-            Debug - Modal de lista: {showListModal ? 'Visível' : 'Oculto'}
-          </Text>
-          <Text style={{ color: '#fff' }}>
-            Debug - Nome da lista: {listName}
-          </Text>
-        </View>
-        */}
-      </SafeAreaView>
-    </SafeAreaProvider>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
@@ -2164,8 +2172,8 @@ const styles = StyleSheet.create({
   },
   floatingActionButton: {
     position: 'absolute',
-    bottom: 130,
-    right: 20,
+    bottom: 80,
+    right: 24,
     width: 56,
     height: 56,
     borderRadius: 28,
@@ -2178,6 +2186,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
+    overflow: 'visible',
   },
   // Stats Modal Styles
   statsContent: {
