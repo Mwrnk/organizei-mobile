@@ -11,6 +11,7 @@ interface Card {
   userId?: {
     avatar?: string;
   };
+  isPublished?: boolean;
 }
 
 const CommunityScreen = () => {
@@ -52,7 +53,19 @@ const CommunityScreen = () => {
       setErrorUserCards('');
       try {
         const response = await api.get('/cards');
-        setUserCards(response.data.data || []);
+        const userCardsData = response.data.data || [];
+        
+        // Buscar cards publicados na comunidade
+        const communityResponse = await api.get('/comunidade/cards');
+        const publishedCards = communityResponse.data.data || [];
+        
+        // Marcar cards que já foram publicados
+        const cardsWithStatus = userCardsData.map((card: Card) => ({
+          ...card,
+          isPublished: publishedCards.some((publishedCard: Card) => publishedCard._id === card._id)
+        }));
+        
+        setUserCards(cardsWithStatus);
       } catch (err) {
         setErrorUserCards('Erro ao carregar seus cards.');
       } finally {
@@ -167,7 +180,18 @@ const CommunityScreen = () => {
                         setDropdownVisible(false);
                       }}
                     >
-                      <Text style={styles.modalItemText}>{card.title}</Text>
+                      <View style={styles.modalItemContent}>
+                        <Text style={styles.modalItemText}>{card.title}</Text>
+                        {card.isPublished ? (
+                          <View style={styles.publishedBadge}>
+                            <Text style={styles.publishedText}>Publicado</Text>
+                          </View>
+                        ) : (
+                          <View style={styles.availableBadge}>
+                            <Text style={styles.availableText}>Disponível</Text>
+                          </View>
+                        )}
+                      </View>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
@@ -399,10 +423,38 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
+  modalItemContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+  },
   modalItemText: {
     fontSize: 16,
     color: '#181818',
     textAlign: 'center',
+  },
+  publishedBadge: {
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  publishedText: {
+    color: '#2E7D32',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  availableBadge: {
+    backgroundColor: '#E3F2FD',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  availableText: {
+    color: '#1976D2',
+    fontSize: 12,
+    fontWeight: '500',
   },
 });
 
