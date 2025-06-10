@@ -15,7 +15,7 @@ const FilesIcon = (props: { color?: string; size?: number }) => (
     xml={xml}
     width={props.size || 24}
     height={props.size || 24}
-    fill={props.color || '#000'}
+    color={props.color || '#000'}
     {...props}
   />
 );

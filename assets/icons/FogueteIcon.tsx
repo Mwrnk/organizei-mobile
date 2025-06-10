@@ -13,7 +13,7 @@ const FogueteIcon = (props: { color?: string, size?: number }) => (
     xml={xml} 
     width={props.size || 24} 
     height={props.size || 24} 
-    color={props.color || '#000'} 
+
   />
 );
 

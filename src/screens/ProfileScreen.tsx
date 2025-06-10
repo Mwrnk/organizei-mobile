@@ -8,6 +8,7 @@ import {
   Image,
   ScrollView,
   ActivityIndicator,
+  SafeAreaView,
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { fontNames } from '../styles/fonts';
@@ -25,6 +26,7 @@ import UserIcon from 'assets/icons/UserIcon';
 import { CardService, Card } from '../services/cardService';
 import { GlobalStyles } from '@styles/global';
 import CustomButton from '@components/CustomButton';
+import colors from '@styles/colors';
 
 const ProfileScreen = () => {
   const { logout, user } = useAuth();
@@ -174,10 +176,8 @@ const ProfileScreen = () => {
   }, [cards]);
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Banner */}
-      <View style={styles.banner} />
-
+    <SafeAreaView style={styles.container}>
+      
       {/* Avatar centralizado */}
       <View style={styles.avatarContainer}>
         {user?.profileImage ? (
@@ -295,7 +295,7 @@ const ProfileScreen = () => {
           <ArrowDiag color="#ffffff" size={16} />
         </View>
       </TouchableOpacity>
-    </ScrollView>
+    </SafeAreaView>
   );
 };
 
@@ -304,20 +304,13 @@ export default ProfileScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingTop: 40,
     paddingHorizontal: 16,
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
   },
-  banner: {
-    width: '100%',
-    height: 140,
-    backgroundColor: '#ddd',
-    borderRadius: 24,
-    marginBottom: 0,
-    marginTop: 40,
-  },
+
   avatarContainer: {
     alignItems: 'center',
-    marginTop: -48,
   },
   avatar: {
     width: 96,
