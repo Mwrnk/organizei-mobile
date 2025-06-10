@@ -6,9 +6,6 @@ import { TOKEN_KEY } from './auth';
 // Configuração base da API
 const api = axios.create({
   baseURL: apiConfig.baseURL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
 // Interceptor para adicionar o token JWT a todas as requisições

@@ -56,6 +56,11 @@ const CreateCardScreen = () => {
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [newTagName, setNewTagName] = useState('');
 
+  // Adicionar estados de erro
+  const [cardTitleError, setCardTitleError] = useState('');
+  const [contentError, setContentError] = useState('');
+  const [newTagError, setNewTagError] = useState('');
+
   // Carregar tags disponíveis
   useEffect(() => {
     loadAvailableTags();
@@ -72,7 +77,12 @@ const CreateCardScreen = () => {
 
   // Criar nova tag
   const handleCreateTag = async () => {
-    if (!newTagName.trim()) return;
+    if (!newTagName.trim()) {
+      setNewTagError('Preencha o nome da tag.');
+      return;
+    } else {
+      setNewTagError('');
+    }
 
     try {
       const response = await api.post('/tags', { name: newTagName.trim() });
@@ -149,10 +159,20 @@ const CreateCardScreen = () => {
 
   // Função para criar card (atualizada)
   const handleCreateCard = async () => {
+    let hasError = false;
     if (!cardTitle.trim()) {
-      Alert.alert('Erro', 'Preencha o nome do card.');
-      return;
+      setCardTitleError('Preencha o nome do card.');
+      hasError = true;
+    } else {
+      setCardTitleError('');
     }
+    if (!content.trim()) {
+      setContentError('Preencha o conteúdo do card.');
+      hasError = true;
+    } else {
+      setContentError('');
+    }
+    if (hasError) return;
 
     const userId = user?._id || user?.id;
     if (!userId) {
@@ -213,11 +233,7 @@ const CreateCardScreen = () => {
           } as any);
 
           try {
-            await api.post(`/cards/${newCard.id}/files`, imageFormData, {
-              headers: {
-                'Content-Type': 'multipart/form-data',
-              },
-            });
+            await api.post(`/cards/${newCard.id}/files`, imageFormData);
           } catch (imageError) {
             console.error('Erro no upload da imagem:', imageError);
             throw imageError;
@@ -228,18 +244,27 @@ const CreateCardScreen = () => {
         if (selectedPdf) {
           const pdfFormData = new FormData();
 
-          pdfFormData.append('files', {
-            uri: selectedPdf.uri,
-            type: selectedPdf.mimeType || 'application/pdf',
-            name: selectedPdf.name || 'document.pdf',
-          } as any);
+          if (Platform.OS === 'web') {
+            pdfFormData.append('files', selectedPdf); // selectedPdf é o File do input web
+            console.log('selectedPdf:', selectedPdf, 'type:', typeof selectedPdf, 'instanceof File:', selectedPdf instanceof File);
+            // Logar todos os campos do FormData
+            // @ts-ignore
+            if (pdfFormData.forEach) {
+              // @ts-ignore
+              pdfFormData.forEach((value, key) => {
+                console.log('FormData:', key, value);
+              });
+            }
+          } else {
+            pdfFormData.append('files', {
+              uri: selectedPdf.uri,
+              type: selectedPdf.mimeType || 'application/pdf',
+              name: selectedPdf.name || 'document.pdf',
+            } as any);
+          }
 
           try {
-            await api.post(`/cards/${newCard.id}/files`, pdfFormData, {
-              headers: {
-                'Content-Type': 'multipart/form-data',
-              },
-            });
+            await api.post(`/cards/${newCard.id}/files`, pdfFormData);
           } catch (pdfError) {
             console.error('Erro no upload do PDF:', pdfError);
             throw pdfError;
@@ -249,29 +274,21 @@ const CreateCardScreen = () => {
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      const successMessage = `Card "${cardTitle.trim()}" criado com sucesso!${
-        selectedImage || selectedPdf
-          ? `\n\nArquivos anexados:\n${selectedImage ? '• 1 imagem' : ''}${
-              selectedPdf ? '\n• 1 PDF' : ''
-            }`
-          : ''
-      }`;
-
-      Alert.alert('Sucesso! 🎉', successMessage, [
-        {
-          text: 'Criar Outro',
-          onPress: () => {
-            clearForm();
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          },
-          style: 'default',
-        },
-        {
-          text: 'Voltar',
-          onPress: () => navigation.goBack(),
-          style: 'cancel',
-        },
-      ]);
+      if (Platform.OS === 'web') {
+        window.alert('Card criado com sucesso ✅');
+        navigation.navigate('Escolar' as never);
+      } else {
+        Alert.alert(
+          'Sucesso',
+          'Card criado com sucesso ✅',
+          [
+            {
+              text: 'OK',
+              onPress: () => navigation.navigate('Escolar' as never),
+            },
+          ]
+        );
+      }
     } catch (err: any) {
       console.error('Erro ao criar card:', err);
 
@@ -378,6 +395,9 @@ const CreateCardScreen = () => {
           {/* Seção do título */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Nome do Card</Text>
+            <Text style={{ color: '#666', fontSize: 13, marginBottom: 4 }}>
+              Obrigatório • Deve ter entre 3 e 100 caracteres
+            </Text>
             <View style={styles.titleInputWrapper}>
               <Ionicons name="create-outline" size={20} color="#666" style={styles.titleIcon} />
               <TextInput
@@ -386,6 +406,7 @@ const CreateCardScreen = () => {
                 onChangeText={(text) => {
                   if (text.length <= 50) {
                     setCardTitle(text);
+                    if (text.trim().length > 0) setCardTitleError('');
                   }
                 }}
                 style={styles.titleInput}
@@ -394,6 +415,9 @@ const CreateCardScreen = () => {
                 returnKeyType="done"
               />
             </View>
+            {cardTitleError ? (
+              <Text style={{ color: 'red', marginTop: 2 }}>{cardTitleError}</Text>
+            ) : null}
             <Text style={styles.characterCount}>{cardTitle.length}/50 caracteres</Text>
           </View>
 
@@ -405,19 +429,28 @@ const CreateCardScreen = () => {
               <TextInput
                 placeholder="Digite o conteúdo do card..."
                 value={content}
-                onChangeText={setContent}
+                onChangeText={(text) => {
+                  setContent(text);
+                  if (text.trim().length > 0) setContentError('');
+                }}
                 style={styles.contentInput}
                 multiline
                 numberOfLines={4}
                 textAlignVertical="top"
               />
             </View>
+            {contentError ? (
+              <Text style={{ color: 'red', marginTop: 2 }}>{contentError}</Text>
+            ) : null}
             <Text style={styles.characterCount}>{content.length} caracteres</Text>
           </View>
 
           {/* Seção de prioridade - Seletor interativo com ícones e feedback visual */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Prioridade</Text>
+            <Text style={{ color: '#666', fontSize: 13, marginBottom: 4 }}>
+              Opcional • Selecione entre: Baixa, Média ou Alta
+            </Text>
             <Text style={styles.sectionDescription}>
               Selecione o nível de prioridade do seu card
             </Text>
@@ -519,7 +552,10 @@ const CreateCardScreen = () => {
               <TextInput
                 placeholder="Nome da nova tag..."
                 value={newTagName}
-                onChangeText={setNewTagName}
+                onChangeText={(text) => {
+                  setNewTagName(text);
+                  if (text.trim().length > 0) setNewTagError('');
+                }}
                 style={styles.newTagInput}
               />
               <TouchableOpacity
@@ -530,6 +566,9 @@ const CreateCardScreen = () => {
                 <Ionicons name="add" size={20} color="#fff" />
               </TouchableOpacity>
             </View>
+            {newTagError ? (
+              <Text style={{ color: 'red', marginTop: 2 }}>{newTagError}</Text>
+            ) : null}
 
             {/* Tags disponíveis */}
             <View style={styles.tagsContainer}>
@@ -607,22 +646,36 @@ const CreateCardScreen = () => {
             <Text style={styles.sectionDescription}>
               Adicione um documento PDF relacionado ao card (máximo: 1 PDF)
             </Text>
-            <TouchableOpacity
-              style={[styles.pdfUploadButton, selectedPdf && styles.uploadButtonDisabled]}
-              onPress={handleSelectPdf}
-              disabled={!!selectedPdf}
-            >
-              <Ionicons
-                name="document-text-outline"
-                size={24}
-                color={selectedPdf ? '#999' : colors.button}
+            {Platform.OS === 'web' ? (
+              <input
+                type="file"
+                accept="application/pdf"
+                style={{ marginTop: 12, marginBottom: 12 }}
+                disabled={!!selectedPdf}
+                onChange={e => {
+                  if (e.target.files && e.target.files[0]) {
+                    setSelectedPdf(e.target.files[0]);
+                  }
+                }}
               />
-              <Text style={[styles.pdfUploadText, selectedPdf && styles.uploadTextDisabled]}>
-                {selectedPdf ? 'PDF selecionado' : 'Selecionar PDF'}
-              </Text>
-              {!selectedPdf && <Ionicons name="chevron-forward" size={20} color="#999" />}
-              {selectedPdf && <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />}
-            </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={[styles.pdfUploadButton, selectedPdf && styles.uploadButtonDisabled]}
+                onPress={handleSelectPdf}
+                disabled={!!selectedPdf}
+              >
+                <Ionicons
+                  name="document-text-outline"
+                  size={24}
+                  color={selectedPdf ? '#999' : colors.button}
+                />
+                <Text style={[styles.pdfUploadText, selectedPdf && styles.uploadTextDisabled]}>
+                  {selectedPdf ? 'PDF selecionado' : 'Selecionar PDF'}
+                </Text>
+                {!selectedPdf && <Ionicons name="chevron-forward" size={20} color="#999" />}
+                {selectedPdf && <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />}
+              </TouchableOpacity>
+            )}
 
             {/* Informações do PDF selecionado */}
             {selectedPdf && (
@@ -752,105 +805,104 @@ const CreateCardScreen = () => {
               </View>
             </View>
           </View>
-        </ScrollView>
 
-        {/* Botões de ação atualizados */}
-        <View style={styles.actionButtonsContainer}>
-          <View style={styles.actionButtons}>
-            <View style={styles.buttonsRow}>
-              <TouchableOpacity
-                style={[
-                  styles.actionButton,
-                  styles.clearButton,
-                  !hasFormData() && styles.buttonDisabled,
-                ]}
-                onPress={() => {
-                  if (hasFormData()) {
-                    Alert.alert(
-                      'Limpar Formulário',
-                      'Tem certeza que deseja limpar todos os dados do formulário?',
-                      [
-                        { text: 'Cancelar', style: 'cancel' },
-                        {
-                          text: 'Limpar',
-                          style: 'destructive',
-                          onPress: () => {
-                            clearForm();
-                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          {/* Botões de ação - agora logo após o preview */}
+          <View style={[styles.actionButtonsContainer, { marginTop: 32 }]}> 
+            <View style={styles.actionButtons}>
+              <View style={styles.buttonsRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.actionButton,
+                    styles.clearButton,
+                    !hasFormData() && styles.buttonDisabled,
+                  ]}
+                  onPress={() => {
+                    if (hasFormData()) {
+                      Alert.alert(
+                        'Limpar Formulário',
+                        'Tem certeza que deseja limpar todos os dados do formulário?',
+                        [
+                          { text: 'Cancelar', style: 'cancel' },
+                          {
+                            text: 'Limpar',
+                            style: 'destructive',
+                            onPress: () => {
+                              clearForm();
+                              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                            },
                           },
-                        },
-                      ]
-                    );
-                  } else {
-                    Alert.alert('Info', 'O formulário já está vazio.');
-                  }
-                }}
-                disabled={!hasFormData()}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name="trash-outline"
-                  size={18}
-                  color={!hasFormData() ? '#999' : '#FF6B6B'}
-                  style={styles.buttonIcon}
-                />
-                <Text
-                  style={[
-                    styles.buttonText,
-                    { color: !hasFormData() ? '#999' : '#FF6B6B' },
-                    !hasFormData() && styles.buttonTextDisabled,
-                  ]}
+                        ]
+                      );
+                    } else {
+                      Alert.alert('Info', 'O formulário já está vazio.');
+                    }
+                  }}
+                  disabled={!hasFormData()}
+                  activeOpacity={0.7}
                 >
-                  Limpar
-                </Text>
-              </TouchableOpacity>
+                  <Ionicons
+                    name="trash-outline"
+                    size={18}
+                    color={!hasFormData() ? '#999' : '#FF6B6B'}
+                    style={styles.buttonIcon}
+                  />
+                  <Text
+                    style={[
+                      styles.buttonText,
+                      { color: !hasFormData() ? '#999' : '#FF6B6B' },
+                      !hasFormData() && styles.buttonTextDisabled,
+                    ]}
+                  >
+                    Limpar
+                  </Text>
+                </TouchableOpacity>
 
+                <TouchableOpacity
+                  style={[
+                    styles.actionButton,
+                    styles.draftButton,
+                    (!cardTitle.trim() || uploadingFiles) && styles.buttonDisabled,
+                  ]}
+                  onPress={handleSaveAsDraft}
+                  disabled={!cardTitle.trim() || uploadingFiles}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name="document-outline"
+                    size={18}
+                    color={!cardTitle.trim() || uploadingFiles ? '#999' : colors.button}
+                    style={styles.buttonIcon}
+                  />
+                  <Text
+                    style={[
+                      styles.buttonText,
+                      { color: colors.button },
+                      (!cardTitle.trim() || uploadingFiles) && styles.buttonTextDisabled,
+                    ]}
+                  >
+                    Rascunho
+                  </Text>
+                </TouchableOpacity>
+              </View>
               <TouchableOpacity
-                style={[
-                  styles.actionButton,
-                  styles.draftButton,
-                  (!cardTitle.trim() || uploadingFiles) && styles.buttonDisabled,
-                ]}
-                onPress={handleSaveAsDraft}
+                style={[styles.actionButton, styles.createButton, styles.primaryButton]}
+                onPress={handleCreateCard}
                 disabled={!cardTitle.trim() || uploadingFiles}
-                activeOpacity={0.7}
+                activeOpacity={0.8}
               >
                 <Ionicons
-                  name="document-outline"
-                  size={18}
-                  color={!cardTitle.trim() || uploadingFiles ? '#999' : colors.button}
+                  name={uploadingFiles ? 'reload-outline' : 'add-circle-outline'}
+                  size={20}
+                  color="#fff"
                   style={styles.buttonIcon}
                 />
-                <Text
-                  style={[
-                    styles.buttonText,
-                    { color: colors.button },
-                    (!cardTitle.trim() || uploadingFiles) && styles.buttonTextDisabled,
-                  ]}
-                >
-                  Rascunho
+                <Text style={[styles.buttonText, { color: '#fff' }]}> 
+                  {uploadingFiles ? 'Criando...' : 'Criar Card'}
                 </Text>
               </TouchableOpacity>
             </View>
-
-            <TouchableOpacity
-              style={[styles.actionButton, styles.createButton, styles.primaryButton]}
-              onPress={handleCreateCard}
-              disabled={!cardTitle.trim() || uploadingFiles}
-              activeOpacity={0.8}
-            >
-              <Ionicons
-                name={uploadingFiles ? 'reload-outline' : 'add-circle-outline'}
-                size={20}
-                color="#fff"
-                style={styles.buttonIcon}
-              />
-              <Text style={[styles.buttonText, { color: '#fff' }]}>
-                {uploadingFiles ? 'Criando...' : 'Criar Card'}
-              </Text>
-            </TouchableOpacity>
           </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
