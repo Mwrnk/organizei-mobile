@@ -14,6 +14,11 @@ export type RootTabParamList = {
   EditProfile: undefined;
   FlashCards: undefined;
   JogoDoMilhao: undefined;
+  QuizGame: {
+    sessionId: string;
+    cardTitle: string;
+    totalQuestions: number;
+  };
   Points: undefined;
 };
 

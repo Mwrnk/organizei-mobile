@@ -37,16 +37,21 @@ export class CardService {
         cards = [];
       }
 
-      console.log('CardService: Cards processados:', cards);
-      console.log('CardService: Número de cards:', cards?.length || 0);
-
-      // Verificar se é um array válido
-      if (!Array.isArray(cards)) {
-        console.error('CardService: Dados não são um array:', cards);
-        return [];
-      }
-
-      return cards;
+      // Mapear os dados para garantir a estrutura correta
+      return cards.map(card => ({
+        _id: card._id || card.id,
+        title: card.title,
+        priority: card.priority || 'Baixa',
+        is_published: card.is_published || false,
+        image_url: card.image_url || [],
+        likes: card.likes || 0,
+        downloads: card.downloads || 0,
+        createdAt: card.createdAt || new Date().toISOString(),
+        updatedAt: card.updatedAt || new Date().toISOString(),
+        content: card.content || '',
+        listId: card.listId || '',
+        userId: card.userId || '',
+      }));
     } catch (error: any) {
       console.error('CardService: Erro ao buscar cards do usuário:', error);
       console.error('CardService: Detalhes do erro:', {
@@ -79,6 +84,38 @@ export class CardService {
       return response.data.data;
     } catch (error) {
       console.error('Erro ao buscar card por ID:', error);
+      throw error;
+    }
+  }
+
+  // Criar novo card
+  static async createCard(cardData: Partial<Card>): Promise<Card> {
+    try {
+      const response = await api.post('/cards', cardData);
+      return response.data.data;
+    } catch (error) {
+      console.error('Erro ao criar card:', error);
+      throw error;
+    }
+  }
+
+  // Atualizar card
+  static async updateCard(cardId: string, cardData: Partial<Card>): Promise<Card> {
+    try {
+      const response = await api.patch(`/cards/${cardId}`, cardData);
+      return response.data.data;
+    } catch (error) {
+      console.error('Erro ao atualizar card:', error);
+      throw error;
+    }
+  }
+
+  // Deletar card
+  static async deleteCard(cardId: string): Promise<void> {
+    try {
+      await api.delete(`/cards/${cardId}`);
+    } catch (error) {
+      console.error('Erro ao deletar card:', error);
       throw error;
     }
   }

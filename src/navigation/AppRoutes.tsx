@@ -15,6 +15,7 @@ import PlanScreen from '@screens/PlanScreen';
 import EditProfileScreen from '@screens/EditProfileScreen';
 import FlashCardsScreen from '@screens/FlashCardsScreen';
 import JogoDoMilhaoScreen from '@screens/JogoDoMilhaoScreen';
+import QuizGameScreen from '@screens/QuizGameScreen';
 import PointsScreen from '@screens/PointsScreen';
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
@@ -48,6 +49,7 @@ function GameStackScreen() {
       <GameStack.Screen name="GameHome" component={GamesScreen} />
       <GameStack.Screen name="FlashCards" component={FlashCardsScreen} />
       <GameStack.Screen name="JogoDoMilhao" component={JogoDoMilhaoScreen} />
+      <GameStack.Screen name="QuizGame" component={QuizGameScreen} />
       <GameStack.Screen name="Points" component={PointsScreen} />
       <GameStack.Screen name="Plan" component={PlanScreen} />
     </GameStack.Navigator>

@@ -27,7 +27,7 @@ import { CardService } from '../services/cardService';
 import { GlobalStyles } from '@styles/global';
 import CustomButton from '@components/CustomButton';
 import colors from '@styles/colors';
-import LogOutIcon from '@icons/LogOutIcon';
+import LogOutIcon from 'assets/icons/LogOutIcon';
 import api from '../services/api';
 
 // Atualizar o tipo de navegação para incluir CardDetail
