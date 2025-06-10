@@ -11,6 +11,10 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootTabParamList } from '../navigation/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
+import colors from '@styles/colors';
+
+const EMAIL_KEY = 'lastLoginEmail';
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
@@ -18,6 +22,28 @@ const LoginScreen = () => {
   const [error, setError] = useState('');
   const { login, loading, user } = useAuth();
   const navigation = useNavigation<StackNavigationProp<RootTabParamList>>();
+  const [rememberEmail, setRememberEmail] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    const loadEmail = async () => {
+      try {
+        const savedEmail = await AsyncStorage.getItem(EMAIL_KEY);
+        if (savedEmail) {
+          setEmail(savedEmail);
+          setRememberEmail(true);
+        }
+      } catch (e) {
+        // Ignorar erro
+      }
+    };
+    loadEmail();
+  }, []);
+
+  // Função para validar e-mail
+  const isEmailValid = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  // Função para validar senha
+  const isPasswordValid = (password: string) => password.length >= 8;
 
   const validateForm = (): boolean => {
     if (!email || !password) {
@@ -28,8 +54,15 @@ const LoginScreen = () => {
   };
 
   const handleLogin = async () => {
-    // Validação do formulário
     if (!validateForm()) {
+      return;
+    }
+    if (!isEmailValid(email)) {
+      setError('Digite um e-mail válido');
+      return;
+    }
+    if (!isPasswordValid(password)) {
+      setError('A senha deve ter pelo menos 8 caracteres');
       return;
     }
 
@@ -41,8 +74,12 @@ const LoginScreen = () => {
 
     try {
       setError('');
-      // Usa a função de login do contexto que agora delega para o controller
       await login({ email, password });
+      if (rememberEmail) {
+        await AsyncStorage.setItem(EMAIL_KEY, email);
+      } else {
+        await AsyncStorage.removeItem(EMAIL_KEY);
+      }
     } catch (err) {
       setError('Login falhou. Verifique suas credenciais.');
       console.error('LoginScreen - Erro no login:', err);
@@ -61,21 +98,61 @@ const LoginScreen = () => {
         </View>
 
         <View style={styles.formContainer}>
-          <Input
-            placeholder="Email"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
-          <Input
-            placeholder="Senha"
-            value={password}
-            secureTextEntry={true}
-            onChangeText={setPassword}
-          />
+          <View style={{ position: 'relative', width: '100%' }}>
+            <Input
+              placeholder="Email"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+          </View>
+          {email.length > 0 && !isEmailValid(email) && (
+            <Text style={{ color: 'red', fontSize: 13, marginBottom: 4 }}>Digite um e-mail válido</Text>
+          )}
+          <View style={{ position: 'relative', width: '100%' }}>
+            <Input
+              placeholder="Senha"
+              value={password}
+              secureTextEntry={!showPassword}
+              onChangeText={setPassword}
+              autoCapitalize="none"
+              keyboardType="default"
+            />
+            <TouchableOpacity
+              onPress={() => setShowPassword((prev) => !prev)}
+              style={{
+                position: 'absolute',
+                right: 16,
+                top: 0,
+                bottom: 0,
+                justifyContent: 'center',
+                height: '100%',
+              }}
+            >
+              <Ionicons
+                name={showPassword ? 'eye-off' : 'eye'}
+                size={24}
+                color="#888"
+              />
+            </TouchableOpacity>
+          </View>
+          {password.length > 0 && !isPasswordValid(password) && (
+            <Text style={{ color: 'red', fontSize: 13, marginBottom: 4 }}>A senha deve ter pelo menos 8 caracteres</Text>
+          )}
 
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        </View>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16, marginLeft: 32 }}>
+          <TouchableOpacity onPress={() => setRememberEmail((prev) => !prev)} style={{ marginRight: 8 }}>
+            <Ionicons
+              name={rememberEmail ? 'checkbox' : 'square-outline'}
+              size={22}
+              color={rememberEmail ? colors.primary : '#888'}
+            />
+          </TouchableOpacity>
+          <Text style={{ color: '#444', fontSize: 15 }}>Lembrar meu e-mail</Text>
         </View>
 
         <View style={styles.createAccountContainer}>

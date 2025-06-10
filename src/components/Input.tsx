@@ -11,7 +11,7 @@ const Input = ({ placeholder, secureTextEntry, onChangeText, value, ...props }: 
         secureTextEntry={secureTextEntry}
         onChangeText={onChangeText}
         value={value}
-        style={styles.input}
+        style={[styles.input, props.style]}
         {...props}
       />
     </View>
@@ -23,7 +23,7 @@ export default Input;
 const styles = StyleSheet.create({
   inputContainer: {
     width: '100%',
-    height: 70,
+    height: 56,
     borderWidth: 2,
     borderColor: '#1a1a1a1a',
     borderRadius: 16,
@@ -34,8 +34,11 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    width: '100%',
+    height: '100%',
     fontSize: 16,
     fontFamily: fontNames.regular,
     color: colors.secondary,
+    textAlign: 'left',
   },
 });
