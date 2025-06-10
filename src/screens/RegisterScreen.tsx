@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Text, Alert, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Text, Alert, TouchableOpacity, Platform } from 'react-native';
 import { GlobalStyles } from '@styles/global';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import Input from '@components/Input';
@@ -11,6 +11,8 @@ import api from '../services/api';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '@styles/colors';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { useAuth } from '../contexts/AuthContext';
 
 const RegisterScreen = () => {
   const [etapa, setEtapa] = useState(1);
@@ -24,8 +26,15 @@ const RegisterScreen = () => {
   const [loading, setLoading] = useState(false);
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [coduserError, setCoduserError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [coduserStatus, setCoduserStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid' | 'error'>('idle');
+  const [emailStatus, setEmailStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid' | 'error'>('idle');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const navigation = useNavigation<StackNavigationProp<RootTabParamList>>();
+  const { login } = useAuth();
 
   // Função para formatar a data enquanto o usuário digita (DD/MM/YYYY)
   const formatDateInput = (text: string) => {
@@ -71,6 +80,19 @@ const RegisterScreen = () => {
       setDateOfBirth(isoDate);
     } else {
       setDateOfBirth('');
+    }
+  };
+
+  // Função para abrir o date picker
+  const openDatePicker = () => setShowDatePicker(true);
+
+  // Função para lidar com a seleção da data
+  const handleDateChangePicker = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      const formatted = selectedDate.toLocaleDateString('pt-BR');
+      setDateOfBirthFormatted(formatted);
+      setDateOfBirth(selectedDate.toISOString().split('T')[0]);
     }
   };
 
@@ -170,7 +192,9 @@ const RegisterScreen = () => {
   };
 
   const handleRegister = async () => {
+    console.log('handleRegister chamado');
     if (!validateEtapa2()) {
+      console.log('Validação da etapa 2 falhou');
       return;
     }
 
@@ -185,46 +209,32 @@ const RegisterScreen = () => {
         coduser: coduser.trim(),
       };
 
+      console.log('Enviando payload para /signup:', payload);
       const response = await api.post('/signup', payload);
+      console.log('Resposta da API:', response.data);
 
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-      Alert.alert(
-        'Conta criada! 🎉',
-        `Bem-vindo, ${response.data.name}! Sua conta foi criada com sucesso.`,
-        [
-          {
-            text: 'Continuar',
-            onPress: () => {
-              // Voltar para a tela de login automaticamente
-              limparCampos();
-              navigation.navigate('Login');
-            },
-          },
-        ]
-      );
-    } catch (error: any) {
-      console.error('RegisterScreen - Erro ao registrar:', error);
-
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-
-      // Tratamento de erros específicos
-      let errorMessage = 'Erro inesperado. Tente novamente.';
-
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.response?.status === 400) {
-        errorMessage = 'Dados inválidos. Verifique os campos preenchidos.';
-      } else if (error.response?.status === 409) {
-        errorMessage = 'Este email já está cadastrado. Tente fazer login.';
-      } else if (error.response?.status === 500) {
-        errorMessage = 'Erro interno do servidor. Tente novamente mais tarde.';
-      }
-
-      Alert.alert('Erro no cadastro', errorMessage);
-    } finally {
+      // Login automático após cadastro
+      await login({ email: payload.email, password: payload.password });
+      limparCampos();
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Escolar' }],
+      });
+    } catch (err: any) {
       setLoading(false);
+      console.log('Erro ao cadastrar:', err);
+      const apiMessage = err.response?.data?.message || '';
+      if (apiMessage.includes('código de usuário') || apiMessage.includes('nickname')) {
+        setCoduserError('Nickname em uso, por favor, escolha outro nickname.');
+      } else if (apiMessage.includes('email')) {
+        setEmailError('E-mail em uso, por favor, escolha outro e-mail.');
+      } else {
+        setError(apiMessage || 'Erro ao criar conta.');
+      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      return;
     }
+    setLoading(false);
   };
 
   const handleSubmit = () => {
@@ -234,6 +244,56 @@ const RegisterScreen = () => {
       handleRegister();
     }
   };
+
+  const checkCoduser = async () => {
+    setCoduserStatus('checking');
+    try {
+      const res = await api.get(`/users/check-nickname?coduser=${encodeURIComponent(coduser.trim())}`);
+      if (res.data.available) {
+        setCoduserStatus('valid');
+      } else {
+        setCoduserStatus('invalid');
+      }
+    } catch (err) {
+      setCoduserStatus('error');
+    }
+  };
+
+  const checkEmail = async () => {
+    setEmailStatus('checking');
+    try {
+      const res = await api.get(`/users/check-email?email=${encodeURIComponent(email.trim().toLowerCase())}`);
+      if (res.data.available) {
+        setEmailStatus('valid');
+      } else {
+        setEmailStatus('invalid');
+      }
+    } catch (err) {
+      setEmailStatus('error');
+    }
+  };
+
+  const isFormValid =
+    name.trim().length >= 3 &&
+    name.trim().length <= 50 &&
+    /^[a-zA-ZÀ-ÿ\s]+$/.test(name.trim()) &&
+    password.length >= 8 &&
+    /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password) &&
+    dateOfBirthFormatted.length === 10 &&
+    isValidDate(dateOfBirthFormatted);
+
+  // Funções para checar requisitos da senha
+  const hasMinLength = password.length >= 8;
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasLowercase = /[a-z]/.test(password);
+  const hasNumber = /\d/.test(password);
+
+  const passwordChecklist = [
+    { label: 'Mínimo 8 caracteres', valid: hasMinLength },
+    { label: 'Pelo menos uma letra maiúscula', valid: hasUppercase },
+    { label: 'Pelo menos uma letra minúscula', valid: hasLowercase },
+    { label: 'Pelo menos um número', valid: hasNumber },
+  ];
 
   return (
     <SafeAreaProvider>
@@ -267,13 +327,57 @@ const RegisterScreen = () => {
         <View style={styles.formContainer}>
           {etapa === 1 && (
             <>
-              <Input
-                placeholder="Nickname"
-                value={coduser}
-                onChangeText={setCoduser}
-                autoCapitalize="none"
-                autoComplete="username"
+              <Text style={styles.title}>Crie sua conta</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Input
+                  style={{ flex: 1 }}
+                  placeholder="Nickname (ex: joaosilva)"
+                  value={coduser}
+                  onChangeText={(text) => {
+                    setCoduser(text);
+                    setCoduserStatus('idle');
+                  }}
+                  autoCapitalize="none"
+                  maxLength={20}
+                />
+                <TouchableOpacity onPress={checkCoduser} style={{ marginLeft: 8 }}>
+                  <Ionicons
+                    name={
+                      coduserStatus === 'valid'
+                        ? 'checkmark-circle'
+                        : coduserStatus === 'invalid'
+                        ? 'close-circle'
+                        : 'help-circle-outline'
+                    }
+                    size={24}
+                    color={
+                      coduserStatus === 'valid'
+                        ? 'green'
+                        : coduserStatus === 'invalid'
+                        ? 'red'
+                        : '#888'
+                    }
+                  />
+                </TouchableOpacity>
+              </View>
+              {coduserStatus === 'valid' && (
+                <Text style={[styles.rulesText, { color: 'green' }]}>Nickname válido!</Text>
+              )}
+              {coduserStatus === 'invalid' && (
+                <Text style={[styles.rulesText, { color: 'red' }]}>Nickname em uso, por favor, escolha outro.</Text>
+              )}
+              {coduserStatus === 'error' && (
+                <Text style={[styles.rulesText, { color: 'red' }]}>Erro ao verificar nickname.</Text>
+              )}
+              <Text style={styles.rulesText}>
+                • 4 a 20 caracteres, apenas letras e números (sem espaços ou símbolos)
+              </Text>
+              <CustomButton
+                title="Próxima"
+                onPress={proximaEtapa}
+                disabled={coduserStatus !== 'valid'}
               />
+              {!!error && <Text style={styles.errorText}>{error}</Text>}
             </>
           )}
 
@@ -284,35 +388,132 @@ const RegisterScreen = () => {
                 value={name}
                 onChangeText={setName}
                 autoCapitalize="words"
-                autoComplete="name"
+                maxLength={50}
               />
-              <Input
-                placeholder="Email"
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                autoComplete="email"
+              <Text style={styles.rulesText}>
+                • 3 a 50 caracteres, apenas letras e espaços
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Input
+                  style={{ flex: 1 }}
+                  placeholder="Email"
+                  value={email}
+                  onChangeText={(text) => {
+                    setEmail(text);
+                    setEmailStatus('idle');
+                  }}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                />
+                <TouchableOpacity onPress={checkEmail} style={{ marginLeft: 8 }}>
+                  <Ionicons
+                    name={
+                      emailStatus === 'valid'
+                        ? 'checkmark-circle'
+                        : emailStatus === 'invalid'
+                        ? 'close-circle'
+                        : 'help-circle-outline'
+                    }
+                    size={24}
+                    color={
+                      emailStatus === 'valid'
+                        ? 'green'
+                        : emailStatus === 'invalid'
+                        ? 'red'
+                        : '#888'
+                    }
+                  />
+                </TouchableOpacity>
+              </View>
+              {emailStatus === 'valid' && (
+                <Text style={[styles.rulesText, { color: 'green' }]}>E-mail válido!</Text>
+              )}
+              {emailStatus === 'invalid' && (
+                <Text style={[styles.rulesText, { color: 'red' }]}>E-mail em uso, por favor, escolha outro.</Text>
+              )}
+              {emailStatus === 'error' && (
+                <Text style={[styles.rulesText, { color: 'red' }]}>Erro ao verificar e-mail.</Text>
+              )}
+              <Text style={styles.rulesText}>
+                • Deve ser um email válido e não pode já estar cadastrado
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Input
+                  style={{ flex: 1 }}
+                  placeholder="Senha"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  maxLength={32}
+                />
+                <TouchableOpacity onPress={() => setShowPassword((prev) => !prev)} style={{ marginLeft: 8 }}>
+                  <Ionicons
+                    name={showPassword ? 'eye-off' : 'eye'}
+                    size={24}
+                    color="#888"
+                  />
+                </TouchableOpacity>
+              </View>
+              <View style={{ marginTop: 8, marginBottom: 4 }}>
+                {passwordChecklist.map((item, idx) => (
+                  <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+                    <Ionicons
+                      name={item.valid ? 'checkmark-circle' : 'ellipse-outline'}
+                      size={18}
+                      color={item.valid ? 'green' : '#bbb'}
+                      style={{ marginRight: 6 }}
+                    />
+                    <Text style={{ color: item.valid ? 'green' : '#888', fontSize: 13 }}>{item.label}</Text>
+                  </View>
+                ))}
+              </View>
+              {Platform.OS === 'web' ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <input
+                    type="date"
+                    value={dateOfBirth}
+                    onChange={e => {
+                      setDateOfBirth(e.target.value);
+                      const [year, month, day] = e.target.value.split('-');
+                      setDateOfBirthFormatted(`${day}/${month}/${year}`);
+                    }}
+                    style={{ flex: 1, fontSize: 16, padding: 10, borderRadius: 8, border: '1px solid #ccc' }}
+                    max={new Date().toISOString().split('T')[0]}
+                  />
+                  <Ionicons name="calendar" size={22} color="#888" style={{ marginLeft: 8 }} />
+                </View>
+              ) : (
+                <TouchableOpacity onPress={openDatePicker} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#fafafa', borderRadius: 8, padding: 12, borderWidth: 1, borderColor: '#eee', marginBottom: 4 }}>
+                  <Ionicons name="calendar" size={22} color="#888" style={{ marginRight: 8 }} />
+                  <Text style={{ fontSize: 16, color: dateOfBirthFormatted ? '#181818' : '#888' }}>
+                    {dateOfBirthFormatted || 'Data de nascimento (DD/MM/AAAA)'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              {showDatePicker && Platform.OS !== 'web' && (
+                <DateTimePicker
+                  value={dateOfBirth ? new Date(dateOfBirth) : new Date('2000-01-01')}
+                  mode="date"
+                  display="default"
+                  onChange={handleDateChangePicker}
+                  maximumDate={new Date()}
+                />
+              )}
+              <Text style={styles.rulesText}>
+                • Idade mínima: 13 anos. Apenas datas válidas.
+              </Text>
+              <CustomButton
+                title="Cadastrar"
+                onPress={handleRegister}
+                loading={loading}
+                disabled={emailStatus !== 'valid' || !isFormValid}
               />
-              <Input
-                placeholder="Senha"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                autoComplete="new-password"
-              />
-              <Input
-                placeholder="Data de nascimento (DD/MM/YYYY)"
-                value={dateOfBirthFormatted}
-                onChangeText={handleDateChange}
-                keyboardType="numeric"
-                maxLength={10}
-              />
-              <Text style={styles.dateHint}>💡 Exemplo: 15/03/1995</Text>
+              <TouchableOpacity onPress={etapaAnterior} style={{ marginTop: 12 }}>
+                <Text style={{ color: colors.primary, textAlign: 'center' }}>Voltar</Text>
+              </TouchableOpacity>
+              {!!error && <Text style={styles.errorText}>{error}</Text>}
             </>
           )}
-
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
         </View>
 
         <View style={styles.navigationContainer}>
@@ -327,14 +528,6 @@ const RegisterScreen = () => {
             Faça login
           </Text>
         </View>
-
-        <CustomButton
-          title={loading ? 'Processando...' : etapa === 1 ? 'Próximo' : 'Registrar'}
-          loading={loading}
-          onPress={handleSubmit}
-          buttonStyle={styles.submitButton}
-          disabled={loading}
-        />
       </SafeAreaView>
     </SafeAreaProvider>
   );
@@ -397,16 +590,10 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   errorText: {
-    color: '#FF6B6B',
-    textAlign: 'center',
-    marginTop: 8,
+    color: 'red',
     fontSize: 14,
-    fontFamily: 'Inter_400Regular',
-    backgroundColor: '#FFF0F0',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#FFD6D6',
+    marginTop: 8,
+    textAlign: 'center',
   },
   dateHint: {
     fontSize: 12,
@@ -414,6 +601,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
     fontFamily: 'Inter_400Regular',
+  },
+  rulesText: {
+    color: '#888',
+    fontSize: 13,
+    marginBottom: 4,
+    marginTop: -8,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 16,
   },
 });
 
