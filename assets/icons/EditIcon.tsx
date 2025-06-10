@@ -9,7 +9,7 @@ const xml = `
 `;
 
 const EditIcon = (props: { color?: string, size?: number }) => (
-  <SvgXml xml={xml} width={props.size || 25} height={props.size || 25} fill={props.color || '#000'} {...props} />
+  <SvgXml xml={xml} width={props.size || 25} height={props.size || 25} color={props.color || '#000'} {...props} />
 );
 
 export default EditIcon; 

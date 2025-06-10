@@ -240,14 +240,20 @@ const CommunityScreen = () => {
           </Modal>
           
           <TouchableOpacity
-            style={[styles.publishBtn, (!selectedCard || publishing) && { opacity: 0.6 }]}
-            disabled={!selectedCard || publishing}
+            style={[styles.publishBtn, (!selectedCard || publishing || selectedCard?.isPublished) && { opacity: 0.6 }]}
+            disabled={!selectedCard || publishing || selectedCard?.isPublished}
             onPress={async () => {
               console.log('Card selecionado:', selectedCard);
               if (!selectedCard || !selectedCard._id) {
                 setPublishMessage('Selecione um card para publicar.');
                 return;
               }
+
+              if (selectedCard.isPublished) {
+                setPublishMessage('Este card já está publicado na comunidade.');
+                return;
+              }
+
               setPublishing(true);
               setPublishMessage('');
               try {
@@ -256,6 +262,16 @@ const CommunityScreen = () => {
                 // Atualizar cards da comunidade
                 const response = await api.get('/comunidade/cards');
                 setCards(response.data.data || []);
+                // Atualizar lista de cards do usuário para marcar como publicado
+                const userCardsResponse = await api.get('/cards');
+                const userCardsData = userCardsResponse.data.data || [];
+                const publishedCards = response.data.data || [];
+                const cardsWithStatus = userCardsData.map((card: Card) => ({
+                  ...card,
+                  isPublished: publishedCards.some((publishedCard: Card) => publishedCard._id === card._id)
+                }));
+                setUserCards(cardsWithStatus);
+                setSelectedCard(null); // Limpa a seleção após publicar
               } catch (err) {
                 setPublishMessage('Erro ao publicar o card.');
               } finally {
@@ -264,13 +280,18 @@ const CommunityScreen = () => {
             }}
           >
             {publishing ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={colors.white} />
             ) : (
-              <Text style={styles.publishBtnText}>Publicar</Text>
+              <Text style={styles.publishBtnText}>
+                {selectedCard?.isPublished ? 'Já publicado' : 'Publicar'}
+              </Text>
             )}
           </TouchableOpacity>
           {!!publishMessage && (
-            <Text style={{ textAlign: 'center', color: publishMessage.includes('sucesso') ? 'green' : 'red', marginBottom: 8 }}>
+            <Text style={[
+              styles.publishMessage,
+              { color: publishMessage.includes('sucesso') ? colors.lowPriority : colors.highPriority }
+            ]}>
               {publishMessage}
             </Text>
           )}
@@ -522,6 +543,13 @@ const styles = StyleSheet.create({
     color: '#1976D2',
     fontSize: 12,
     fontFamily: fontNames.regular
+  },
+  publishMessage: {
+    textAlign: 'center',
+    marginBottom: 8,
+    marginTop: 8,
+    fontSize: 14,
+    fontFamily: fontNames.regular,
   },
 });
 

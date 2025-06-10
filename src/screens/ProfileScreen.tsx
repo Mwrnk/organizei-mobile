@@ -23,14 +23,45 @@ import ArrowDiag from 'assets/icons/ArrowDiag';
 import AnaliticsIcon from 'assets/icons/AnaliticsIcon';
 import EditIcon from 'assets/icons/EditIcon';
 import UserIcon from 'assets/icons/UserIcon';
-import { CardService, Card } from '../services/cardService';
+import { CardService } from '../services/cardService';
 import { GlobalStyles } from '@styles/global';
 import CustomButton from '@components/CustomButton';
 import colors from '@styles/colors';
+import LogOutIcon from '@icons/LogOutIcon';
+import api from '../services/api';
+
+// Atualizar o tipo de navegação para incluir CardDetail
+type ProfileScreenNavigationProp = StackNavigationProp<
+  RootTabParamList & {
+    CardDetail: {
+      card: {
+        id: string;
+        title: string;
+        content?: string;
+        image_url?: string[];
+        createdAt: string;
+        pdfs?: any[];
+      };
+      listId: string;
+      listName: string;
+    };
+  }
+>;
+
+// Atualizar interface Card para incluir pdfs
+interface Card {
+  _id: string;
+  title: string;
+  content?: string;
+  image_url?: string[];
+  createdAt: string;
+  priority?: string;
+  pdfs?: any[];
+}
 
 const ProfileScreen = () => {
   const { logout, user } = useAuth();
-  const navigation = useNavigation<StackNavigationProp<RootTabParamList>>();
+  const navigation = useNavigation<ProfileScreenNavigationProp>();
   const [cards, setCards] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,55 +82,13 @@ const ProfileScreen = () => {
       setLoading(true);
       setError(null);
 
-      const userCards = await CardService.getUserCards();
-
-      // Validar se retornou dados válidos
-      if (!userCards) {
-        console.log('ProfileScreen: Nenhum card retornado');
-        setCards([]);
-        return;
-      }
-
-      // Garantir que é um array
-      const cardsArray = Array.isArray(userCards) ? userCards : [];
-
-      // Filtrar cards inválidos
-      const validCards = cardsArray.filter((card: any) => {
-        return card && typeof card === 'object' && card._id && card.title;
-      });
-
-      console.log('ProfileScreen: Cards válidos encontrados:', validCards.length);
-
-      // Log detalhado dos cards e suas imagens
-      if (validCards.length > 0) {
-        validCards.forEach((card, index) => {
-          console.log(`ProfileScreen: Card ${index + 1}:`, {
-            id: card._id,
-            title: card.title,
-            hasImages: Boolean(card.image_url?.length),
-            imageCount: card.image_url?.length || 0,
-            firstImage: card.image_url?.[0] || null,
-          });
-        });
-      }
-
-      setCards(validCards);
+      const response = await api.get('/cards');
+      const userCards = response.data.data || [];
+      setCards(userCards);
+      
     } catch (err: any) {
       console.error('ProfileScreen: Erro ao buscar cards:', err);
-
-      let errorMessage = 'Erro ao carregar seus cards';
-
-      if (err.response?.status === 401) {
-        errorMessage = 'Erro de autenticação. Faça login novamente.';
-      } else if (err.response?.status === 404) {
-        errorMessage = 'Serviço não encontrado';
-      } else if (err.response?.data?.message) {
-        errorMessage = err.response.data.message;
-      } else if (err.message) {
-        errorMessage = err.message;
-      }
-
-      setError(errorMessage);
+      setError('Não foi possível carregar seus cards');
       setCards([]);
     } finally {
       setLoading(false);
@@ -123,6 +112,22 @@ const ProfileScreen = () => {
     });
   };
 
+  // Função para navegar para o detalhe do card
+  const handleCardPress = (card: Card) => {
+    navigation.navigate('CardDetail', {
+      card: {
+        id: card._id,
+        title: card.title,
+        content: card.content,
+        image_url: card.image_url,
+        createdAt: card.createdAt,
+        pdfs: card.pdfs,
+      },
+      listId: 'profile',
+      listName: 'Meus Cards'
+    });
+  };
+
   // Função para renderizar card
   const renderCard = ({ item, index }: { item: Card; index: number }) => {
     const hasImages = Boolean(
@@ -131,17 +136,15 @@ const ProfileScreen = () => {
     const imageUri = hasImages && item.image_url ? item.image_url[0] : null;
 
     return (
-      <View style={styles.cardBox}>
+      <TouchableOpacity 
+        style={styles.cardBox}
+        onPress={() => handleCardPress(item)}
+        activeOpacity={0.7}
+      >
         {imageUri ? (
           <Image
             source={{ uri: imageUri }}
             style={styles.cardImage}
-            onError={() => {
-              console.log('ProfileScreen: Erro ao carregar imagem:', imageUri);
-            }}
-            onLoad={() => {
-              console.log('ProfileScreen: Imagem carregada com sucesso:', imageUri);
-            }}
             resizeMode="cover"
           />
         ) : (
@@ -158,7 +161,7 @@ const ProfileScreen = () => {
           </Text>
           <Text style={styles.cardType}>{item.priority || 'N/A'}</Text>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -226,23 +229,18 @@ const ProfileScreen = () => {
         </View>
       ) : cards.length > 0 ? (
         <FlatList
-          data={listData}
-          keyExtractor={(item) => item.uniqueKey}
+          data={cards.slice(0, 6)}
+          keyExtractor={(item) => item._id}
           renderItem={renderCard}
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.cardsList}
-          contentContainerStyle={{ paddingLeft: 12, paddingRight: 12 }}
-          getItemLayout={(data, index) => ({
-            length: 184, // width + margin
-            offset: 184 * index,
-            index,
-          })}
-          initialNumToRender={5}
-          maxToRenderPerBatch={5}
-          windowSize={10}
+          contentContainerStyle={styles.cardsContainer}
+          ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
+          initialNumToRender={6}
+          maxToRenderPerBatch={6}
+          windowSize={6}
           removeClippedSubviews={true}
-          ItemSeparatorComponent={() => <View style={{ width: 0 }} />}
         />
       ) : (
         <View style={styles.emptyContainer}>
@@ -252,25 +250,19 @@ const ProfileScreen = () => {
       )}
 
       {/* Botões de menu */}
-      <View style={styles.menuBox}>
-        <View style={styles.contentContainer}>
-          {/* button logout */}
-          <CustomButton
-            title="Sair da conta"
-            loading={loading}
-            onPress={handleLogout}
-            buttonStyle={styles.logoutButton}
-            variant="outline"
-          />
+      
+      {/* Botão Premium */}
+      <TouchableOpacity style={styles.premiumBtn} onPress={() => navigation.navigate('Plan')}>
+        <SuperCheck color="#ffffff" size={16} />
+        <Text style={styles.premiumBtnText}>Vire Premium</Text>
+        <View style={[styles.iconCircle, { backgroundColor: 'rgba(26, 26, 26, 0.1)' }]}>
+          <ArrowDiag color="#ffffff" size={16} />
         </View>
+      </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuBtn}>
-          <UserIcon color="#222" size={16} />
-          <Text style={styles.menuText}>Informação Pessoal</Text>
-          <View style={styles.iconCircle}>
-            <ArrowDiag color="#222" size={16} />
-          </View>
-        </TouchableOpacity>
+
+      <View style={styles.menuBox}>
+        
         <TouchableOpacity style={styles.menuBtn}>
           <AnaliticsIcon color="#222" size={16} />
           <Text style={styles.menuText}>Minhas Análises</Text>
@@ -287,14 +279,16 @@ const ProfileScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Botão Premium */}
-      <TouchableOpacity style={styles.premiumBtn} onPress={() => navigation.navigate('Plan')}>
-        <SuperCheck color="#ffffff" size={16} />
-        <Text style={styles.premiumBtnText}>Vire Premium</Text>
-        <View style={[styles.iconCircle, { backgroundColor: 'rgba(26, 26, 26, 0.1)' }]}>
-          <ArrowDiag color="#ffffff" size={16} />
-        </View>
-      </TouchableOpacity>
+      
+       {/* button logout */}
+       <CustomButton
+            title="Sair da conta"
+            loading={loading}
+            onPress={handleLogout}
+            buttonStyle={styles.logoutButton}
+            icon={<LogOutIcon size={16} color={colors.white} />}
+        />
+
     </SafeAreaView>
   );
 };
@@ -388,14 +382,14 @@ const styles = StyleSheet.create({
     fontFamily: fontNames.regular,
   },
   cardsList: {
-    marginTop: 8,
-    minHeight: 140,
-    maxHeight: 300,
+    minHeight: 180,
+    maxHeight: 200,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
   cardBox: {
     backgroundColor: '#fff',
     borderRadius: 16,
-    margin: 12,
     padding: 10,
     width: 160,
     shadowColor: '#000',
@@ -406,21 +400,24 @@ const styles = StyleSheet.create({
   },
   cardImage: {
     width: '100%',
-    height: 60,
+    height: 80,
     borderRadius: 10,
     marginBottom: 8,
     backgroundColor: '#eee',
   },
   cardTitle: {
     fontWeight: '600',
-    fontSize: 15,
+    fontSize: 14,
     color: '#222',
     marginBottom: 4,
     fontFamily: fontNames.bold,
+    minHeight: 40,
   },
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
   },
   cardDate: {
     fontSize: 11,
@@ -485,7 +482,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   menuBox: {
-    marginTop: 18,
+    marginTop: 8,
     marginHorizontal: 12,
     gap: 10,
   },
@@ -519,33 +516,34 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 18,
 
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.button,
     borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
     marginHorizontal: 8,
     marginTop: 8,
-    marginBottom: 18,
   },
   premiumBtnText: {
     flex: 1,
-    color: '#fff',
-    fontWeight: '600',
+    color: colors.white,
     fontSize: 16,
     marginRight: 8,
     fontFamily: fontNames.bold,
   },
 
-  contentContainer: {
-    flex: 1,
-    width: '80%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+
 
   logoutButton: {
-    width: '80%',
-    marginBottom: 20,
+    height: 68,
+    backgroundColor: colors.highPriority,
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    gap: 8,
+    marginHorizontal: 8,
+    marginTop: 8,
+    marginBottom: 18,
   },
 
   placeholderImage: {
@@ -556,5 +554,11 @@ const styles = StyleSheet.create({
   placeholderText: {
     fontSize: 24,
     color: '#888',
+  },
+  cardsContainer: {
+    paddingHorizontal: 16,
+  },
+  cardsRow: {
+    justifyContent: 'space-between',
   },
 });
