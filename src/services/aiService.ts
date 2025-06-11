@@ -28,7 +28,7 @@ class AIService {
 
   async sendMessage(message: string): Promise<ChatResponse> {
     try {
-      const response = await api.post('/ai/chat', {
+      const response = await api.post('/chat', {
         message: message,
       });
 
