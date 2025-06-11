@@ -10,9 +10,7 @@ import {
   Image,
   ScrollView,
   RefreshControl,
-  TextInput,
   Animated,
-  Dimensions,
   Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -31,7 +29,6 @@ import CustomButton from '@components/CustomButton';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
 import FilterIcon from 'assets/icons/FilterIcon';
-import NotificationIcon from 'assets/icons/NotificationIcon';
 import AnaliticsIcon from 'assets/icons/AnaliticsIcon';
 import NewIcon from 'assets/icons/NewIcon';
 import SearchIcon from 'assets/icons/SearchIcon';
@@ -39,7 +36,6 @@ import CloseIcon from 'assets/icons/CloseIcon';
 import RefreshIcon from '@icons/RefreshIcon';
 import FileDocumentIcon from '@icons/FileDocumentIcon';
 import HeartIcon from '@icons/HeartIcon';
-import HeartFillIcon from '@icons/HeartFillIcon';
 import FolderIcon from '@icons/FolderIcon';
 
 // Interfaces baseadas na versão web
@@ -67,7 +63,7 @@ interface CardData {
 }
 
 const EscolarScreen = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigation = useNavigation<any>();
   const userId = user?._id || user?.id; // Usar _id do MongoDB ou fallback para id
 
@@ -186,12 +182,12 @@ const EscolarScreen = () => {
     }
   };
 
-  // Salvar preferências sempre que mudarem
+  // Salva preferências apenas quando estados realmente usados mudam
   useEffect(() => {
     if (userId) {
       savePreferences();
     }
-  }, [viewMode, activeFilters, favorites, userId, lists, cards]);
+  }, [viewMode, activeFilters, favorites, userId]);
 
   const fetchListsAndCards = async () => {
     if (!userId) return;
@@ -204,7 +200,9 @@ const EscolarScreen = () => {
       setLists(listas);
 
       if (listas.length === 0) {
+        // Nenhuma lista para exibir – encerra loading antes de sair
         setCards({});
+        setLoading(false);
         return;
       }
 
@@ -627,8 +625,7 @@ const EscolarScreen = () => {
 
     setLoading(true);
     try {
-      // Log dos valores antes do envio
-      console.log('Tentando criar lista:', { userId, listName });
+      // Dados para criação de lista (logger removido)
       const payload = {
         name: listName.trim(),
         userId,
@@ -691,7 +688,7 @@ const EscolarScreen = () => {
   };
 
   const handleDeleteList = async (listId: string) => {
-    console.log('Clicou para excluir lista:', listId);
+    // Ação de excluir lista
     const listToDelete = lists.find((list) => list.id === listId);
     const cardsInList = cards[listId] || [];
 
@@ -718,45 +715,41 @@ const EscolarScreen = () => {
     }
 
     // Mobile: Alert.alert
-    Alert.alert(
-      'Excluir Lista',
-      confirmMessage,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Excluir',
-          style: 'destructive',
-          onPress: async () => {
-            if (offlineMode) {
-              setLists((prev) => prev.filter((list) => list.id !== listId));
-              setCards((prev) => {
-                const updated = { ...prev };
-                delete updated[listId];
-                return updated;
-              });
-              Alert.alert('Sucesso', 'Lista excluída com sucesso! (Modo Offline)');
-              return;
-            }
+    Alert.alert('Excluir Lista', confirmMessage, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Excluir',
+        style: 'destructive',
+        onPress: async () => {
+          if (offlineMode) {
+            setLists((prev) => prev.filter((list) => list.id !== listId));
+            setCards((prev) => {
+              const updated = { ...prev };
+              delete updated[listId];
+              return updated;
+            });
+            Alert.alert('Sucesso', 'Lista excluída com sucesso! (Modo Offline)');
+            return;
+          }
 
-            try {
-              await api.delete(`/lists/${listId}`);
-              setLists((prev) => prev.filter((list) => list.id !== listId));
-              setCards((prev) => {
-                const updated = { ...prev };
-                delete updated[listId];
-                return updated;
-              });
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              Alert.alert('Sucesso', 'Lista e todos os seus cards foram excluídos permanentemente!');
-            } catch (err: any) {
-              console.error('Erro ao excluir lista', err);
-              const errorMessage = err.response?.data?.message || 'Não foi possível excluir a lista';
-              Alert.alert('Erro', errorMessage);
-            }
-          },
+          try {
+            await api.delete(`/lists/${listId}`);
+            setLists((prev) => prev.filter((list) => list.id !== listId));
+            setCards((prev) => {
+              const updated = { ...prev };
+              delete updated[listId];
+              return updated;
+            });
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            Alert.alert('Sucesso', 'Lista e todos os seus cards foram excluídos permanentemente!');
+          } catch (err: any) {
+            console.error('Erro ao excluir lista', err);
+            const errorMessage = err.response?.data?.message || 'Não foi possível excluir a lista';
+            Alert.alert('Erro', errorMessage);
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   // Função para editar card
@@ -848,14 +841,16 @@ const EscolarScreen = () => {
           </View>
         </View>
 
-        <ScrollView
+        <FlatList
+          data={filteredCards}
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={styles.cardsScrollView}
+          keyExtractor={(card) => card.id}
+          initialNumToRender={5}
+          windowSize={5}
           contentContainerStyle={styles.cardsScrollContent}
-        >
-          {filteredCards.map((cardItem, index) => (
-            <View key={cardItem.id} style={styles.cardContainer}>
+          renderItem={({ item: cardItem, index }) => (
+            <View style={styles.cardContainer}>
               <TouchableOpacity
                 onPress={() => handleCardPress(cardItem, item.id)}
                 onLongPress={() => handleDeleteCard(cardItem.id, item.id)}
@@ -892,14 +887,18 @@ const EscolarScreen = () => {
                 </View>
               </TouchableOpacity>
             </View>
-          ))}
-
-          <TouchableOpacity style={styles.addCardContainer} onPress={() => openCardModal(item.id)}>
-            <View style={styles.addCardIcon}>
-              <Ionicons name="add" size={24} color="#ccc" />
-            </View>
-          </TouchableOpacity>
-        </ScrollView>
+          )}
+          ListFooterComponent={() => (
+            <TouchableOpacity
+              style={styles.addCardContainer}
+              onPress={() => openCardModal(item.id)}
+            >
+              <View style={styles.addCardIcon}>
+                <Ionicons name="add" size={24} color="#ccc" />
+              </View>
+            </TouchableOpacity>
+          )}
+        />
       </View>
     );
   };
@@ -996,7 +995,7 @@ const EscolarScreen = () => {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+      <View style={{ flex: 1 }}>
         {/* Network Status Indicator */}
         {offlineMode && (
           <View style={styles.networkStatus}>
@@ -1010,10 +1009,7 @@ const EscolarScreen = () => {
             <View style={styles.userSection}>
               <View style={styles.avatar}>
                 {user?.profileImage ? (
-                  <Image 
-                    source={{ uri: user.profileImage }} 
-                    style={styles.avatarImage}
-                  />
+                  <Image source={{ uri: user.profileImage }} style={styles.avatarImage} />
                 ) : (
                   <Text style={styles.avatarText}>{user?.name?.charAt(0) || 'U'}</Text>
                 )}
@@ -1036,7 +1032,7 @@ const EscolarScreen = () => {
               </TouchableOpacity>
 
               <TouchableOpacity onPress={() => setShowStats(true)} style={styles.headerIconButton}>
-                <AnaliticsIcon size={24} color={colors.primary}/>
+                <AnaliticsIcon size={24} color={colors.primary} />
               </TouchableOpacity>
             </View>
           </View>
@@ -1055,7 +1051,7 @@ const EscolarScreen = () => {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[
             styles.listEmptyContainer,
-            filteredLists.length === 0 && { flex: 1 }
+            filteredLists.length === 0 && { flex: 1 },
           ]}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
@@ -1108,7 +1104,8 @@ const EscolarScreen = () => {
                 }}
               />
               <Text style={{ color: '#888', fontSize: 13, marginTop: 4 }}>
-                O nome deve ter entre 3 e 50 caracteres e pode conter apenas letras, números, espaço, hífen e underline.
+                O nome deve ter entre 3 e 50 caracteres e pode conter apenas letras, números,
+                espaço, hífen e underline.
               </Text>
               {!!listNameError && (
                 <Text style={{ color: 'red', fontSize: 13, marginTop: 2 }}>{listNameError}</Text>
@@ -1146,7 +1143,7 @@ const EscolarScreen = () => {
             <Animated.View style={[styles.modalContent, { opacity: fadeAnim }]}>
               <View style={styles.cardDetailsHeader}>
                 <View style={styles.titleModalContainer}>
-                  <AnaliticsIcon size={24} color={colors.primary}/>
+                  <AnaliticsIcon size={24} color={colors.primary} />
                   <Text style={styles.modalTitle}>Estatísticas Escolar</Text>
                 </View>
                 <TouchableOpacity onPress={() => setShowStats(false)} style={styles.closeButton}>
@@ -1188,7 +1185,7 @@ const EscolarScreen = () => {
                       <Text style={styles.progressText}>Cards estudados hoje</Text>
                       <Text style={styles.progressValue}>65%</Text>
                     </View>
-                    
+
                     <View style={styles.progressBar}>
                       <View style={[styles.progressFill, { width: '65%' }]} />
                     </View>
@@ -1228,10 +1225,10 @@ const EscolarScreen = () => {
             <Animated.View style={[styles.modalContent, { opacity: fadeAnim }]}>
               <View style={styles.cardDetailsHeader}>
                 <View style={styles.titleModalContainer}>
-                  <SearchIcon size={24} color={colors.primary}/>
+                  <SearchIcon size={24} color={colors.primary} />
                   <Text style={styles.modalTitle}>Filtros</Text>
                 </View>
-                
+
                 <TouchableOpacity onPress={() => setShowFilters(false)} style={styles.closeButton}>
                   <CloseIcon size={24} color={colors.gray} />
                 </TouchableOpacity>
@@ -1441,7 +1438,7 @@ const EscolarScreen = () => {
             </View>
           </View>
         </Modal>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 };
@@ -1700,7 +1697,7 @@ const styles = StyleSheet.create({
     color: '#666',
     fontFamily: fontNames.regular,
   },
-  
+
   emptyContainer: {
     flex: 1,
     height: '100%',
@@ -1730,7 +1727,6 @@ const styles = StyleSheet.create({
     padding: 24,
     width: '90%',
     gap: 16,
-
   },
   modalTitle: {
     fontSize: 20,
@@ -2256,7 +2252,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  
+
   progressFill: {
     height: '100%',
     backgroundColor: colors.button,
