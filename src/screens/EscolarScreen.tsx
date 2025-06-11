@@ -15,8 +15,6 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
-import * as DocumentPicker from 'expo-document-picker';
-import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
@@ -77,7 +75,6 @@ const EscolarScreen = () => {
   const [searchText, setSearchText] = useState('');
   const [offlineMode, setOfflineMode] = useState(false);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [showStats, setShowStats] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
@@ -146,7 +143,6 @@ const EscolarScreen = () => {
 
       if (savedPreferences) {
         const prefs = JSON.parse(savedPreferences);
-        setViewMode(prefs.viewMode || 'list');
         setActiveFilters(
           prefs.activeFilters || {
             onlyFavorites: false,
@@ -172,7 +168,6 @@ const EscolarScreen = () => {
   const savePreferences = async () => {
     try {
       const preferences = {
-        viewMode,
         activeFilters,
         favorites: Array.from(favorites),
       };
@@ -187,7 +182,7 @@ const EscolarScreen = () => {
     if (userId) {
       savePreferences();
     }
-  }, [viewMode, activeFilters, favorites, userId]);
+  }, [activeFilters, favorites, userId]);
 
   const fetchListsAndCards = async () => {
     if (!userId) return;
@@ -235,7 +230,7 @@ const EscolarScreen = () => {
       console.error('Erro ao buscar listas ou cards', err);
 
       // Verificar se é erro de rede ou servidor
-      if (err.code === 'NETWORK_ERROR' || err.response?.status >= 500) {
+      if (err.code === 'ERR_NETWORK' || err.response?.status >= 500) {
         Alert.alert(
           'Erro de Conexão',
           'Não foi possível conectar ao servidor. Deseja carregar dados de demonstração?',
@@ -345,9 +340,10 @@ const EscolarScreen = () => {
     return lists.filter((list) => list.name.toLowerCase().includes(searchText.toLowerCase()));
   }, [lists, searchText]);
 
-  // Função para filtrar cards pela busca e filtros - otimizada com useCallback
-  const getFilteredCards = useCallback(
-    (listId: string) => {
+  // Memoiza listas filtradas de cards por lista para evitar recomputo por render
+  const filteredCardsByList = useMemo(() => {
+    const result: Record<string, CardData[]> = {};
+    Object.keys(cards).forEach((listId) => {
       let listCards = cards[listId] || [];
 
       // Filtro por texto de busca
@@ -368,7 +364,7 @@ const EscolarScreen = () => {
       }
 
       // Ordenação
-      listCards.sort((a, b) => {
+      listCards = [...listCards].sort((a, b) => {
         switch (activeFilters.sortBy) {
           case 'name':
             return a.title.localeCompare(b.title);
@@ -380,56 +376,10 @@ const EscolarScreen = () => {
         }
       });
 
-      return listCards;
-    },
-    [cards, searchText, activeFilters, favorites]
-  );
-
-  // Função para upload de PDF (placeholder)
-  const handlePdfUpload = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    Alert.alert(
-      'Upload de PDF',
-      'Funcionalidade em desenvolvimento. Em breve você poderá anexar arquivos PDF aos seus cards.',
-      [{ text: 'OK' }]
-    );
-  }, []);
-
-  // Função para selecionar imagem
-  const handleSelectImage = useCallback(async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [16, 9],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
-    } catch (error) {
-      console.error('Erro ao selecionar imagem:', error);
-      Alert.alert('Erro', 'Não foi possível selecionar a imagem');
-    }
-  }, []);
-
-  // Função para selecionar PDF
-  const handleSelectPdf = useCallback(async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: 'application/pdf',
-        copyToCacheDirectory: true,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
-    } catch (error) {
-      console.error('Erro ao selecionar PDF:', error);
-      Alert.alert('Erro', 'Não foi possível selecionar o PDF');
-    }
-  }, []);
+      result[listId] = listCards;
+    });
+    return result;
+  }, [cards, searchText, activeFilters, favorites]);
 
   // Função para alternar favorito - otimizada com useCallback
   const toggleFavorite = useCallback((cardId: string) => {
@@ -812,7 +762,7 @@ const EscolarScreen = () => {
   };
 
   const renderList = ({ item }: { item: Lista }) => {
-    const filteredCards = getFilteredCards(item.id);
+    const filteredCards = filteredCardsByList[item.id] || [];
 
     return (
       <View style={styles.listContainer}>
@@ -874,7 +824,10 @@ const EscolarScreen = () => {
 
                 <View style={styles.cardProgress}>
                   <View
-                    style={[styles.progressBar, { backgroundColor: getProgressColor(index) }]}
+                    style={[
+                      styles.progressBar,
+                      { backgroundColor: getProgressColor(cardItem.priority) },
+                    ]}
                   />
                   <Text style={styles.progressText}>
                     {cardItem.createdAt
@@ -910,10 +863,19 @@ const EscolarScreen = () => {
     return colors[index % colors.length];
   };
 
-  // Helper function to get progress colors
-  const getProgressColor = (index: number) => {
-    const colors = ['#ff4444', '#4CAF50', '#FF9500', '#2196F3', '#9C27B0'];
-    return colors[index % colors.length];
+  // Cor do card baseada na prioridade
+  const getProgressColor = (priority?: string | null) => {
+    const value = priority?.toLowerCase();
+    switch (value) {
+      case 'alta':
+        return '#ff4444'; // Vermelho
+      case 'media':
+        return '#FF9500'; // Laranja
+      case 'baixa':
+        return '#4CAF50'; // Verde
+      default:
+        return '#2196F3'; // Azul (indefinida)
+    }
   };
 
   // Função para criar card diretamente (alternativa ao modal)
@@ -1049,10 +1011,9 @@ const EscolarScreen = () => {
           renderItem={renderList}
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={[
-            styles.listEmptyContainer,
-            filteredLists.length === 0 && { flex: 1 },
-          ]}
+          contentContainerStyle={
+            filteredLists.length === 0 ? styles.listEmptyContainer : styles.listContent
+          }
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
@@ -1476,6 +1437,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 16,
     paddingBottom: 100, // espaço para o floating button
+  },
+  listContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 100, // espaço para o FAB
   },
   listContainer: {
     flexDirection: 'column',
