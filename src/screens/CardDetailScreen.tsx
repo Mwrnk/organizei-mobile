@@ -12,6 +12,7 @@ import {
   Dimensions,
   ActivityIndicator,
   Platform,
+  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -37,9 +38,9 @@ const { width: screenWidth } = Dimensions.get('window');
 // Interfaces para comentários
 interface Comment {
   _id: string;
-  userId: string;
-  userName: string;
-  content: string;
+  userId: string | { _id: string; name?: string; profileImage?: string };
+  userName?: string; // Nome pode vir populado no backend
+  description: string;
   createdAt: string;
   userProfileImage?: string;
 }
@@ -93,6 +94,15 @@ const CardDetailScreen = () => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
 
+  /**
+   * ------------------------------------------------------------------
+   * PDF CACHE (Optimização #1)
+   * ------------------------------------------------------------------
+   * Mantém em memória as URLs (blob: ou assinadas) já geradas para evitar
+   * novos downloads quando o usuário alterna entre PDFs do mesmo card.
+   */
+  const pdfCache = React.useRef<Map<string, string>>(new Map());
+
   // Carregar dados completos do card
   useEffect(() => {
     loadCardDetails();
@@ -124,6 +134,16 @@ const CardDetailScreen = () => {
   // Função para carregar PDF
   const loadPdf = useCallback(
     async (cardId: string, pdfIndex: number = 0) => {
+      const cacheKey = `${cardId}-${pdfIndex}`;
+
+      // Verifica cache em memória antes de baixar
+      const cachedUrl = pdfCache.current.get(cacheKey);
+      if (cachedUrl) {
+        setPdfUrl(cachedUrl);
+        setCurrentPdfIndex(pdfIndex);
+        return;
+      }
+
       try {
         if (!cardData?.pdfs || cardData.pdfs.length === 0) {
           setPdfUrl(null);
@@ -139,7 +159,7 @@ const CardDetailScreen = () => {
         // Construir URL base para o PDF
         const pdfViewUrl = `${api.defaults.baseURL}/cards/${cardId}/pdf/${pdfIndex}/view`;
         console.log('🔄 Tentando carregar PDF da URL:', pdfViewUrl);
-        
+
         if (Platform.OS === 'web') {
           try {
             const response = await fetch(pdfViewUrl, {
@@ -162,6 +182,8 @@ const CardDetailScreen = () => {
             console.log('📄 URL do objeto criada:', pdfObjectUrl);
 
             setPdfUrl(pdfObjectUrl);
+            // Armazena no cache
+            pdfCache.current.set(cacheKey, pdfObjectUrl);
           } catch (error) {
             console.error('❌ Erro ao processar PDF no ambiente web:', error);
             throw error;
@@ -171,6 +193,8 @@ const CardDetailScreen = () => {
           const fullUrl = `${pdfViewUrl}?token=${encodeURIComponent(token)}`;
           console.log('📄 URL mobile gerada:', fullUrl);
           setPdfUrl(fullUrl);
+          // Armazena no cache
+          pdfCache.current.set(cacheKey, fullUrl);
         }
 
         setCurrentPdfIndex(pdfIndex);
@@ -183,8 +207,23 @@ const CardDetailScreen = () => {
         setPdfLoading(false);
       }
     },
-    [cardData]
+    // Dependências reduzidas (Optimização #3)
+    [cardData.id, cardData.pdfs?.length]
   );
+
+  /**
+   * Libera URLs blob: quando o componente desmontar
+   */
+  useEffect(() => {
+    return () => {
+      pdfCache.current.forEach((url) => {
+        if (url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      });
+      pdfCache.current.clear();
+    };
+  }, []);
 
   // Componente de visualização do PDF
   const PdfViewerComponent = () => {
@@ -202,9 +241,7 @@ const CardDetailScreen = () => {
       return (
         <View style={styles.pdfPlaceholder}>
           <Ionicons name="document-text-outline" size={48} color={colors.gray} />
-          <Text style={styles.pdfPlaceholderText}>
-            Selecione um arquivo para visualizar
-          </Text>
+          <Text style={styles.pdfPlaceholderText}>Selecione um arquivo para visualizar</Text>
         </View>
       );
     }
@@ -261,9 +298,7 @@ const CardDetailScreen = () => {
           {hasError && (
             <View style={styles.pdfErrorOverlay}>
               <Ionicons name="alert-circle-outline" size={48} color={errorColor} />
-              <Text style={styles.pdfErrorText}>
-                Erro ao carregar o PDF. Tente novamente.
-              </Text>
+              <Text style={styles.pdfErrorText}>Erro ao carregar o PDF. Tente novamente.</Text>
               <TouchableOpacity
                 style={styles.retryButton}
                 onPress={() => {
@@ -303,9 +338,7 @@ const CardDetailScreen = () => {
           {hasError && (
             <View style={styles.pdfErrorOverlay}>
               <Ionicons name="alert-circle-outline" size={48} color={errorColor} />
-              <Text style={styles.pdfErrorText}>
-                Erro ao carregar o PDF. Tente novamente.
-              </Text>
+              <Text style={styles.pdfErrorText}>Erro ao carregar o PDF. Tente novamente.</Text>
               <TouchableOpacity
                 style={styles.retryButton}
                 onPress={() => {
@@ -394,7 +427,7 @@ const CardDetailScreen = () => {
 
     setLoadingComments(true);
     try {
-      const response = await api.get(`/cards/${cardData.id}/comments`);
+      const response = await api.get(`/comments/${cardData.id}`);
       const commentsData = response.data.data || [];
       setComments(commentsData);
     } catch (error) {
@@ -418,8 +451,9 @@ const CardDetailScreen = () => {
     }
 
     try {
-      const response = await api.post(`/cards/${cardData.id}/comments`, {
-        content: comment.trim()
+      const response = await api.post(`/comments`, {
+        cardId: cardData.id,
+        description: comment.trim(),
       });
 
       // Atualizar a lista de comentários
@@ -437,7 +471,40 @@ const CardDetailScreen = () => {
     }
   };
 
-  // Renderizar lista de comentários
+  // -----------------------------
+  // Renderização dos comentários
+  // Virtualizada com FlatList (Optimização #2)
+  // -----------------------------
+
+  const renderCommentItem = useCallback(({ item }: { item: Comment }) => {
+    const populatedUser = typeof item.userId === 'object' ? (item.userId as any) : null;
+    const displayName = item.userName || populatedUser?.name || 'Usuário';
+    const profileImg = item.userProfileImage || populatedUser?.profileImage || undefined;
+
+    const initial = displayName.charAt(0).toUpperCase();
+
+    return (
+      <View style={styles.commentItem}>
+        <View style={styles.commentHeader}>
+          {profileImg ? (
+            <Image source={{ uri: profileImg }} style={styles.commentUserImage} />
+          ) : (
+            <View style={styles.commentUserImagePlaceholder}>
+              <Text style={styles.commentUserImagePlaceholderText}>{initial}</Text>
+            </View>
+          )}
+          <View style={styles.commentUserInfo}>
+            <Text style={styles.commentUserName}>{displayName}</Text>
+            <Text style={styles.commentDate}>
+              {new Date(item.createdAt).toLocaleDateString('pt-BR')}
+            </Text>
+          </View>
+        </View>
+        <Text style={styles.commentContent}>{item.description}</Text>
+      </View>
+    );
+  }, []);
+
   const renderComments = () => {
     if (loadingComments) {
       return (
@@ -452,39 +519,22 @@ const CardDetailScreen = () => {
       return (
         <View style={styles.noCommentsContainer}>
           <Ionicons name="chatbubbles-outline" size={24} color={colors.gray} />
-          <Text style={styles.noCommentsText}>Nenhum comentário ainda. Seja o primeiro a comentar!</Text>
+          <Text style={styles.noCommentsText}>
+            Nenhum comentário ainda. Seja o primeiro a comentar!
+          </Text>
         </View>
       );
     }
 
     return (
-      <View style={styles.commentsList}>
-        {comments.map((comment) => (
-          <View key={comment._id} style={styles.commentItem}>
-            <View style={styles.commentHeader}>
-              {comment.userProfileImage ? (
-                <Image
-                  source={{ uri: comment.userProfileImage }}
-                  style={styles.commentUserImage}
-                />
-              ) : (
-                <View style={styles.commentUserImagePlaceholder}>
-                  <Text style={styles.commentUserImagePlaceholderText}>
-                    {comment.userName.charAt(0).toUpperCase()}
-                  </Text>
-                </View>
-              )}
-              <View style={styles.commentUserInfo}>
-                <Text style={styles.commentUserName}>{comment.userName}</Text>
-                <Text style={styles.commentDate}>
-                  {new Date(comment.createdAt).toLocaleDateString('pt-BR')}
-                </Text>
-              </View>
-            </View>
-            <Text style={styles.commentContent}>{comment.content}</Text>
-          </View>
-        ))}
-      </View>
+      <FlatList
+        data={comments}
+        keyExtractor={(item) => item._id}
+        renderItem={renderCommentItem}
+        contentContainerStyle={styles.commentsList}
+        initialNumToRender={8}
+        windowSize={5}
+      />
     );
   };
 
@@ -525,33 +575,35 @@ const CardDetailScreen = () => {
       <View style={styles.prioritySection}>
         <Text style={styles.sectionTitle}>Prioridade</Text>
         <View style={styles.badgesContainer}>
-          <View style={[
-            styles.priorityBadge,
-            {
-              backgroundColor: cardData.priority ? 
-                (cardData.priority === 'alta' ? colors.highPriority :
-                 cardData.priority === 'media' ? colors.mediumPriority :
-                 colors.lowPriority) : 
-                colors.background
-            }
-          ]}>
-            <Text style={[
-              styles.priorityText,
-              !cardData.priority && styles.undefinedPriorityText
-            ]}>
+          <View
+            style={[
+              styles.priorityBadge,
+              {
+                backgroundColor: cardData.priority
+                  ? cardData.priority === 'alta'
+                    ? colors.highPriority
+                    : cardData.priority === 'media'
+                    ? colors.mediumPriority
+                    : colors.lowPriority
+                  : colors.background,
+              },
+            ]}
+          >
+            <Text style={[styles.priorityText, !cardData.priority && styles.undefinedPriorityText]}>
               {cardData.priority ? cardData.priority.toUpperCase() : 'NÃO DEFINIDA'}
             </Text>
           </View>
 
-          <View style={[
-            styles.publishedBadge,
-            cardData.is_published ? styles.publishedBadgeActive : styles.publishedBadgeInactive
-          ]}>
+          <View
+            style={[
+              styles.publishedBadge,
+              cardData.is_published ? styles.publishedBadgeActive : styles.publishedBadgeInactive,
+            ]}
+          >
             <NetworkIcon size={16} color={cardData.is_published ? colors.white : colors.primary} />
-            <Text style={[
-              styles.publishedText,
-              !cardData.is_published && styles.publishedTextInactive
-            ]}>
+            <Text
+              style={[styles.publishedText, !cardData.is_published && styles.publishedTextInactive]}
+            >
               {cardData.is_published ? 'PUBLICADO' : 'NÃO PUBLICADO'}
             </Text>
           </View>
@@ -583,30 +635,27 @@ const CardDetailScreen = () => {
       {cardData.pdfs && cardData.pdfs.length > 0 ? (
         <View style={styles.pdfSection}>
           <Text style={styles.sectionTitle}>PDFs disponíveis</Text>
-          
+
           {/* Lista de PDFs disponíveis */}
           <View style={styles.pdfListContainer}>
             {cardData.pdfs.map((pdf, index) => (
               <TouchableOpacity
                 key={index}
-                style={[
-                  styles.pdfListItem,
-                  currentPdfIndex === index && styles.pdfListItemActive
-                ]}
+                style={[styles.pdfListItem, currentPdfIndex === index && styles.pdfListItemActive]}
                 onPress={() => {
                   setCurrentPdfIndex(index);
                   loadPdf(cardData.id, index);
                 }}
               >
-                <Ionicons 
-                  name="document-text" 
-                  size={20} 
-                  color={currentPdfIndex === index ? colors.button : colors.gray} 
+                <Ionicons
+                  name="document-text"
+                  size={20}
+                  color={currentPdfIndex === index ? colors.button : colors.gray}
                 />
-                <Text 
+                <Text
                   style={[
                     styles.pdfListItemText,
-                    currentPdfIndex === index && styles.pdfListItemTextActive
+                    currentPdfIndex === index && styles.pdfListItemTextActive,
                   ]}
                   numberOfLines={1}
                 >
@@ -632,12 +681,13 @@ const CardDetailScreen = () => {
           {cardData.pdfs[currentPdfIndex] && (
             <View style={styles.pdfInfo}>
               <Text style={styles.pdfInfoText}>
-                {cardData.pdfs[currentPdfIndex].size_kb 
-                  ? `Tamanho: ${Math.round(cardData.pdfs[currentPdfIndex].size_kb)}KB` 
+                {cardData.pdfs[currentPdfIndex].size_kb
+                  ? `Tamanho: ${Math.round(cardData.pdfs[currentPdfIndex].size_kb)}KB`
                   : ''}
               </Text>
               <Text style={styles.pdfInfoText}>
-                Enviado em: {new Date(cardData.pdfs[currentPdfIndex].uploaded_at).toLocaleDateString('pt-BR')}
+                Enviado em:{' '}
+                {new Date(cardData.pdfs[currentPdfIndex].uploaded_at).toLocaleDateString('pt-BR')}
               </Text>
             </View>
           )}
@@ -658,9 +708,7 @@ const CardDetailScreen = () => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <ArrowBack color={colors.primary} size={16} />
         </TouchableOpacity>
-
         <Text style={styles.headerTitle}>Seu card</Text>
-
         <View style={{ width: 24 }} /> {/* Espaçador para centralizar */}
       </View>
 
@@ -702,17 +750,16 @@ const CardDetailScreen = () => {
           />
 
           <CustomButton
-            title={cardData.is_published ? "Publicado na comunidade" : "Publicar na comunidade"}
+            title={cardData.is_published ? 'Publicado na comunidade' : 'Publicar na comunidade'}
             onPress={handlePublishToCommunity}
-            buttonStyle={[
-              styles.publishButton,
-              cardData.is_published && styles.publishedButton
-            ]}
+            buttonStyle={[styles.publishButton, cardData.is_published && styles.publishedButton]}
             textStyle={[
               styles.publishButtonText,
-              cardData.is_published && styles.publishedButtonText
+              cardData.is_published && styles.publishedButtonText,
             ]}
-            icon={<NetworkIcon size={24} color={cardData.is_published ? colors.gray : colors.white} />}
+            icon={
+              <NetworkIcon size={24} color={cardData.is_published ? colors.gray : colors.white} />
+            }
             disabled={cardData.is_published}
           />
         </View>
@@ -1245,8 +1292,7 @@ const styles = StyleSheet.create({
   undefinedPriorityText: {
     color: colors.primary,
   },
-  descriptionSection: {
-  },
+  descriptionSection: {},
   descriptionContainer: {
     backgroundColor: colors.background,
     borderRadius: 8,
