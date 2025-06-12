@@ -1,7 +1,8 @@
 import api from './api';
 
 export interface Card {
-  _id: string;
+  _id?: string;
+  id?: string;
   title: string;
   priority: 'Baixa' | 'Média' | 'Alta';
   is_published: boolean;
@@ -46,7 +47,13 @@ export class CardService {
         return [];
       }
 
-      return cards;
+      // Garantir que cada card tenha _id (mesma lógica do web)
+      const normalized = cards.map((card: any) => ({
+        _id: card._id || card.id,
+        ...card,
+      }));
+
+      return normalized as Card[];
     } catch (error: any) {
       console.error('CardService: Erro ao buscar cards do usuário:', error);
       console.error('CardService: Detalhes do erro:', {
