@@ -29,8 +29,9 @@ import CustomButton from '@components/CustomButton';
 import colors from '@styles/colors';
 import LogOutIcon from '@icons/LogOutIcon';
 import api from '../services/api';
+import UserGroupIcon from '@icons/UserGroupIcon';
 
-// Atualizar o tipo de navegação para incluir CardDetail
+// Atualizar o tipo de navegação para incluir CardDetail e About
 type ProfileScreenNavigationProp = StackNavigationProp<
   RootTabParamList & {
     CardDetail: {
@@ -45,6 +46,7 @@ type ProfileScreenNavigationProp = StackNavigationProp<
       listId: string;
       listName: string;
     };
+    About: undefined;
   }
 >;
 
@@ -180,6 +182,13 @@ const ProfileScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+
+      {/* Btn Sobre */}
+        <View style={styles.sobreBtn}>
+          <TouchableOpacity style={styles.iconCircle} onPress={() => navigation.navigate('About')}>
+            <UserGroupIcon color={colors.primary} size={20} />
+          </TouchableOpacity>
+        </View>
       
       {/* Avatar centralizado */}
       <View style={styles.avatarContainer}>
@@ -301,6 +310,15 @@ const styles = StyleSheet.create({
     paddingTop: 40,
     paddingHorizontal: 16,
     backgroundColor: colors.white,
+  },
+
+  sobreBtn:{
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 16,
   },
 
   avatarContainer: {

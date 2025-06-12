@@ -16,6 +16,7 @@ import EditProfileScreen from '@screens/EditProfileScreen';
 import FlashCardsScreen from '@screens/FlashCardsScreen';
 import JogoDoMilhaoScreen from '@screens/JogoDoMilhaoScreen';
 import PointsScreen from '@screens/PointsScreen';
+import AboutScreen from '@screens/AboutScreen';
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
 const ProfileStack = createStackNavigator();
@@ -28,6 +29,7 @@ function ProfileStackScreen() {
       <ProfileStack.Screen name="Profile" component={ProfileScreen} />
       <ProfileStack.Screen name="Plan" component={PlanScreen} />
       <ProfileStack.Screen name="EditProfile" component={EditProfileScreen} />
+      <ProfileStack.Screen name="About" component={AboutScreen} />
     </ProfileStack.Navigator>
   );
 }
