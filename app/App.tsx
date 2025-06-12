@@ -6,6 +6,9 @@ import { customFonts } from '@styles/fonts';
 import * as SplashScreen from 'expo-splash-screen';
 import { AuthProvider } from '../src/contexts/AuthContext';
 import Routes from '../src/navigation/Routes';
+import { CommunityProvider } from '../src/contexts/CommunityContext';
+// @ts-ignore
+import Toast from 'react-native-toast-message';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -46,8 +49,11 @@ export default function App() {
   return (
     <NavigationContainer onReady={onLayoutRootView}>
       <AuthProvider>
-        <Routes />
+        <CommunityProvider>
+          <Routes />
+        </CommunityProvider>
       </AuthProvider>
+      <Toast />
     </NavigationContainer>
   );
 }

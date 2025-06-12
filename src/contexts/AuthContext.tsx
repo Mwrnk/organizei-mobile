@@ -1,63 +1,46 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { LoginCredentials, AuthService } from '../services/auth';
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User } from '../models/User';
+import { AuthService } from '../services/auth';
 
-interface AuthContextData {
+interface AuthContextValue {
   user: User | null;
-  login: (credentials: LoginCredentials) => Promise<void>;
-  logout: () => Promise<void>;
   loading: boolean;
+<<<<<<< HEAD
   updateUserData: (userData: User) => Promise<void>;
+=======
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+>>>>>>> 52028c3e00001d0a7b6307e35604e762e5805e35
 }
 
-const AuthContext = createContext<AuthContextData>({} as AuthContextData);
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const loadStoredUser = async () => {
-      try {
-        const storedUser = await AuthService.getCurrentUser();
-        if (storedUser) {
-          setUser(storedUser);
-        }
-      } catch (error) {
-        console.error('Erro ao carregar dados de autenticação:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadStoredUser();
-  }, []);
-
-  const login = async (credentials: LoginCredentials) => {
+  const initialize = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const response = await AuthService.login(credentials);
-      setUser(response.user);
-    } catch (error) {
-      console.error('AuthContext - Erro no processo de login:', error);
-      throw error;
+      const currentUser = await AuthService.getCurrentUser();
+      setUser(currentUser);
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    initialize();
+  }, []);
+
+  const login = async (email: string, password: string) => {
+    const { user } = await AuthService.login({ email, password });
+    setUser(user);
+  };
+
   const logout = async () => {
-    try {
-      await AuthService.logout();
-      setUser(null);
-    } catch (error) {
-      console.error('Erro ao fazer logout:', error);
-      throw error;
-    }
+    await AuthService.logout();
+    setUser(null);
   };
 
   const updateUserData = async (userData: User) => {
@@ -71,16 +54,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   return (
+<<<<<<< HEAD
     <AuthContext.Provider value={{ user, login, logout, loading, updateUserData }}>{children}</AuthContext.Provider>
+=======
+    <AuthContext.Provider value={{ user, loading, login, logout }}>{children}</AuthContext.Provider>
+>>>>>>> 52028c3e00001d0a7b6307e35604e762e5805e35
   );
 };
 
-export const useAuth = (): AuthContextData => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+export const useAuth = () => {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
 };
-
-export default AuthContext;

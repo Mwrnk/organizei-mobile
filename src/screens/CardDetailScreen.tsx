@@ -28,6 +28,14 @@ import NetworkIcon from '@icons/NetworkIcon';
 import ArrowBack from '@icons/ArrowBack';
 import CloseIcon from '@icons/CloseIcon';
 import ChatIcon from '@icons/ChatIcon';
+import { RouteProp } from '@react-navigation/native';
+import { ICard } from '../types/community.types';
+import { useCommunity } from '../contexts/CommunityContext';
+import { CommunityService } from '../services/communityService';
+import LikeButton from '../components/community/LikeButton';
+import CommentsButton from '../components/community/CommentsButton';
+import DownloadButton from '../components/community/DownloadButton';
+import Toast from 'react-native-toast-message';
 
 interface Comment {
   _id: string;
@@ -52,24 +60,26 @@ interface CardData {
   content?: string;
   priority?: 'baixa' | 'media' | 'alta';
   is_published?: boolean;
+  image_url?: string[];
   comments?: Comment[];
 }
 
-interface RouteParams {
-  card: CardData;
-  listId: string;
-  listName: string;
-}
+type ParamList = {
+  CardDetail: {
+    card: ICard;
+  };
+};
 
 const errorColor = '#FF3B30';
 
 const CardDetailScreen = () => {
   const navigation = useNavigation<any>();
-  const route = useRoute();
-  const { card } = route.params as RouteParams;
+  const route = useRoute<RouteProp<ParamList, 'CardDetail'>>();
+  const { card } = route.params;
   const { user } = useAuth();
+  const { likeCard, unlikeCard } = useCommunity();
 
-  const [cardData, setCardData] = useState<CardData>(card);
+  const [cardData, setCardData] = useState<ICard>(card);
   const [loading, setLoading] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
@@ -78,28 +88,46 @@ const CardDetailScreen = () => {
   const [comment, setComment] = useState('');
   const [comments, setComments] = useState<Comment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
+  const [publishing, setPublishing] = useState(false);
 
   // Carrega detalhes completos do card (inclusive URL do PDF assinada)
   const loadCardDetails = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.get(`/cards/${card.id}`);
-      const updatedCard: CardData = {
+      const updatedCard: ICard = {
         ...card,
         ...res.data.data,
         pdfs: res.data.data.pdfs || [],
         content: res.data.data.content || '',
       };
-      setCardData(updatedCard);
 
-      // Se existir um PDF, monta URL assinada
-      if (updatedCard.pdfs && updatedCard.pdfs.length > 0) {
+      // Se existir imagem no novo modelo (armazenada binária), busca info e cria URL de visualização
+      try {
         const token = await AsyncStorage.getItem(TOKEN_KEY);
         if (token) {
-          const pdfViewUrl = `${api.defaults.baseURL}/cards/${updatedCard.id}/pdf/0/view`;
-          setPdfUrl(`${pdfViewUrl}?token=${encodeURIComponent(token)}`);
+          // Monta URL do PDF se existir
+          if (updatedCard.pdfs && updatedCard.pdfs.length > 0) {
+            const pdfViewUrl = `${api.defaults.baseURL}/cards/${updatedCard.id}/pdf/0/view`;
+            setPdfUrl(`${pdfViewUrl}?token=${encodeURIComponent(token)}`);
+          }
+
+          // Verifica se já temos image_url; caso não, consulta info
+          if (!updatedCard.image_url || updatedCard.image_url.length === 0) {
+            const infoRes = await api.get(`/cards/${updatedCard.id}/image/info`);
+            if (infoRes.data?.data) {
+              const imageViewUrl = `${api.defaults.baseURL}/cards/${
+                updatedCard.id
+              }/image/view?token=${encodeURIComponent(token)}`;
+              updatedCard.image_url = [imageViewUrl];
+            }
+          }
         }
+      } catch (err) {
+        console.warn('Erro ao montar URL da imagem do card:', err);
       }
+
+      setCardData(updatedCard);
     } catch (err) {
       console.error('Erro ao carregar card:', err);
       Alert.alert('Erro', 'Não foi possível carregar o card');
@@ -111,6 +139,10 @@ const CardDetailScreen = () => {
   useEffect(() => {
     loadCardDetails();
   }, [loadCardDetails]);
+
+  useEffect(() => {
+    console.log('cardData.image_url', cardData.image_url);
+  }, [cardData.image_url]);
 
   /** Comentários */
   const loadComments = useCallback(async () => {
@@ -202,16 +234,40 @@ const CardDetailScreen = () => {
     }
   }, [pdfUrl]);
 
-  const toggleFavorite = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    Alert.alert('Favorito', 'Funcionalidade de favoritos será implementada em breve.');
+  const toggleLike = async () => {
+    if (cardData.likedByUser) {
+      await unlikeCard(cardData.id);
+      setCardData({ ...cardData, likedByUser: false, likes: Math.max(0, cardData.likes - 1) });
+    } else {
+      await likeCard(cardData.id);
+      setCardData({ ...cardData, likedByUser: true, likes: cardData.likes + 1 });
+    }
   };
 
   const handleAddComment = () => setShowCommentModal(true);
 
-  const handlePublishToCommunity = () => {
+  const handlePublishToCommunity = async () => {
+    if (cardData.is_published) return;
+
+    // Checa se possui PDF (mesma regra do web)
+    if (!cardData.pdfs || cardData.pdfs.length === 0) {
+      Alert.alert('Atenção', 'Adicione um PDF ao card antes de publicar na comunidade.');
+      return;
+    }
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Alert.alert('Publicar', 'Funcionalidade em desenvolvimento.');
+    setPublishing(true);
+    try {
+      await CommunityService.publishCard(cardData.id);
+      Toast.show({ type: 'success', text1: 'Card publicado com sucesso!' });
+      setCardData({ ...cardData, is_published: true });
+    } catch (err: any) {
+      console.error('Erro ao publicar card:', err);
+      const message = err.response?.data?.message || 'Erro ao publicar card.';
+      Alert.alert('Erro', message);
+    } finally {
+      setPublishing(false);
+    }
   };
 
   /** Renderizações auxiliares */
@@ -279,9 +335,11 @@ const CardDetailScreen = () => {
           <View style={styles.cardHeader}>
             <View style={styles.cardTitleContainer}>
               <Text style={styles.cardTitle}>{cardData.title}</Text>
-              <TouchableOpacity onPress={toggleFavorite} style={styles.favoriteButton}>
-                <Ionicons name="heart-outline" size={24} color={colors.gray} />
-              </TouchableOpacity>
+              <LikeButton
+                liked={!!cardData.likedByUser}
+                count={cardData.likes}
+                onPress={toggleLike}
+              />
             </View>
 
             <View style={styles.cardMeta}>
@@ -301,6 +359,17 @@ const CardDetailScreen = () => {
               )}
             </View>
           </View>
+          {/* Imagem do card */}
+          {cardData.image_url && cardData.image_url.length > 0 && (
+            <Image
+              source={{
+                uri: cardData.image_url[0].startsWith('http')
+                  ? cardData.image_url[0]
+                  : `${api.defaults.baseURL}${cardData.image_url[0]}`,
+              }}
+              style={styles.cardMainImage}
+            />
+          )}
         </View>
 
         {/* Descrição */}
@@ -341,7 +410,7 @@ const CardDetailScreen = () => {
           icon={
             <NetworkIcon size={24} color={cardData.is_published ? colors.gray : colors.white} />
           }
-          disabled={cardData.is_published}
+          disabled={cardData.is_published || publishing}
         />
       </View>
     </View>
@@ -698,6 +767,7 @@ const styles = StyleSheet.create({
   },
   modalActions: { flexDirection: 'row', gap: 12 },
   modalActionButton: { flex: 1 },
+  cardMainImage: { width: '100%', height: 200, borderRadius: 12, marginTop: 12 },
 });
 
 export default CardDetailScreen;
