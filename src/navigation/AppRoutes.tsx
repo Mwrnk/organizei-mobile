@@ -8,7 +8,7 @@ import GamesScreen from '@screens/GamesScreen';
 import EscolarScreen from '@screens/EscolarScreen';
 import CreateCardScreen from '@screens/CreateCardScreen';
 import CardDetailScreen from '@screens/CardDetailScreen';
-import CommunityScreen from '@screens/CommunityScreen';
+import CommunityFeedScreen from '@screens/CommunityFeedScreen';
 import AIScreen from '@screens/AIScreen';
 import ProfileScreen from '@screens/ProfileScreen';
 import PlanScreen from '@screens/PlanScreen';
@@ -64,7 +64,7 @@ const AppRoutes = () => (
   >
     <Tab.Screen name="Escolar" component={EscolarStackScreen} />
     <Tab.Screen name="Game" component={GameStackScreen} />
-    <Tab.Screen name="Comunidade" component={CommunityScreen} />
+    <Tab.Screen name="Comunidade" component={CommunityFeedScreen} />
     <Tab.Screen name="IA" component={AIScreen} />
     <Tab.Screen name="Eu" component={ProfileStackScreen} />
   </Tab.Navigator>
