@@ -19,7 +19,7 @@ export class CardService {
   // Buscar todos os cards do usuário logado
   static async getUserCards(): Promise<Card[]> {
     try {
-      console.log('CardService: Iniciando busca de cards do usuário');
+      console.log('CardService: Fazendo requisição para /cards');
       const response = await api.get('/cards');
       console.log('CardService: Resposta recebida:', response.data);
 
@@ -49,17 +49,14 @@ export class CardService {
       return cards;
     } catch (error: any) {
       console.error('CardService: Erro ao buscar cards do usuário:', error);
-      if (error.response) {
-        console.error('CardService: Detalhes do erro:', {
-          status: error.response.status,
-          statusText: error.response.statusText,
-          data: error.response.data,
-          url: error.config?.url,
-          method: error.config?.method,
-          headers: error.config?.headers,
-        });
-        throw new Error(error.response.data.message || 'Erro ao buscar cards');
-      }
+      console.error('CardService: Detalhes do erro:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        url: error.config?.url,
+        method: error.config?.method,
+        headers: error.config?.headers,
+      });
       throw error;
     }
   }
@@ -67,16 +64,10 @@ export class CardService {
   // Buscar cards por ID do usuário
   static async getCardsByUserId(userId: string): Promise<Card[]> {
     try {
-      console.log('CardService: Buscando cards do usuário:', userId);
       const response = await api.get(`/cards/user/${userId}`);
-      console.log('CardService: Resposta recebida:', response.data);
       return response.data.data;
-    } catch (error: any) {
-      console.error('CardService: Erro ao buscar cards do usuário por ID:', error);
-      if (error.response) {
-        console.error('CardService: Detalhes do erro:', error.response.data);
-        throw new Error(error.response.data.message || 'Erro ao buscar cards do usuário');
-      }
+    } catch (error) {
+      console.error('Erro ao buscar cards do usuário por ID:', error);
       throw error;
     }
   }
@@ -84,16 +75,10 @@ export class CardService {
   // Buscar card por ID
   static async getCardById(cardId: string): Promise<Card> {
     try {
-      console.log('CardService: Buscando card por ID:', cardId);
       const response = await api.get(`/cards/${cardId}`);
-      console.log('CardService: Resposta recebida:', response.data);
       return response.data.data;
-    } catch (error: any) {
-      console.error('CardService: Erro ao buscar card por ID:', error);
-      if (error.response) {
-        console.error('CardService: Detalhes do erro:', error.response.data);
-        throw new Error(error.response.data.message || 'Erro ao buscar card');
-      }
+    } catch (error) {
+      console.error('Erro ao buscar card por ID:', error);
       throw error;
     }
   }

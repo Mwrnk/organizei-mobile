@@ -16,8 +16,6 @@ import EditProfileScreen from '@screens/EditProfileScreen';
 import FlashCardsScreen from '@screens/FlashCardsScreen';
 import JogoDoMilhaoScreen from '@screens/JogoDoMilhaoScreen';
 import PointsScreen from '@screens/PointsScreen';
-import { CreateFlashcardScreen } from '../screens/CreateFlashcardScreen';
-import CreateFlashcardWithIAScreen from '../screens/CreateFlashcardWithIAScreen';
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
 const ProfileStack = createStackNavigator();
@@ -52,16 +50,6 @@ function GameStackScreen() {
       <GameStack.Screen name="JogoDoMilhao" component={JogoDoMilhaoScreen} />
       <GameStack.Screen name="Points" component={PointsScreen} />
       <GameStack.Screen name="Plan" component={PlanScreen} />
-      <GameStack.Screen
-        name="CreateFlashcard"
-        component={CreateFlashcardScreen}
-        options={{
-          title: 'Criar Flashcard',
-          headerShown: true,
-        }}
-      />
-      <GameStack.Screen name="CreateFlashcardManual" component={CreateFlashcardScreen} options={{ title: 'Criar Flashcard Manual', headerShown: true }} />
-      <GameStack.Screen name="CreateFlashcardWithIA" component={CreateFlashcardWithIAScreen} options={{ title: 'Criar Flashcard com IA', headerShown: true }} />
     </GameStack.Navigator>
   );
 }
