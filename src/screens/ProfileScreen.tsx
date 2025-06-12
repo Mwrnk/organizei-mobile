@@ -114,6 +114,19 @@ const ProfileScreen = () => {
     });
   };
 
+  // Função para formatar o nome do plano
+  const formatPlanName = (planId: string | null) => {
+    if (!planId) return 'Free';
+    
+    // Mapeamento de IDs para nomes de planos
+    const planNames: { [key: string]: string } = {
+      '68379d4289ed7583b0596d87': 'Premium',
+      // Adicione outros IDs de planos aqui conforme necessário
+    };
+
+    return planNames[planId] || 'Free';
+  };
+
   // Função para navegar para o detalhe do card
   const handleCardPress = (card: Card) => {
     navigation.navigate('CardDetail', {
@@ -210,6 +223,7 @@ const ProfileScreen = () => {
           </View>
         </TouchableOpacity>
       </View>
+      <Text style={styles.userPlan}>Plano: {formatPlanName(user?.plan)}</Text>
       <View style={styles.pointsRow}>
         <RaioIcon color="#222" size={16} />
         <Text style={styles.pointsText}>+0pts</Text>
@@ -347,8 +361,7 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontSize: 20,
-    fontWeight: '600',
-    color: '#222',
+    color: colors.primary,
     fontFamily: fontNames.bold,
   },
   editBtn: {
@@ -578,5 +591,12 @@ const styles = StyleSheet.create({
   },
   cardsRow: {
     justifyContent: 'space-between',
+  },
+  userPlan: {
+    fontSize: 14,
+    color: '#666',
+    fontFamily: fontNames.regular,
+    textAlign: 'center',
+    marginTop: 4,
   },
 });

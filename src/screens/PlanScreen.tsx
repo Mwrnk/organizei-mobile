@@ -1,13 +1,38 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Switch } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Switch, ActivityIndicator, Alert } from 'react-native';
 import { fontNames } from '../styles/fonts';
 import colors from '../styles/colors';
 import { useNavigation } from '@react-navigation/native';
+import { useAuth } from '../contexts/AuthContext';
+import { AuthService } from '../services/auth';
 
 const PlanScreen = () => {
+  const { user, updateUserData } = useAuth();
   const [isAnnual, setIsAnnual] = useState(true);
   const [isPremium, setIsPremium] = useState(false);
+  const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
+
+  const handleSubscribe = async () => {
+    if (!user?._id) {
+      Alert.alert('Erro', 'Usuário não encontrado');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const planId = '68379d4289ed7583b0596d87'; // ID do plano Premium
+      const updatedUser = await AuthService.updateUserPlan(user._id, planId);
+      await updateUserData(updatedUser);
+      Alert.alert('Sucesso', 'Plano atualizado com sucesso!');
+      navigation.goBack();
+    } catch (error) {
+      console.error('Erro ao atualizar plano:', error);
+      Alert.alert('Erro', 'Não foi possível atualizar seu plano. Tente novamente mais tarde.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -37,7 +62,7 @@ const PlanScreen = () => {
 
       {/* Plano atual */}
       <Text style={styles.currentPlan}>
-        Seu Plano: <Text style={styles.currentPlanFree}>Free</Text>
+        Seu Plano: <Text style={styles.currentPlanFree}>{user?.plan ? 'Premium' : 'Free'}</Text>
       </Text>
 
       {/* Tabs mensal/anual */}
@@ -69,8 +94,16 @@ const PlanScreen = () => {
             </View>
           </View>
           <Text style={styles.price}><Text style={styles.priceCurrency}>R$</Text>00.<Text style={styles.priceCents}>00</Text><Text style={styles.pricePeriod}>/anual</Text></Text>
-          <TouchableOpacity style={styles.subscribeBtn}>
-            <Text style={styles.subscribeBtnText}>Assinar</Text>
+          <TouchableOpacity 
+            style={[styles.subscribeBtn, loading && styles.subscribeBtnDisabled]} 
+            onPress={handleSubscribe}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color={colors.primary} />
+            ) : (
+              <Text style={styles.subscribeBtnText}>Assinar</Text>
+            )}
           </TouchableOpacity>
           <Text style={styles.recommended}>Plano recomendado</Text>
         </View>
@@ -92,8 +125,16 @@ const PlanScreen = () => {
             </View>
           </View>
           <Text style={styles.price}><Text style={styles.priceCurrency}>R$</Text>00.<Text style={styles.priceCents}>00</Text><Text style={styles.pricePeriod}>/mês</Text></Text>
-          <TouchableOpacity style={styles.subscribeBtn}>
-            <Text style={styles.subscribeBtnText}>Assinar</Text>
+          <TouchableOpacity 
+            style={[styles.subscribeBtn, loading && styles.subscribeBtnDisabled]} 
+            onPress={handleSubscribe}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color={colors.primary} />
+            ) : (
+              <Text style={styles.subscribeBtnText}>Assinar</Text>
+            )}
           </TouchableOpacity>
           <Text style={styles.recommended}>Plano recomendado</Text>
         </View>
@@ -259,6 +300,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: fontNames.regular,
     marginTop: 8,
+    opacity: 0.7,
+  },
+  subscribeBtnDisabled: {
     opacity: 0.7,
   },
 }); 

@@ -227,9 +227,25 @@ export const AuthService = {
 
   async updateStoredUser(userData: User): Promise<void> {
     try {
-      await AsyncStorage.setItem('@Organizei:user', JSON.stringify(userData));
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(userData));
     } catch (error) {
-      console.error('Erro ao atualizar usuário no storage:', error);
+      console.error('Erro ao atualizar dados do usuário:', error);
+      throw error;
+    }
+  },
+
+  // Atualiza o plano do usuário
+  async updateUserPlan(userId: string, planId: string): Promise<User> {
+    try {
+      const response = await api.put<ApiResponse<ApiUserResponse>>(`/users/${userId}/plan`, {
+        planId
+      });
+
+      const updatedUser = mapApiUserToModel(response.data.data);
+      await this.updateStoredUser(updatedUser);
+      return updatedUser;
+    } catch (error) {
+      console.error('Erro ao atualizar plano do usuário:', error);
       throw error;
     }
   },
