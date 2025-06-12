@@ -1,336 +1,234 @@
 import React, { useState, useEffect } from 'react';
-import { SafeAreaView, View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, Image, ActivityIndicator, Modal, Pressable, ScrollView, StatusBar } from 'react-native';
+import {
+  SafeAreaView,
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  ScrollView,
+  RefreshControl,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useCommunity } from '../contexts/CommunityContext';
+import { ICard } from '../types/community.types';
+import CommunityCard from '../components/community/CommunityCard';
 import api from '../services/api';
 import colors from '@styles/colors';
 import { fontNames } from '@styles/fonts';
 import SearchIcon from '@icons/SearchIcon';
+// @ts-ignore
+import Toast from 'react-native-toast-message';
 
 type RootStackParamList = {
-  CardDetail: {
-    card: {
-      id: string;
-      title: string;
-      image_url?: string[];
-      createdAt?: string;
-    };
-    listId: string;
-    listName: string;
-  };
+  CardDetail: { card: ICard };
 };
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'CardDetail'>;
-
-interface Card {
-  _id: string;
-  title: string;
-  image_url?: string[];
-  createdAt?: string;
-  userId?: {
-    avatar?: string;
-  };
-  isPublished?: boolean;
-}
+type Nav = NativeStackNavigationProp<RootStackParamList, 'CardDetail'>;
 
 const CommunityScreen = () => {
-  const navigation = useNavigation<NavigationProp>();
+  const navigation = useNavigation<Nav>();
+  const { feed, loading, refreshing, refreshFeed, loadMore } = useCommunity();
   const [search, setSearch] = useState('');
-  const [cards, setCards] = useState<Card[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
 
-  // Dropdown de cards do usuário
-  const [userCards, setUserCards] = useState<Card[]>([]);
+  // Dropdown de publicação
+  const [userCards, setUserCards] = useState<ICard[]>([]);
   const [dropdownVisible, setDropdownVisible] = useState(false);
-  const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+  const [selectedCard, setSelectedCard] = useState<ICard | null>(null);
   const [loadingUserCards, setLoadingUserCards] = useState(false);
-  const [errorUserCards, setErrorUserCards] = useState('');
-
   const [publishing, setPublishing] = useState(false);
-  const [publishMessage, setPublishMessage] = useState('');
+
+  const fetchUserCards = async () => {
+    setLoadingUserCards(true);
+    try {
+      const response = await api.get('/cards');
+      const allUserCards = response.data.data || [];
+      const unpublished = allUserCards.filter((c: ICard) => !c.is_published);
+      setUserCards(unpublished);
+    } catch (err) {
+      Toast.show({ type: 'error', text1: 'Erro ao carregar seus cards' });
+    } finally {
+      setLoadingUserCards(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchCards = async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const response = await api.get('/comunidade/cards');
-        setCards(response.data.data || []);
-      } catch (err) {
-        setError('Erro ao carregar os cards da comunidade.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchCards();
-  }, []);
-
-  // Buscar cards do usuário para o dropdown
-  useEffect(() => {
-    const fetchUserCards = async () => {
-      setLoadingUserCards(true);
-      setErrorUserCards('');
-      try {
-        const response = await api.get('/cards');
-        const userCardsData = response.data.data || [];
-        
-        // Buscar cards publicados na comunidade
-        const communityResponse = await api.get('/comunidade/cards');
-        const publishedCards = communityResponse.data.data || [];
-        
-        // Marcar cards que já foram publicados
-        const cardsWithStatus = userCardsData.map((card: Card) => ({
-          ...card,
-          isPublished: publishedCards.some((publishedCard: Card) => publishedCard._id === card._id)
-        }));
-        
-        setUserCards(cardsWithStatus);
-      } catch (err) {
-        setErrorUserCards('Erro ao carregar seus cards.');
-      } finally {
-        setLoadingUserCards(false);
-      }
-    };
     fetchUserCards();
   }, []);
 
-  const filteredCards = cards
-    .filter(card => card.title?.toLowerCase().includes(search.toLowerCase()))
-    .slice(0, 2);
-
-  const handleCardPress = (card: Card) => {
-    navigation.navigate('CardDetail', {
-      card: {
-        id: card._id,
-        title: card.title,
-        image_url: card.image_url,
-        createdAt: card.createdAt,
-      },
-      listId: 'community',
-      listName: 'Comunidade',
-    });
+  const handlePublish = async () => {
+    if (!selectedCard) return;
+    setPublishing(true);
+    try {
+      await api.post(`/comunidade/publish/${selectedCard.id}`);
+      Toast.show({ type: 'success', text1: 'Card publicado com sucesso!' });
+      setSelectedCard(null);
+      await Promise.all([refreshFeed(), fetchUserCards()]); // Atualiza feed e lista de cards
+    } catch (err: any) {
+      const message = err.response?.data?.message || 'Erro ao publicar o card.';
+      Toast.show({ type: 'error', text1: message });
+    } finally {
+      setPublishing(false);
+    }
   };
+
+  const filteredFeed = feed.filter((card) =>
+    card.title.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const handleCardPress = (card: ICard) => {
+    navigation.navigate('CardDetail', { card });
+  };
+
+  const renderListHeader = () => (
+    <>
+      <View style={styles.header}>
+        <Text style={styles.title}>O que está {'\n'}procurando hoje?</Text>
+      </View>
+      <View style={styles.searchArea}>
+        <View style={styles.searchBox}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Pesquise o nome do card..."
+            placeholderTextColor={colors.gray}
+            value={search}
+            onChangeText={setSearch}
+          />
+          <TouchableOpacity style={styles.searchBtn}>
+            <SearchIcon size={20} color={colors.white} />
+          </TouchableOpacity>
+        </View>
+      </View>
+      <View style={styles.sectionHeaderRow}>
+        <Text style={styles.sectionTitle}>#recomendados</Text>
+        <View style={styles.sectionLine} />
+      </View>
+    </>
+  );
+
+  const renderListFooter = () => (
+    <View style={styles.publishSection}>
+      <View style={styles.sectionHeaderRow}>
+        <Text style={styles.sectionTitle}>#publique</Text>
+        <View style={styles.sectionLine} />
+      </View>
+      <Text style={styles.publishTitle}>Publique os seus cards{'\n'}mais fácil!</Text>
+      <TouchableOpacity style={styles.dropdown} onPress={() => setDropdownVisible(true)}>
+        <Text style={styles.dropdownText}>
+          {selectedCard ? selectedCard.title : 'Selecionar o card'}
+        </Text>
+        <Ionicons name="chevron-down" size={20} color={colors.gray} />
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.publishBtn, (!selectedCard || publishing) && { opacity: 0.6 }]}
+        disabled={!selectedCard || publishing}
+        onPress={handlePublish}
+      >
+        {publishing ? (
+          <ActivityIndicator color={colors.white} />
+        ) : (
+          <Text style={styles.publishBtnText}>Publicar</Text>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-
-          {/* Header / Título */}
-        <View style={styles.header}>
-          <Text style={styles.title}>O que está {"\n"}procurando hoje?</Text>
-        </View>
-
-        {/* Área de busca */}
-        <View style={styles.searchArea}>  
-          <View style={styles.searchBox}>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Pesquise o nome do card..."
-              placeholderTextColor= {colors.gray}
-              value={search}
-              onChangeText={setSearch}
-            />
-            <TouchableOpacity style={styles.searchBtn}>
-              <SearchIcon size={20} color={colors.white} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Seção de cards recomendados */}
-        <View style={styles.recommendedSection}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>#recomendados</Text>
-            <View style={styles.sectionLine} />
-          </View>
-          {loading ? (
-            <ActivityIndicator size="large" color="#007AFF" style={{ marginTop: 24 }} />
-          ) : error ? (
-            <Text style={{ color: 'red', textAlign: 'center', marginTop: 24 }}>{error}</Text>
-          ) : filteredCards.length === 0 ? (
-            <Text style={{ color: '#888', textAlign: 'center', marginTop: 24 }}>Nenhum card encontrado.</Text>
-          ) : (
-            <FlatList
-              data={filteredCards}
-              keyExtractor={(item, index) => item._id || String(index)}
-              renderItem={({ item }) => (
-                <TouchableOpacity 
-                  style={styles.cardBox}
-                  onPress={() => handleCardPress(item)}
-                  activeOpacity={0.7}
-                >
-                  <Image source={{ uri: item.image_url?.[0] || 'https://via.placeholder.com/120x80' }} style={styles.cardImg} />
-                  <View style={styles.cardFooterRow}>
-                    <Text style={styles.cardTitle}>{item.title}</Text>
-                    <Text style={styles.cardDate}>{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ''}</Text>
-                    {item.userId?.avatar ? (
-                      <Image source={{ uri: item.userId.avatar }} style={styles.cardAvatar} />
-                    ) : (
-                      <Ionicons name="person-circle-outline" size={18} color="#181818" />
-                    )}
-                  </View>
-                </TouchableOpacity>
-              )}
-              showsVerticalScrollIndicator={false}
-              style={{ marginBottom: 18 }}
-            />
+      {loading && feed.length === 0 ? (
+        <ActivityIndicator style={{ flex: 1 }} size="large" color={colors.primary} />
+      ) : (
+        <FlatList
+          data={filteredFeed}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <CommunityCard card={item} onPress={() => handleCardPress(item)} />
           )}
-        </View>
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16 }}
+          ListHeaderComponent={renderListHeader}
+          ListFooterComponent={renderListFooter}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={refreshFeed}
+              tintColor={colors.primary}
+            />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>Nenhum card encontrado.</Text>
+            </View>
+          }
+        />
+      )}
 
-        {/* Seção de publicação */}
-        <View style={styles.publishSection}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>#publique</Text>
-            <View style={styles.sectionLine} />
-          </View>
-          <Text style={styles.publishTitle}>Publique os seus cards{"\n"}mais fácil!</Text>
-          {/* Dropdown de seleção de card */}
-          <TouchableOpacity style={styles.dropdown} onPress={() => setDropdownVisible(true)}>
-            <Text style={styles.dropdownText}>
-              {selectedCard ? selectedCard.title : 'Selecionar o card'}
-            </Text>
-            <Ionicons name="chevron-down" size={20} color={colors.gray} />
-          </TouchableOpacity>
-          {/* Modal do dropdown */}
-          <Modal
-            visible={dropdownVisible}
-            transparent
-            animationType="fade"
-            onRequestClose={() => setDropdownVisible(false)}
-          >
-            <Pressable style={styles.modalOverlay} onPress={() => setDropdownVisible(false)}>
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Selecione um card</Text>
-                {loadingUserCards ? (
-                  <ActivityIndicator size="small" color="#007AFF" style={{ marginVertical: 16 }} />
-                ) : errorUserCards ? (
-                  <Text style={{ color: 'red', textAlign: 'center', marginVertical: 16 }}>{errorUserCards}</Text>
-                ) : userCards.length === 0 ? (
-                  <Text style={{ color: '#888', textAlign: 'center', marginVertical: 16 }}>Você não possui cards.</Text>
-                ) : (
-                  <ScrollView style={{ maxHeight: 300 }}>
-                    {userCards.map((card, index) => (
-                      <TouchableOpacity
-                        key={card._id || String(index)}
-                        style={styles.modalItem}
-                        onPress={() => {
-                          setSelectedCard(card);
-                          setDropdownVisible(false);
-                        }}
-                      >
-                        <View style={styles.modalItemContent}>
-                          <Text style={styles.modalItemText}>{card.title}</Text>
-                          {card.isPublished ? (
-                            <View style={styles.publishedBadge}>
-                              <Text style={styles.publishedText}>Publicado</Text>
-                            </View>
-                          ) : (
-                            <View style={styles.availableBadge}>
-                              <Text style={styles.availableText}>Disponível</Text>
-                            </View>
-                          )}
-                        </View>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                )}
-              </View>
-            </Pressable>
-          </Modal>
-          
-          <TouchableOpacity
-            style={[styles.publishBtn, (!selectedCard || publishing || selectedCard?.isPublished) && { opacity: 0.6 }]}
-            disabled={!selectedCard || publishing || selectedCard?.isPublished}
-            onPress={async () => {
-              console.log('Card selecionado:', selectedCard);
-              if (!selectedCard || !selectedCard._id) {
-                setPublishMessage('Selecione um card para publicar.');
-                return;
-              }
-
-              if (selectedCard.isPublished) {
-                setPublishMessage('Este card já está publicado na comunidade.');
-                return;
-              }
-
-              setPublishing(true);
-              setPublishMessage('');
-              try {
-                await api.post(`/comunidade/publish/${selectedCard._id}`);
-                setPublishMessage('Card publicado com sucesso!');
-                // Atualizar cards da comunidade
-                const response = await api.get('/comunidade/cards');
-                setCards(response.data.data || []);
-                // Atualizar lista de cards do usuário para marcar como publicado
-                const userCardsResponse = await api.get('/cards');
-                const userCardsData = userCardsResponse.data.data || [];
-                const publishedCards = response.data.data || [];
-                const cardsWithStatus = userCardsData.map((card: Card) => ({
-                  ...card,
-                  isPublished: publishedCards.some((publishedCard: Card) => publishedCard._id === card._id)
-                }));
-                setUserCards(cardsWithStatus);
-                setSelectedCard(null); // Limpa a seleção após publicar
-              } catch (err) {
-                setPublishMessage('Erro ao publicar o card.');
-              } finally {
-                setPublishing(false);
-              }
-            }}
-          >
-            {publishing ? (
-              <ActivityIndicator color={colors.white} />
+      {/* Modal Dropdown para Publicar */}
+      <Modal
+        visible={dropdownVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDropdownVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setDropdownVisible(false)}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Selecione um card para publicar</Text>
+            {loadingUserCards ? (
+              <ActivityIndicator />
+            ) : userCards.length === 0 ? (
+              <Text style={styles.emptyText}>Você não tem cards disponíveis para publicar.</Text>
             ) : (
-              <Text style={styles.publishBtnText}>
-                {selectedCard?.isPublished ? 'Já publicado' : 'Publicar'}
-              </Text>
+              <ScrollView style={{ maxHeight: 300 }}>
+                {userCards.map((card) => (
+                  <TouchableOpacity
+                    key={card.id}
+                    style={styles.modalItem}
+                    onPress={() => {
+                      setSelectedCard(card);
+                      setDropdownVisible(false);
+                    }}
+                  >
+                    <Text style={styles.modalItemText}>{card.title}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
             )}
-          </TouchableOpacity>
-          {!!publishMessage && (
-            <Text style={[
-              styles.publishMessage,
-              { color: publishMessage.includes('sucesso') ? colors.lowPriority : colors.highPriority }
-            ]}>
-              {publishMessage}
-            </Text>
-          )}
-          
-        </View>
-      </ScrollView>
-      
+          </View>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 };
 
+// Estilos
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: colors.white, 
-    paddingBottom: 130,
-    paddingTop: 40,
+  container: {
+    flex: 1,
+    backgroundColor: colors.white,
   },
-
-  header: { 
-    marginBottom: 12, 
-    paddingHorizontal: 16,
+  header: {
+    paddingVertical: 16,
   },
-
-  title: { 
-    fontSize: 24, 
-    fontFamily: fontNames.bold, 
+  title: {
+    fontSize: 28,
+    fontFamily: fontNames.bold,
     color: colors.primary,
+    lineHeight: 34,
   },
-
-  searchArea: { 
-    marginBottom: 16, 
-    paddingHorizontal: 16,
+  searchArea: {
+    marginBottom: 24,
   },
-
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     backgroundColor: colors.lightGray,
     borderRadius: 24,
     paddingLeft: 18,
@@ -349,17 +247,12 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 4,
   },
-  recommendedSection: { flex: 1,
-    paddingHorizontal: 16,
-    marginTop: 16,
-  },
-
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 8,
+    marginVertical: 8,
   },
   sectionTitle: {
     color: colors.primary,
@@ -369,67 +262,30 @@ const styles = StyleSheet.create({
   },
   sectionLine: {
     flex: 1,
-    height: 2,
+    height: 1,
     backgroundColor: colors.lightGray,
-    borderRadius: 1,
   },
-  cardBox: {
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    marginBottom: 12,
-    padding: 12,
-    borderWidth: 2,
-    borderColor: colors.lightGray,
-  },
-  cardImg: {
-    width: '100%',
-    height: 80,
-    borderRadius: 12,
-    marginBottom: 8,
-    backgroundColor: '#eee',
-  },
-  cardTitle: {
-    fontWeight: 'bold',
-    fontSize: 16,
-    color: '#181818',
-    marginBottom: 6,
-  },
-  cardFooterRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  emptyContainer: {
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
   },
-  cardDate: {
-    fontSize: 12,
-    color: '#888',
-    marginRight: 8,
+  emptyText: {
+    fontSize: 14,
+    color: colors.gray,
+    fontFamily: fontNames.regular,
+    textAlign: 'center',
   },
-  cardAvatar: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    marginHorizontal: 4,
+  publishSection: {
+    paddingVertical: 24,
   },
-  cardType: {
-    fontSize: 12,
-    color: '#888',
-    marginLeft: 8,
-  },
-
-  publishSection: { 
-    paddingHorizontal: 16, 
-    paddingBottom: 24,
-    marginTop: 16,
-  },
-
   publishTitle: {
     fontFamily: fontNames.bold,
-    fontSize: 16,
+    fontSize: 22,
     color: colors.primary,
-    marginBottom: 12,
-    marginTop: 8,
+    marginBottom: 16,
+    lineHeight: 28,
   },
-
   dropdown: {
     backgroundColor: colors.lightGray,
     borderRadius: 12,
@@ -445,40 +301,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: fontNames.regular,
   },
-  radioRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 18,
-  },
-  radioBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 18,
-  },
-  radioCircle: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 2,
-    borderColor: '#EAEAEA',
-    backgroundColor: '#EAEAEA',
-    marginRight: 6,
-  },
-  radioCircleActive: {
-    borderColor: '#007AFF',
-    backgroundColor: '#007AFF',
-  },
-  radioLabel: {
-    color: '#181818',
-    fontSize: 15,
-  },
   publishBtn: {
     backgroundColor: '#007AFF',
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 16,
-    marginBottom: 18,
+    marginTop: 8,
   },
   publishBtnText: {
     color: colors.white,
@@ -487,7 +316,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.2)',
+    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -495,9 +324,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 20,
-    width: '80%',
-    maxWidth: 340,
-    elevation: 4,
+    width: '90%',
+    maxHeight: '60%',
   },
   modalTitle: {
     fontWeight: 'bold',
@@ -511,45 +339,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
-  modalItemContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-  },
   modalItemText: {
     fontSize: 16,
-    color: '#181818',
+    color: '#333',
     textAlign: 'center',
-  },
-  publishedBadge: {
-    backgroundColor: '#E8F5E9',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  publishedText: {
-    color: colors.lowPriority,
-    fontSize: 12,
-    fontFamily: fontNames.regular,
-  },
-  availableBadge: {
-    backgroundColor: '#E3F2FD',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  availableText: {
-    color: '#1976D2',
-    fontSize: 12,
-    fontFamily: fontNames.regular
-  },
-  publishMessage: {
-    textAlign: 'center',
-    marginBottom: 8,
-    marginTop: 8,
-    fontSize: 14,
-    fontFamily: fontNames.regular,
   },
 });
 

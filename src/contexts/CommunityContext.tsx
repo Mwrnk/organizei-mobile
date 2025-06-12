@@ -8,8 +8,10 @@ import React, {
 } from 'react';
 // @ts-ignore
 import Toast from 'react-native-toast-message';
-import { ICard } from '../types/community.types';
+import { ICard, IComment } from '../types/community.types';
 import { CommunityService } from '../services/communityService';
+import api from '../services/api';
+import { ApiSuccess } from '../types/community.types';
 
 interface CommunityContextValue {
   feed: ICard[];
@@ -32,12 +34,34 @@ export const CommunityProvider = ({ children }: { children: ReactNode }) => {
   const [page, setPage] = useState<number>(1);
   const PAGE_SIZE = 20; // client-side pagination since backend ainda não suporta
 
-  // Carrega feed completo uma vez e depois paginamos localmente
+  // Carrega feed completo e contagem de comentários
   const fetchFeed = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await CommunityService.fetchFeed();
-      setFeed(data);
+      // Busca cards e todos os comentários em paralelo
+      const [cardsData, allCommentsRes] = await Promise.all([
+        CommunityService.fetchFeed(),
+        api.get<ApiSuccess<IComment[]>>('/comments'),
+      ]);
+
+      const allComments = allCommentsRes.data.data || [];
+
+      // Cria um mapa de contagem de comentários por cardId
+      const commentCounts = allComments.reduce((acc, comment) => {
+        const cardId = (comment as any).cardId;
+        if (cardId) {
+          acc[cardId] = (acc[cardId] || 0) + 1;
+        }
+        return acc;
+      }, {} as Record<string, number>);
+
+      // Mapeia os cards para adicionar a contagem de comentários
+      const feedWithCounts = cardsData.map((card) => ({
+        ...card,
+        comments: commentCounts[card.id] || 0,
+      }));
+
+      setFeed(feedWithCounts);
       setPage(1);
     } catch (err) {
       console.error('CommunityContext: erro ao buscar feed', err);
