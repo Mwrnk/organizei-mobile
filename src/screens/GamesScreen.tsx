@@ -27,6 +27,7 @@ import RaioIcon from 'assets/icons/RaioIcon';
 import { CardService, Card } from '../services/cardService';
 import { TagService, Tag } from '../services/tagService';
 import { FlashcardService, Flashcard } from '../services/flashcardService';
+import { ActivityIndicator, Modal, TextInput } from 'react-native';
 import Toast from 'react-native-toast-message';
 
 // Definição do tipo de navegação para tipagem do TypeScript
@@ -55,6 +56,7 @@ const GamesScreen = () => {
 
   // Seleções e inputs
   const [searchCardTerm, setSearchCardTerm] = useState('');
+  const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [searchFlashcardTerm, setSearchFlashcardTerm] = useState('');
 
   const [front, setFront] = useState('');
@@ -103,6 +105,7 @@ const GamesScreen = () => {
       setTags(data);
     } catch (error) {
       console.error('GamesScreen: erro ao carregar tags', error);
+      Toast.show({ type: 'error', text1: 'Erro ao carregar tags' });
     } finally {
       setLoadingTags(false);
     }
@@ -170,6 +173,7 @@ const GamesScreen = () => {
       const payloadAI = {
         cardId: cardIdToUse,
         amount: 1,
+        tags: validTags,
         title: aiTitle.trim(),
       };
 
@@ -188,6 +192,7 @@ const GamesScreen = () => {
         }
         console.log('Flashcard IA payload:', payloadAI);
         await FlashcardService.createWithAI(payloadAI);
+        Toast.show({ type: 'success', text1: 'Flashcard gerado pela IA!' });
       }
       exitFlow();
     } catch (error) {

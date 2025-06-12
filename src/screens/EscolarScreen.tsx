@@ -1691,6 +1691,9 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 24,
     width: '90%',
+    maxWidth: 450,
+    maxHeight: '80%',
+    alignSelf: 'center',
     gap: 16,
   },
   modalTitle: {
@@ -2173,7 +2176,7 @@ const styles = StyleSheet.create({
   },
   // Stats Modal Styles
   statsContent: {
-    flex: 1,
+    flexGrow: 1,
     padding: 16,
   },
   statsGrid: {
@@ -2245,7 +2248,7 @@ const styles = StyleSheet.create({
   },
   // Filters Modal Styles
   filtersContent: {
-    flex: 1,
+    flexGrow: 1,
     padding: 16,
   },
   filterSection: {
