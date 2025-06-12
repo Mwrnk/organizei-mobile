@@ -46,6 +46,7 @@ interface Comment {
 
 interface CardData {
   id: string;
+  _id?: string;
   title: string;
   userId: string;
   createdAt?: string;
@@ -101,10 +102,11 @@ const CardDetailScreen = () => {
   const loadCardDetails = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/cards/${card.id}`);
+      const res = await api.get(`/cards/${card.id || card._id}`);
       const updatedCard = {
         ...card,
         ...res.data.data,
+        id: res.data.data.id || res.data.data._id,
         pdfs: res.data.data.pdfs || [],
         content: res.data.data.content || '',
       };
@@ -112,7 +114,7 @@ const CardDetailScreen = () => {
 
       // Carregar PDF automaticamente se existir
       if (updatedCard.pdfs && updatedCard.pdfs.length > 0) {
-        loadPdf(card.id);
+        loadPdf(updatedCard.id);
       }
     } catch (error) {
       console.error('Erro ao carregar detalhes do card:', error);
@@ -509,6 +511,11 @@ const CardDetailScreen = () => {
                   ? new Date(cardData.createdAt).toLocaleDateString('pt-BR')
                   : 'Data não disponível'}
               </Text>
+            </View>
+
+            <View style={styles.metaItem}>
+              <Ionicons name="finger-print-outline" size={16} color={colors.gray} />
+              <Text style={styles.metaText}>ID: {cardData.id || cardData._id}</Text>
             </View>
 
             {cardData.pdfs && cardData.pdfs.length > 0 && (

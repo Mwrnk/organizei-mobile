@@ -29,3 +29,9 @@ export type EscolarStackParamList = {
     listName: string;
   };
 };
+
+export type AppStackParamList = {
+  // ... existing code ...
+  CreateFlashcard: undefined;
+  // ... existing code ...
+};
