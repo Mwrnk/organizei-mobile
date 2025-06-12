@@ -256,11 +256,11 @@ const CreateCardScreen = () => {
               });
             }
           } else {
-            pdfFormData.append('files', {
-              uri: selectedPdf.uri,
-              type: selectedPdf.mimeType || 'application/pdf',
-              name: selectedPdf.name || 'document.pdf',
-            } as any);
+          pdfFormData.append('files', {
+            uri: selectedPdf.uri,
+            type: selectedPdf.mimeType || 'application/pdf',
+            name: selectedPdf.name || 'document.pdf',
+          } as any);
           }
 
           try {
@@ -282,10 +282,10 @@ const CreateCardScreen = () => {
           'Sucesso',
           'Card criado com sucesso ✅',
           [
-            {
+        {
               text: 'OK',
               onPress: () => navigation.navigate('Escolar' as never),
-            },
+        },
           ]
         );
       }
@@ -659,22 +659,22 @@ const CreateCardScreen = () => {
                 }}
               />
             ) : (
-              <TouchableOpacity
-                style={[styles.pdfUploadButton, selectedPdf && styles.uploadButtonDisabled]}
-                onPress={handleSelectPdf}
-                disabled={!!selectedPdf}
-              >
-                <Ionicons
-                  name="document-text-outline"
-                  size={24}
-                  color={selectedPdf ? '#999' : colors.button}
-                />
-                <Text style={[styles.pdfUploadText, selectedPdf && styles.uploadTextDisabled]}>
-                  {selectedPdf ? 'PDF selecionado' : 'Selecionar PDF'}
-                </Text>
-                {!selectedPdf && <Ionicons name="chevron-forward" size={20} color="#999" />}
-                {selectedPdf && <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />}
-              </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.pdfUploadButton, selectedPdf && styles.uploadButtonDisabled]}
+              onPress={handleSelectPdf}
+              disabled={!!selectedPdf}
+            >
+              <Ionicons
+                name="document-text-outline"
+                size={24}
+                color={selectedPdf ? '#999' : colors.button}
+              />
+              <Text style={[styles.pdfUploadText, selectedPdf && styles.uploadTextDisabled]}>
+                {selectedPdf ? 'PDF selecionado' : 'Selecionar PDF'}
+              </Text>
+              {!selectedPdf && <Ionicons name="chevron-forward" size={20} color="#999" />}
+              {selectedPdf && <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />}
+            </TouchableOpacity>
             )}
 
             {/* Informações do PDF selecionado */}
@@ -808,100 +808,100 @@ const CreateCardScreen = () => {
 
           {/* Botões de ação - agora logo após o preview */}
           <View style={[styles.actionButtonsContainer, { marginTop: 32 }]}> 
-            <View style={styles.actionButtons}>
-              <View style={styles.buttonsRow}>
-                <TouchableOpacity
-                  style={[
-                    styles.actionButton,
-                    styles.clearButton,
-                    !hasFormData() && styles.buttonDisabled,
-                  ]}
-                  onPress={() => {
-                    if (hasFormData()) {
-                      Alert.alert(
-                        'Limpar Formulário',
-                        'Tem certeza que deseja limpar todos os dados do formulário?',
-                        [
-                          { text: 'Cancelar', style: 'cancel' },
-                          {
-                            text: 'Limpar',
-                            style: 'destructive',
-                            onPress: () => {
-                              clearForm();
-                              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                            },
-                          },
-                        ]
-                      );
-                    } else {
-                      Alert.alert('Info', 'O formulário já está vazio.');
-                    }
-                  }}
-                  disabled={!hasFormData()}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons
-                    name="trash-outline"
-                    size={18}
-                    color={!hasFormData() ? '#999' : '#FF6B6B'}
-                    style={styles.buttonIcon}
-                  />
-                  <Text
-                    style={[
-                      styles.buttonText,
-                      { color: !hasFormData() ? '#999' : '#FF6B6B' },
-                      !hasFormData() && styles.buttonTextDisabled,
-                    ]}
-                  >
-                    Limpar
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.actionButton,
-                    styles.draftButton,
-                    (!cardTitle.trim() || uploadingFiles) && styles.buttonDisabled,
-                  ]}
-                  onPress={handleSaveAsDraft}
-                  disabled={!cardTitle.trim() || uploadingFiles}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons
-                    name="document-outline"
-                    size={18}
-                    color={!cardTitle.trim() || uploadingFiles ? '#999' : colors.button}
-                    style={styles.buttonIcon}
-                  />
-                  <Text
-                    style={[
-                      styles.buttonText,
-                      { color: colors.button },
-                      (!cardTitle.trim() || uploadingFiles) && styles.buttonTextDisabled,
-                    ]}
-                  >
-                    Rascunho
-                  </Text>
-                </TouchableOpacity>
-              </View>
+          <View style={styles.actionButtons}>
+            <View style={styles.buttonsRow}>
               <TouchableOpacity
-                style={[styles.actionButton, styles.createButton, styles.primaryButton]}
-                onPress={handleCreateCard}
-                disabled={!cardTitle.trim() || uploadingFiles}
-                activeOpacity={0.8}
+                style={[
+                  styles.actionButton,
+                  styles.clearButton,
+                  !hasFormData() && styles.buttonDisabled,
+                ]}
+                onPress={() => {
+                  if (hasFormData()) {
+                    Alert.alert(
+                      'Limpar Formulário',
+                      'Tem certeza que deseja limpar todos os dados do formulário?',
+                      [
+                        { text: 'Cancelar', style: 'cancel' },
+                        {
+                          text: 'Limpar',
+                          style: 'destructive',
+                          onPress: () => {
+                            clearForm();
+                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                          },
+                        },
+                      ]
+                    );
+                  } else {
+                    Alert.alert('Info', 'O formulário já está vazio.');
+                  }
+                }}
+                disabled={!hasFormData()}
+                activeOpacity={0.7}
               >
                 <Ionicons
-                  name={uploadingFiles ? 'reload-outline' : 'add-circle-outline'}
-                  size={20}
-                  color="#fff"
+                  name="trash-outline"
+                  size={18}
+                  color={!hasFormData() ? '#999' : '#FF6B6B'}
                   style={styles.buttonIcon}
                 />
-                <Text style={[styles.buttonText, { color: '#fff' }]}> 
-                  {uploadingFiles ? 'Criando...' : 'Criar Card'}
+                <Text
+                  style={[
+                    styles.buttonText,
+                    { color: !hasFormData() ? '#999' : '#FF6B6B' },
+                    !hasFormData() && styles.buttonTextDisabled,
+                  ]}
+                >
+                  Limpar
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.actionButton,
+                  styles.draftButton,
+                  (!cardTitle.trim() || uploadingFiles) && styles.buttonDisabled,
+                ]}
+                onPress={handleSaveAsDraft}
+                disabled={!cardTitle.trim() || uploadingFiles}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name="document-outline"
+                  size={18}
+                  color={!cardTitle.trim() || uploadingFiles ? '#999' : colors.button}
+                  style={styles.buttonIcon}
+                />
+                <Text
+                  style={[
+                    styles.buttonText,
+                    { color: colors.button },
+                    (!cardTitle.trim() || uploadingFiles) && styles.buttonTextDisabled,
+                  ]}
+                >
+                  Rascunho
                 </Text>
               </TouchableOpacity>
             </View>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.createButton, styles.primaryButton]}
+              onPress={handleCreateCard}
+              disabled={!cardTitle.trim() || uploadingFiles}
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name={uploadingFiles ? 'reload-outline' : 'add-circle-outline'}
+                size={20}
+                color="#fff"
+                style={styles.buttonIcon}
+              />
+              <Text style={[styles.buttonText, { color: '#fff' }]}>
+                {uploadingFiles ? 'Criando...' : 'Criar Card'}
+              </Text>
+            </TouchableOpacity>
           </View>
+        </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

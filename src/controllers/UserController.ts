@@ -215,36 +215,29 @@ export class UserController {
   /**
    * Atualiza a imagem de perfil do usuário
    * @param id ID do usuário
-   * @param imageUri URI da imagem
+   * @param base64Image Base64 da imagem
    * @returns Usuário atualizado
    */
-  async updateProfileImage(id: string, imageUri: string): Promise<User | null> {
+  async updateProfileImage(id: string, base64Image: string): Promise<User | null> {
     try {
-      // Converte a imagem para base64 antes de enviar para a API
-      const base64Image = await convertImageToBase64(imageUri);
-
-      // Usa o endpoint correto do backend: PATCH /users/:id/image
       const response = await api.patch<ApiResponse<ApiUserResponse>>(
         `/users/${id}/image`,
-        { image: base64Image }, // Envia a imagem em base64, como a versão web
+        { image: base64Image },
         {
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('@Organizei:token')}`
           },
         }
       );
-
       const updatedUser = this.mapApiUserToModel(response.data.data);
-
-      // Atualiza o cache local
       const index = this.users.findIndex((user) => user._id === id);
       if (index !== -1) {
         this.users[index] = updatedUser;
       }
-
       return updatedUser;
     } catch (error) {
-      console.error(`Erro ao atualizar imagem de perfil do usuário com ID ${id}:`, error);
+      console.error('Erro ao atualizar imagem:', error);
       return null;
     }
   }

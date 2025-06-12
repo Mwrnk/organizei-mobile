@@ -7,6 +7,7 @@ interface AuthContextData {
   login: (credentials: LoginCredentials) => Promise<void>;
   logout: () => Promise<void>;
   loading: boolean;
+  updateUserData: (userData: User) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -59,8 +60,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const updateUserData = async (userData: User) => {
+    try {
+      setUser(userData);
+      await AuthService.updateStoredUser(userData);
+    } catch (error) {
+      console.error('Erro ao atualizar dados do usuário:', error);
+      throw error;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ user, login, logout, loading, updateUserData }}>{children}</AuthContext.Provider>
   );
 };
 

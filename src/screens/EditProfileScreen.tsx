@@ -18,6 +18,8 @@ import UserController from '../controllers/UserController';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
+import { convertImageToBase64 } from '../utils/imageUtils';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const EditProfileScreen = () => {
   const navigation = useNavigation();
@@ -29,6 +31,61 @@ const EditProfileScreen = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [dateOfBirth, setDateOfBirth] = useState(user?.dateOfBirth ? new Date(user.dateOfBirth) : new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  // Estados de erro
+  const [nameError, setNameError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [dateError, setDateError] = useState('');
+
+  // Funções de validação
+  const validateName = (value: string) => {
+    if (!value) return '';
+    if (value.length < 3 || value.length > 50) return 'O nome deve ter entre 3 e 50 caracteres';
+    if (!/^[a-zA-ZÀ-ÿ\s]+$/.test(value)) return 'O nome deve conter apenas letras e espaços';
+    return '';
+  };
+  const validateEmail = (value: string) => {
+    if (!value) return '';
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(value)) return 'Email inválido';
+    return '';
+  };
+  const validatePassword = (value: string) => {
+    if (!value) return '';
+    if (value.length < 8) return 'A senha deve ter pelo menos 8 caracteres';
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(value)) return 'A senha deve conter pelo menos uma letra maiúscula, uma minúscula e um número';
+    return '';
+  };
+  const validateDate = (date: Date) => {
+    const birthDate = new Date(date);
+    const today = new Date();
+    const age = today.getFullYear() - birthDate.getFullYear();
+    if (isNaN(birthDate.getTime())) return 'Data de nascimento inválida';
+    if (age < 13) return 'Você deve ter pelo menos 13 anos';
+    if (age > 120) return 'Data de nascimento inválida';
+    return '';
+  };
+
+  // Handlers com validação em tempo real
+  const handleNameChange = (value: string) => {
+    setName(value);
+    setNameError(validateName(value));
+  };
+  const handleEmailChange = (value: string) => {
+    setEmail(value);
+    setEmailError(validateEmail(value));
+  };
+  const handlePasswordChange = (value: string) => {
+    setPassword(value);
+    setPasswordError(validatePassword(value));
+  };
+  const handleDateChange = (date: Date) => {
+    setDateOfBirth(date);
+    setDateError(validateDate(date));
+  };
 
   // Função para solicitar permissões
   const requestPermissions = async () => {
@@ -91,22 +148,36 @@ const EditProfileScreen = () => {
   };
 
   // Função para atualizar a foto de perfil
-  const updateProfileImageWithUri = async (imageUri: string) => {
+  const updateProfileImageWithUri = async (imageUriOrBase64: string) => {
     if (!user) return;
 
     setLoading(true);
     try {
-      const updatedUser = await UserController.updateProfileImage(user._id, imageUri);
+      let base64Image: string;
+      if (Platform.OS === 'web') {
+        // Já é base64 (data:image/...) vindo do FileReader
+        base64Image = imageUriOrBase64;
+      } else {
+        // Precisa converter usando expo-file-system
+        base64Image = await convertImageToBase64(imageUriOrBase64);
+      }
+
+      const updatedUser = await UserController.updateProfileImage(user._id, base64Image);
+      console.log('Resposta do servidor:', updatedUser);
       if (updatedUser) {
         setProfileImage(updatedUser.profileImage);
         await updateUserData(updatedUser);
         Alert.alert('Sucesso', 'Foto de perfil atualizada com sucesso!');
       } else {
+        console.error('Erro: Usuário não atualizado');
         Alert.alert('Erro', 'Não foi possível atualizar a foto de perfil.');
       }
     } catch (error) {
-      console.error('Erro ao atualizar foto de perfil:', error);
-      Alert.alert('Erro', 'Não foi possível atualizar a foto de perfil.');
+      console.error('Erro detalhado ao atualizar foto de perfil:', error);
+      Alert.alert(
+        'Erro',
+        'Não foi possível atualizar a foto de perfil. Por favor, tente novamente.'
+      );
     } finally {
       setLoading(false);
     }
@@ -147,8 +218,13 @@ const EditProfileScreen = () => {
     if (!user) return;
     setLoading(true);
     try {
-      const updated = await UserController.updateUser(user._id, { name, email });
+      const updatePayload: any = { name, email };
+      if (password) updatePayload.password = password;
+      if (dateOfBirth) updatePayload.dateOfBirth = dateOfBirth.toISOString();
+
+      const updated = await UserController.updateUser(user._id, updatePayload);
       if (updated) {
+        await updateUserData(updated);
         Alert.alert('Perfil atualizado com sucesso!');
         navigation.goBack();
       } else {
@@ -159,6 +235,29 @@ const EditProfileScreen = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePickImageWeb = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64 = reader.result as string;
+      await updateProfileImageWithUri(base64); // já está no formato data:image/jpeg;base64,...
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Função para checar se pode salvar
+  const canSave = () => {
+    // Só valida campos que o usuário alterou (não obriga todos)
+    const nameValid = !nameError && name.length > 0;
+    const emailValid = !emailError && email.length > 0;
+    const passwordValid = !passwordError;
+    const dateValid = !dateError && dateOfBirth;
+    // Só bloqueia se algum campo alterado estiver inválido
+    return nameValid && emailValid && passwordValid && dateValid;
   };
 
   return (
@@ -194,45 +293,64 @@ const EditProfileScreen = () => {
             </Text>
           </View>
         )}
-        <TouchableOpacity
-          style={styles.fabEditAvatar}
-          onPress={handleChangeProfileImage}
-          disabled={loading}
-        >
-          <Ionicons name="camera-outline" size={22} color="#181818" />
-        </TouchableOpacity>
+        {Platform.OS === 'web' ? (
+          <>
+            <input
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              id="web-profile-image-input"
+              onChange={handlePickImageWeb}
+            />
+            <TouchableOpacity onPress={() => (document.getElementById('web-profile-image-input') as HTMLInputElement)?.click()}>
+              <Ionicons name="camera-outline" size={22} color="#181818" />
+            </TouchableOpacity>
+          </>
+        ) : (
+          <TouchableOpacity
+            style={styles.fabEditAvatar}
+            onPress={handleChangeProfileImage}
+            disabled={loading}
+          >
+            <Ionicons name="camera-outline" size={22} color="#181818" />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Nome */}
       <Text style={styles.label}>Nome Completo</Text>
-      <View style={styles.inputBox}>
+      <View style={[styles.inputBox, nameError ? styles.inputBoxError : null]}>
         <Ionicons name="person-outline" size={22} color={colors.button} style={styles.inputIcon} />
         <TextInput
           style={styles.input}
           value={name}
-          onChangeText={setName}
+          onChangeText={handleNameChange}
           placeholder="Nome Completo"
           placeholderTextColor="#aaa"
         />
       </View>
+      <Text style={styles.helperText}>Entre 3 e 50 caracteres, apenas letras e espaços.</Text>
+      {nameError ? <Text style={styles.errorText}>{nameError}</Text> : null}
 
       {/* Email */}
       <Text style={styles.label}>Email</Text>
-      <View style={styles.inputBox}>
+      <View style={[styles.inputBox, emailError ? styles.inputBoxError : null]}>
         <MaterialIcons name="email" size={22} color={colors.button} style={styles.inputIcon} />
         <TextInput
           style={styles.input}
           value={email}
-          onChangeText={setEmail}
+          onChangeText={handleEmailChange}
           placeholder="Email"
           placeholderTextColor="#aaa"
           autoCapitalize="none"
         />
       </View>
+      <Text style={styles.helperText}>Digite um email válido. Não pode estar em uso por outro usuário.</Text>
+      {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
 
       {/* Senha */}
       <Text style={styles.label}>Senha</Text>
-      <View style={styles.inputBox}>
+      <View style={[styles.inputBox, passwordError ? styles.inputBoxError : null]}>
         <Ionicons
           name="lock-closed-outline"
           size={22}
@@ -242,7 +360,7 @@ const EditProfileScreen = () => {
         <TextInput
           style={styles.input}
           value={password}
-          onChangeText={setPassword}
+          onChangeText={handlePasswordChange}
           placeholder="**********"
           placeholderTextColor="#aaa"
           secureTextEntry={!showPassword}
@@ -256,9 +374,61 @@ const EditProfileScreen = () => {
           />
         </TouchableOpacity>
       </View>
+      <Text style={styles.helperText}>Mínimo 8 caracteres, com pelo menos uma letra maiúscula, uma minúscula e um número.</Text>
+      {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
+
+      {/* Data de Nascimento */}
+      <Text style={styles.label}>Data de Nascimento</Text>
+      <View style={[styles.inputBox, dateError ? styles.inputBoxError : null]}>
+        <Ionicons name="calendar-outline" size={22} color={colors.button} style={styles.inputIcon} />
+        {Platform.OS === 'web' ? (
+          <input
+            type="date"
+            value={dateOfBirth.toISOString().slice(0, 10)}
+            onChange={e => {
+              const date = new Date(e.target.value);
+              if (!isNaN(date.getTime())) handleDateChange(date);
+            }}
+            style={{
+              flex: 1,
+              fontSize: 15,
+              fontFamily: fontNames.regular,
+              color: colors.primary,
+              padding: 6,
+              border: 'none',
+              background: 'transparent',
+            }}
+          />
+        ) : (
+          <>
+            <TouchableOpacity
+              style={{ flex: 1 }}
+              onPress={() => setShowDatePicker(true)}
+            >
+              <Text style={{ fontSize: 15, color: colors.primary }}>
+                {dateOfBirth.toLocaleDateString()}
+              </Text>
+            </TouchableOpacity>
+            {showDatePicker && (
+              <DateTimePicker
+                value={dateOfBirth}
+                mode="date"
+                display="default"
+                onChange={(_, selectedDate) => {
+                  setShowDatePicker(false);
+                  if (selectedDate) handleDateChange(selectedDate);
+                }}
+                maximumDate={new Date()}
+              />
+            )}
+          </>
+        )}
+      </View>
+      <Text style={styles.helperText}>Você deve ter entre 13 e 120 anos.</Text>
+      {dateError ? <Text style={styles.errorText}>{dateError}</Text> : null}
 
       {/* Botão */}
-      <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={loading}>
+      <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={loading || !canSave()}>
         <Ionicons name="create-outline" size={22} color="#fff" style={{ marginRight: 8 }} />
         <Text style={styles.saveBtnText}>{loading ? 'Salvando...' : 'Editar perfil'}</Text>
       </TouchableOpacity>
@@ -412,5 +582,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: fontNames.bold,
     textAlign: 'center',
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#888',
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  inputBoxError: {
+    borderColor: '#e53935',
+  },
+  errorText: {
+    color: '#e53935',
+    fontSize: 12,
+    marginBottom: 8,
+    marginLeft: 4,
   },
 });

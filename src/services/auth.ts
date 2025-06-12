@@ -224,6 +224,15 @@ export const AuthService = {
       throw error;
     }
   },
+
+  async updateStoredUser(userData: User): Promise<void> {
+    try {
+      await AsyncStorage.setItem('@Organizei:user', JSON.stringify(userData));
+    } catch (error) {
+      console.error('Erro ao atualizar usuário no storage:', error);
+      throw error;
+    }
+  },
 };
 
 export default AuthService;
