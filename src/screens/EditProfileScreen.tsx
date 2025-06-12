@@ -9,6 +9,7 @@ import {
   TextInput,
   ActionSheetIOS,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { fontNames } from '../styles/fonts';
 import colors from '../styles/colors';
@@ -25,13 +26,14 @@ const EditProfileScreen = () => {
   const navigation = useNavigation();
   const { user, updateUserData } = useAuth();
   const [profileImage, setProfileImage] = useState<string | null>(user?.profileImage || null);
-  const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [dateOfBirth, setDateOfBirth] = useState(user?.dateOfBirth ? new Date(user.dateOfBirth) : new Date());
+  const [dateOfBirth, setDateOfBirth] = useState(
+    user?.dateOfBirth ? new Date(user.dateOfBirth) : new Date()
+  );
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   // Estados de erro
@@ -56,7 +58,8 @@ const EditProfileScreen = () => {
   const validatePassword = (value: string) => {
     if (!value) return '';
     if (value.length < 8) return 'A senha deve ter pelo menos 8 caracteres';
-    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(value)) return 'A senha deve conter pelo menos uma letra maiúscula, uma minúscula e um número';
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(value))
+      return 'A senha deve conter pelo menos uma letra maiúscula, uma minúscula e um número';
     return '';
   };
   const validateDate = (date: Date) => {
@@ -208,12 +211,6 @@ const EditProfileScreen = () => {
     }
   };
 
-  // Placeholders para simular troca de imagem
-  const handleChangeBackground = () => {
-    setBackgroundImage('https://via.placeholder.com/400x140?text=Novo+Background');
-    Alert.alert('Background alterado! (dummy)');
-  };
-
   const handleSave = async () => {
     if (!user) return;
     setLoading(true);
@@ -261,7 +258,11 @@ const EditProfileScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+    >
       {/* Header */}
       <View style={styles.headerRow}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -269,17 +270,6 @@ const EditProfileScreen = () => {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Informações Pessoais</Text>
         <View style={{ width: 26 }} />
-      </View>
-
-      {/* Background */}
-      <View style={styles.backgroundBox}>
-        <Image
-          source={{ uri: backgroundImage || 'https://via.placeholder.com/400x140?text=Background' }}
-          style={styles.backgroundImg}
-        />
-        <TouchableOpacity style={styles.fabEditBg} onPress={handleChangeBackground}>
-          <Ionicons name="camera-outline" size={22} color="#181818" />
-        </TouchableOpacity>
       </View>
 
       {/* Foto de perfil */}
@@ -302,7 +292,11 @@ const EditProfileScreen = () => {
               id="web-profile-image-input"
               onChange={handlePickImageWeb}
             />
-            <TouchableOpacity onPress={() => (document.getElementById('web-profile-image-input') as HTMLInputElement)?.click()}>
+            <TouchableOpacity
+              onPress={() =>
+                (document.getElementById('web-profile-image-input') as HTMLInputElement)?.click()
+              }
+            >
               <Ionicons name="camera-outline" size={22} color="#181818" />
             </TouchableOpacity>
           </>
@@ -345,7 +339,9 @@ const EditProfileScreen = () => {
           autoCapitalize="none"
         />
       </View>
-      <Text style={styles.helperText}>Digite um email válido. Não pode estar em uso por outro usuário.</Text>
+      <Text style={styles.helperText}>
+        Digite um email válido. Não pode estar em uso por outro usuário.
+      </Text>
       {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
 
       {/* Senha */}
@@ -374,18 +370,25 @@ const EditProfileScreen = () => {
           />
         </TouchableOpacity>
       </View>
-      <Text style={styles.helperText}>Mínimo 8 caracteres, com pelo menos uma letra maiúscula, uma minúscula e um número.</Text>
+      <Text style={styles.helperText}>
+        Mínimo 8 caracteres, com pelo menos uma letra maiúscula, uma minúscula e um número.
+      </Text>
       {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
 
       {/* Data de Nascimento */}
       <Text style={styles.label}>Data de Nascimento</Text>
       <View style={[styles.inputBox, dateError ? styles.inputBoxError : null]}>
-        <Ionicons name="calendar-outline" size={22} color={colors.button} style={styles.inputIcon} />
+        <Ionicons
+          name="calendar-outline"
+          size={22}
+          color={colors.button}
+          style={styles.inputIcon}
+        />
         {Platform.OS === 'web' ? (
           <input
             type="date"
             value={dateOfBirth.toISOString().slice(0, 10)}
-            onChange={e => {
+            onChange={(e) => {
               const date = new Date(e.target.value);
               if (!isNaN(date.getTime())) handleDateChange(date);
             }}
@@ -401,10 +404,7 @@ const EditProfileScreen = () => {
           />
         ) : (
           <>
-            <TouchableOpacity
-              style={{ flex: 1 }}
-              onPress={() => setShowDatePicker(true)}
-            >
+            <TouchableOpacity style={{ flex: 1 }} onPress={() => setShowDatePicker(true)}>
               <Text style={{ fontSize: 15, color: colors.primary }}>
                 {dateOfBirth.toLocaleDateString()}
               </Text>
@@ -428,11 +428,15 @@ const EditProfileScreen = () => {
       {dateError ? <Text style={styles.errorText}>{dateError}</Text> : null}
 
       {/* Botão */}
-      <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={loading || !canSave()}>
+      <TouchableOpacity
+        style={styles.saveBtn}
+        onPress={handleSave}
+        disabled={loading || !canSave()}
+      >
         <Ionicons name="create-outline" size={22} color="#fff" style={{ marginRight: 8 }} />
         <Text style={styles.saveBtnText}>{loading ? 'Salvando...' : 'Editar perfil'}</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 };
 
@@ -442,8 +446,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  scrollContent: {
     paddingTop: 48,
     paddingHorizontal: 18,
+    paddingBottom: 100,
   },
   headerRow: {
     flexDirection: 'row',
@@ -457,37 +464,8 @@ const styles = StyleSheet.create({
     color: colors.primary,
     textAlign: 'center',
   },
-  backgroundBox: {
-    width: '100%',
-    alignItems: 'center',
-    marginBottom: 24,
-    position: 'relative',
-  },
-  backgroundImg: {
-    width: 340,
-    height: 120,
-    borderRadius: 18,
-    backgroundColor: '#eee',
-  },
-  fabEditBg: {
-    position: 'absolute',
-    right: 24,
-    bottom: 12,
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 2,
-  },
   avatarBox: {
     alignItems: 'center',
-    marginTop: -60,
     marginBottom: 24,
     position: 'relative',
   },

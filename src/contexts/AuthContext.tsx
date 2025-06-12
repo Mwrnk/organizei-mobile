@@ -5,12 +5,9 @@ import { AuthService } from '../services/auth';
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
-<<<<<<< HEAD
-  updateUserData: (userData: User) => Promise<void>;
-=======
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
->>>>>>> 52028c3e00001d0a7b6307e35604e762e5805e35
+  updateUserData: (userData: User) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -54,11 +51,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-<<<<<<< HEAD
-    <AuthContext.Provider value={{ user, login, logout, loading, updateUserData }}>{children}</AuthContext.Provider>
-=======
-    <AuthContext.Provider value={{ user, loading, login, logout }}>{children}</AuthContext.Provider>
->>>>>>> 52028c3e00001d0a7b6307e35604e762e5805e35
+    <AuthContext.Provider value={{ user, loading, login, logout, updateUserData }}>
+      {children}
+    </AuthContext.Provider>
   );
 };
 
