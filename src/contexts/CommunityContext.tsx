@@ -5,6 +5,7 @@ import React, {
   useState,
   ReactNode,
   useCallback,
+  useRef,
 } from 'react';
 // @ts-ignore
 import Toast from 'react-native-toast-message';
@@ -12,6 +13,8 @@ import { ICard, IComment } from '../types/community.types';
 import { CommunityService } from '../services/communityService';
 import api from '../services/api';
 import { ApiSuccess } from '../types/community.types';
+import { useAuth } from './AuthContext';
+import * as Haptics from 'expo-haptics';
 
 interface CommunityContextValue {
   feed: ICard[];
@@ -32,6 +35,10 @@ export const CommunityProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [page, setPage] = useState<number>(1);
+  const pendingLikeOps = useRef<Set<string>>(new Set()); // evita múltiplos cliques rápidos
+
+  const { user } = useAuth();
+
   const PAGE_SIZE = 20; // client-side pagination since backend ainda não suporta
 
   // Carrega feed completo e contagem de comentários
@@ -87,26 +94,70 @@ export const CommunityProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const likeCard = async (cardId: string) => {
+    // Debounce rápido
+    if (pendingLikeOps.current.has(cardId)) return;
+
+    const targetCard = feed.find((c) => c.id === cardId);
+    if (!targetCard) return;
+
+    // Validação de auto-curtida
+    const authorId =
+      typeof targetCard.userId === 'object' ? (targetCard.userId as any)?._id : targetCard.userId;
+    if (authorId && authorId === user?.id) {
+      Toast.show({ type: 'info', text1: 'Você não pode curtir seu próprio post' });
+      return;
+    }
+
+    // Otimista
+    setFeed((prev) =>
+      prev.map((c) => (c.id === cardId ? { ...c, likes: c.likes + 1, likedByUser: true } : c))
+    );
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    pendingLikeOps.current.add(cardId);
     try {
       await CommunityService.likeCard(cardId);
-      setFeed((prev) =>
-        prev.map((c) => (c.id === cardId ? { ...c, likes: c.likes + 1, likedByUser: true } : c))
-      );
-    } catch (err) {
-      Toast.show({ type: 'error', text1: 'Erro ao curtir card' });
-    }
-  };
-
-  const unlikeCard = async (cardId: string) => {
-    try {
-      await CommunityService.unlikeCard(cardId);
+    } catch (err: any) {
+      // Rollback
       setFeed((prev) =>
         prev.map((c) =>
           c.id === cardId ? { ...c, likes: Math.max(0, c.likes - 1), likedByUser: false } : c
         )
       );
-    } catch (err) {
-      Toast.show({ type: 'error', text1: 'Erro ao remover like' });
+
+      const message = err?.response?.data?.message || 'Erro ao curtir card';
+      Toast.show({ type: 'error', text1: message });
+    } finally {
+      pendingLikeOps.current.delete(cardId);
+    }
+  };
+
+  const unlikeCard = async (cardId: string) => {
+    if (pendingLikeOps.current.has(cardId)) return;
+
+    // Otimista
+    setFeed((prev) =>
+      prev.map((c) =>
+        c.id === cardId ? { ...c, likes: Math.max(0, c.likes - 1), likedByUser: false } : c
+      )
+    );
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    pendingLikeOps.current.add(cardId);
+    try {
+      await CommunityService.unlikeCard(cardId);
+    } catch (err: any) {
+      // Rollback
+      setFeed((prev) =>
+        prev.map((c) => (c.id === cardId ? { ...c, likes: c.likes + 1, likedByUser: true } : c))
+      );
+
+      const message = err?.response?.data?.message || 'Erro ao remover like';
+      Toast.show({ type: 'error', text1: message });
+    } finally {
+      pendingLikeOps.current.delete(cardId);
     }
   };
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -89,6 +89,8 @@ const CardDetailScreen = () => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [likeLoading, setLikeLoading] = useState(false);
+  const likePendingRef = useRef(false);
 
   // Carrega detalhes completos do card (inclusive URL do PDF assinada)
   const loadCardDetails = useCallback(async () => {
@@ -235,12 +237,41 @@ const CardDetailScreen = () => {
   }, [pdfUrl]);
 
   const toggleLike = async () => {
-    if (cardData.likedByUser) {
-      await unlikeCard(cardData.id);
-      setCardData({ ...cardData, likedByUser: false, likes: Math.max(0, cardData.likes - 1) });
-    } else {
-      await likeCard(cardData.id);
-      setCardData({ ...cardData, likedByUser: true, likes: cardData.likes + 1 });
+    if (likeLoading || likePendingRef.current) return;
+
+    // Validação de auto-curtida
+    if (cardData.userId === user?.id) {
+      Toast.show({ type: 'info', text1: 'Você não pode curtir seu próprio post' });
+      return;
+    }
+
+    // Otimista
+    const optimisticLiked = !cardData.likedByUser;
+    const optimisticLikes = cardData.likes + (optimisticLiked ? 1 : -1);
+    setCardData({ ...cardData, likedByUser: optimisticLiked, likes: optimisticLikes });
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    setLikeLoading(true);
+    likePendingRef.current = true;
+    try {
+      if (optimisticLiked) {
+        await likeCard(cardData.id);
+      } else {
+        await unlikeCard(cardData.id);
+      }
+      // Sucesso — nada a fazer pois estado já está consistente
+    } catch (err: any) {
+      // Rollback para estado anterior
+      setCardData((prev) => ({
+        ...prev,
+        likedByUser: !optimisticLiked,
+        likes: prev.likes - (optimisticLiked ? 1 : -1),
+      }));
+      const message = err?.response?.data?.message || 'Erro ao atualizar like';
+      Toast.show({ type: 'error', text1: message });
+    } finally {
+      setLikeLoading(false);
+      likePendingRef.current = false;
     }
   };
 
@@ -339,6 +370,7 @@ const CardDetailScreen = () => {
                 liked={!!cardData.likedByUser}
                 count={cardData.likes}
                 onPress={toggleLike}
+                loading={likeLoading}
               />
             </View>
 

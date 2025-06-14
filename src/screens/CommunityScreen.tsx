@@ -278,6 +278,7 @@ const styles = StyleSheet.create({
   },
   publishSection: {
     paddingVertical: 24,
+    marginBottom: 130,
   },
   publishTitle: {
     fontFamily: fontNames.bold,
