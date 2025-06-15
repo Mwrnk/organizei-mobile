@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, ScrollView, ActivityIndicator, Alert, StyleSheet } from 'react-native';
+import { View, Text, TextInput, ScrollView, ActivityIndicator, Alert, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { GlobalStyles } from '@styles/global';
 import CustomButton from '@components/CustomButton';
@@ -7,6 +7,9 @@ import colors from '@styles/colors';
 import AIService, { ChatMessage } from '../services/aiService';
 import BotIcon from '@icons/BotIcon';
 import { fontNames } from '../styles/fonts';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigation } from '@react-navigation/native';
+import api from '../services/api';
 
 interface Message {
   id: number;
@@ -15,14 +18,38 @@ interface Message {
 }
 
 const AIScreen = () => {
+  const { user } = useAuth();
+  const navigation = useNavigation();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [freePlanId, setFreePlanId] = useState<string | null>(null);
+
+  // Verifica se o usuário é premium
+  const isPremium = user?.plan && freePlanId && user.plan !== freePlanId;
 
   useEffect(() => {
-    initializeIA();
+    const fetchFreePlanId = async () => {
+      try {
+        const response = await api.get('/plans');
+        const freePlan = response.data.data.find((plan: any) => plan.isDefault);
+        setFreePlanId(freePlan?._id || null);
+      } catch (error) {
+        console.error('Erro ao buscar plano free:', error);
+      }
+    };
+
+    fetchFreePlanId();
   }, []);
+
+  useEffect(() => {
+    if (isPremium) {
+      initializeIA();
+    } else {
+      setIsInitialLoading(false);
+    }
+  }, [isPremium]);
 
   const initializeIA = async () => {
     setIsInitialLoading(true);
@@ -77,10 +104,38 @@ const AIScreen = () => {
     }
   };
 
+  // Renderiza a tela de bloqueio para usuários free
+  const renderLockedScreen = () => (
+    <View style={styles.lockedContainer}>
+      <BotIcon color="#1D1B20" size={48} />
+      <Text style={styles.lockedTitle}>Recurso Premium</Text>
+      <Text style={styles.lockedDescription}>
+        Para acessar a ORGAN.IA e aproveitar todos os benefícios da inteligência artificial, você precisa assinar o plano Premium.
+      </Text>
+      <TouchableOpacity 
+        style={styles.upgradeButton}
+        onPress={() => navigation.navigate('Plan' as never)}
+      >
+        <Text style={styles.upgradeButtonText}>Assinar Premium</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  if (isInitialLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (!isPremium) {
+    return renderLockedScreen();
+  }
+
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
-       
         {/* Header */}
         <View style={styles.logoIa}>
           <BotIcon color="#1D1B20" size={20}/>
@@ -95,9 +150,7 @@ const AIScreen = () => {
         </View>
 
         {/* Card de chat */}
-        <View
-          style={styles.cardChat}
-        >
+        <View style={styles.cardChat}>
           {/* Chat messages */}
           <ScrollView
             style={styles.chatMessages}
@@ -144,7 +197,6 @@ const AIScreen = () => {
 
           {/* Input area */}
           <View style={styles.inputArea}>
-
             <TextInput
               style={styles.txtInput}
               placeholder="Digite sua mensagem..."
@@ -153,7 +205,6 @@ const AIScreen = () => {
               onSubmitEditing={handleSendMessage}
               editable={!isLoading}
             />
-
             
             <CustomButton
               title="Enviar"
@@ -180,21 +231,59 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
     backgroundColor: '#fff',
   },
-
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  lockedContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+    backgroundColor: '#fff',
+  },
+  lockedTitle: {
+    fontSize: 24,
+    fontFamily: fontNames.bold,
+    color: '#1D1B20',
+    marginTop: 24,
+    marginBottom: 16,
+  },
+  lockedDescription: {
+    fontSize: 16,
+    fontFamily: fontNames.regular,
+    color: '#1D1B20',
+    textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 24,
+  },
+  upgradeButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 16,
+    width: '100%',
+    alignItems: 'center',
+  },
+  upgradeButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontFamily: fontNames.bold,
+  },
   nomeIA: {
     fontSize: 20,
     fontFamily: fontNames.bold,
     fontWeight: '600',
     color: '#1D1B20',
   },
-
   logoIa: {
     gap: 6,
     flexDirection: 'row',
     alignItems: "baseline",
     justifyContent: 'center',
   },
-
   titulo: {
     fontSize: 22,
     fontWeight: '700',
@@ -204,8 +293,6 @@ const styles = StyleSheet.create({
     marginTop: 32,
     fontFamily: fontNames.bold,
   },
-
-
   cardChat: {
     flex: 1,
     backgroundColor: '#F6F6F6',
@@ -213,12 +300,10 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
-
   chatMessages: {
     flex: 1,
     padding: 24,
   },
-
   button: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -227,7 +312,6 @@ const styles = StyleSheet.create({
     height: 44,
     paddingHorizontal: 24,
   },
-
   txtButton: {
     color: '#fff',
     fontWeight: '600',
@@ -235,7 +319,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     fontFamily: fontNames.bold,
   },
-
   txtInput: {
     flex: 1,
     backgroundColor: '#fff',
@@ -248,13 +331,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     fontFamily: fontNames.regular,
   },
-
   inputArea: {
     flexDirection: 'row',
     alignItems: 'center',
+    padding: 16,
     gap: 12,
-    marginHorizontal: 16,
-    marginBottom: 16,
   },
 });
 
