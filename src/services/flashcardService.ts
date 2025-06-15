@@ -58,4 +58,14 @@ export class FlashcardService {
       throw error;
     }
   }
+
+  // Novo: enviar nota de revisão (0-5) para um flashcard
+  static async review(flashcardId: string, grade: number): Promise<void> {
+    try {
+      await api.patch(`/flashcards/doreview/${flashcardId}`, { grade });
+    } catch (error) {
+      console.error('FlashcardService: erro ao enviar nota de revisão', error);
+      throw error;
+    }
+  }
 }
