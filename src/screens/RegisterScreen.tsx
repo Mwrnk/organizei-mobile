@@ -214,7 +214,8 @@ const RegisterScreen = () => {
       console.log('Resposta da API:', response.data);
 
       // Login automático após cadastro
-      await login({ email: payload.email, password: payload.password });
+      console.log('Tentando login automático com:', payload.email, payload.password);
+      await login(payload.email, payload.password);
       limparCampos();
       navigation.reset({
         index: 0,
