@@ -1,34 +1,79 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Switch, ActivityIndicator, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Switch, ActivityIndicator, Alert, Platform } from 'react-native';
 import { fontNames } from '../styles/fonts';
 import colors from '../styles/colors';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import { AuthService } from '../services/auth';
+import api from '../services/api';
+import { Ionicons } from '@expo/vector-icons';
+
+// Função utilitária multiplataforma para alertas
+function showAlert(title: string, message: string) {
+  if (Platform.OS === 'web') {
+    window.alert(`${title}\n\n${message}`);
+  } else {
+    Alert.alert(title, message);
+  }
+}
 
 const PlanScreen = () => {
   const { user, updateUserData } = useAuth();
-  const [isAnnual, setIsAnnual] = useState(true);
-  const [isPremium, setIsPremium] = useState(false);
+  const [plans, setPlans] = useState<any[]>([]);
+  const [freePlanId, setFreePlanId] = useState<string | null>(null);
+  const [premiumPlanId, setPremiumPlanId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
 
-  const handleSubscribe = async () => {
-    if (!user?._id) {
-      Alert.alert('Erro', 'Usuário não encontrado');
-      return;
-    }
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const response = await api.get('/plans');
+        setPlans(response.data.data);
+        const freePlan = response.data.data.find((plan: any) => plan.isDefault);
+        setFreePlanId(freePlan?._id || null);
+        const premiumPlan = response.data.data.filter((plan: any) => !plan.isDefault).sort((a: any, b: any) => b.price - a.price)[0];
+        setPremiumPlanId(premiumPlan?._id || null);
+      } catch (error) {
+        console.error('Erro ao buscar planos:', error);
+      }
+    };
+    fetchPlans();
+  }, []);
 
+  const isUserPremium = user?.plan && freePlanId && user.plan !== freePlanId;
+
+  // Filtra apenas o plano mensal
+  const selectedPlan: any = plans.filter((plan: any) => !plan.isDefault)
+    .find((plan: any) => plan.duration < 365);
+
+  // Função para voltar ao plano free
+  const handleDowngrade = async () => {
+    if (!user?._id || !freePlanId) return;
     try {
       setLoading(true);
-      const planId = '68379d4289ed7583b0596d87'; // ID do plano Premium
-      const updatedUser = await AuthService.updateUserPlan(user._id, planId);
+      const updatedUser = await AuthService.updateUserPlan(user._id, freePlanId);
       await updateUserData(updatedUser);
-      Alert.alert('Sucesso', 'Plano atualizado com sucesso!');
+      showAlert('Até logo, Premium!', 'Sentiremos sua falta! Você voltou para o plano Free, mas esperamos te ver novamente como Premium em breve. 😊');
       navigation.goBack();
     } catch (error) {
-      console.error('Erro ao atualizar plano:', error);
-      Alert.alert('Erro', 'Não foi possível atualizar seu plano. Tente novamente mais tarde.');
+      showAlert('Erro', 'Não foi possível alterar seu plano.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Função para assinar o plano premium
+  const handleUpgrade = async () => {
+    if (!user?._id || !premiumPlanId) return;
+    try {
+      setLoading(true);
+      const updatedUser = await AuthService.updateUserPlan(user._id, premiumPlanId);
+      await updateUserData(updatedUser);
+      showAlert('Obrigado por apoiar!', 'Parabéns! Agora você é Premium. Agradecemos por apoiar nosso projeto e esperamos que aproveite todos os benefícios! 🥳');
+      navigation.goBack();
+    } catch (error) {
+      showAlert('Erro', 'Não foi possível assinar o plano premium.');
     } finally {
       setLoading(false);
     }
@@ -50,10 +95,16 @@ const PlanScreen = () => {
         <Text style={styles.title}>Vire um usuário</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <Switch
-            value={isPremium}
-            onValueChange={setIsPremium}
+            value={!!(user?.plan && user.plan !== freePlanId)}
+            onValueChange={(value) => {
+              if (value) {
+                // Aqui você pode implementar o upgrade para premium se quiser
+              } else {
+                handleDowngrade();
+              }
+            }}
             trackColor={{ false: '#EAEAEA', true: colors.button }}
-            thumbColor={isPremium ? colors.button : '#fff'}
+            thumbColor={user?.plan && user.plan !== freePlanId ? colors.button : '#fff'}
             style={styles.switch}
           />
           <Text style={styles.title}>premium</Text>
@@ -62,83 +113,35 @@ const PlanScreen = () => {
 
       {/* Plano atual */}
       <Text style={styles.currentPlan}>
-        Seu Plano: <Text style={styles.currentPlanFree}>{user?.plan ? 'Premium' : 'Free'}</Text>
+        Seu Plano: <Text style={styles.currentPlanFree}>{isUserPremium ? 'Premium' : 'Free'}</Text>
       </Text>
 
-      {/* Tabs mensal/anual */}
-      <View style={styles.tabsRow}>
-        <TouchableOpacity style={[styles.tab, !isAnnual && styles.tabActive]} onPress={() => setIsAnnual(false)}>
-          <Text style={[styles.tabText, !isAnnual && styles.tabTextActive]}>Mensal</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.tab, isAnnual && styles.tabActive]} onPress={() => setIsAnnual(true)}>
-          <Text style={[styles.tabText, isAnnual && styles.tabTextActive]}>Anual</Text>
-        </TouchableOpacity>
+      {/* Card do plano mensal */}
+      <View style={styles.planContainer}>
+        {selectedPlan && (
+          <>
+            <Text style={styles.planTitle}>{selectedPlan.name}</Text>
+            <Text style={styles.planPrice}>R$ {selectedPlan.price.toFixed(2)}/mês</Text>
+            <View style={styles.featuresList}>
+              {selectedPlan.features.map((feature: string, idx: number) => (
+                <View key={idx} style={styles.featureItem}>
+                  <Text style={styles.featureIcon}>✓</Text>
+                  <Text style={styles.featureText}>{feature}</Text>
+                </View>
+              ))}
+            </View>
+            {isUserPremium ? (
+              <TouchableOpacity style={styles.downgradeButton} onPress={handleDowngrade} disabled={loading}>
+                <Text style={styles.downgradeButtonText}>{loading ? 'Processando...' : 'Voltar para o Free'}</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={styles.upgradeButton} onPress={handleUpgrade} disabled={loading}>
+                <Text style={styles.upgradeButtonText}>{loading ? 'Processando...' : 'Assinar Premium'}</Text>
+              </TouchableOpacity>
+            )}
+          </>
+        )}
       </View>
-
-      {/* Card do plano */}
-      {isAnnual ? (
-        <View style={styles.planCard}>
-          <Text style={styles.planTitle}>Plano A</Text>
-          <View style={styles.planFeaturesRow}>
-            <View style={styles.planFeaturesCol}>
-              <Text style={styles.featureRed}>✗ <Text style={styles.featureText}>Teste</Text></Text>
-              <Text style={styles.featureGreen}>✓ <Text style={styles.featureText}>Teste</Text></Text>
-              <Text style={styles.featureGreen}>✓ <Text style={styles.featureText}>Teste</Text></Text>
-              <Text style={styles.featureRed}>✗ <Text style={styles.featureText}>Teste</Text></Text>
-            </View>
-            <View style={styles.planFeaturesCol}>
-              <Text style={styles.featureRed}>✗ <Text style={styles.featureText}>Teste</Text></Text>
-              <Text style={styles.featureGreen}>✓ <Text style={styles.featureText}>Teste</Text></Text>
-              <Text style={styles.featureRed}>✗ <Text style={styles.featureText}>Teste</Text></Text>
-              <Text style={styles.featureRed}>✗ <Text style={styles.featureText}>Teste</Text></Text>
-            </View>
-          </View>
-          <Text style={styles.price}><Text style={styles.priceCurrency}>R$</Text>00.<Text style={styles.priceCents}>00</Text><Text style={styles.pricePeriod}>/anual</Text></Text>
-          <TouchableOpacity 
-            style={[styles.subscribeBtn, loading && styles.subscribeBtnDisabled]} 
-            onPress={handleSubscribe}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color={colors.primary} />
-            ) : (
-              <Text style={styles.subscribeBtnText}>Assinar</Text>
-            )}
-          </TouchableOpacity>
-          <Text style={styles.recommended}>Plano recomendado</Text>
-        </View>
-      ) : (
-        <View style={styles.planCard}>
-          <Text style={styles.planTitle}>Plano A</Text>
-          <View style={styles.planFeaturesRow}>
-            <View style={styles.planFeaturesCol}>
-              <Text style={styles.featureRed}>✗ <Text style={styles.featureText}>Teste</Text></Text>
-              <Text style={styles.featureGreen}>✓ <Text style={styles.featureText}>Teste</Text></Text>
-              <Text style={styles.featureGreen}>✓ <Text style={styles.featureText}>Teste</Text></Text>
-              <Text style={styles.featureRed}>✗ <Text style={styles.featureText}>Teste</Text></Text>
-            </View>
-            <View style={styles.planFeaturesCol}>
-              <Text style={styles.featureRed}>✗ <Text style={styles.featureText}>Teste</Text></Text>
-              <Text style={styles.featureGreen}>✓ <Text style={styles.featureText}>Teste</Text></Text>
-              <Text style={styles.featureRed}>✗ <Text style={styles.featureText}>Teste</Text></Text>
-              <Text style={styles.featureRed}>✗ <Text style={styles.featureText}>Teste</Text></Text>
-            </View>
-          </View>
-          <Text style={styles.price}><Text style={styles.priceCurrency}>R$</Text>00.<Text style={styles.priceCents}>00</Text><Text style={styles.pricePeriod}>/mês</Text></Text>
-          <TouchableOpacity 
-            style={[styles.subscribeBtn, loading && styles.subscribeBtnDisabled]} 
-            onPress={handleSubscribe}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color={colors.primary} />
-            ) : (
-              <Text style={styles.subscribeBtnText}>Assinar</Text>
-            )}
-          </TouchableOpacity>
-          <Text style={styles.recommended}>Plano recomendado</Text>
-        </View>
-      )}
     </View>
   );
 };
@@ -159,7 +162,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   backArrow: {
-    fontSize: 22,
+    fontSize: 36,
     color: colors.primary,
     fontFamily: fontNames.bold,
   },
@@ -223,7 +226,7 @@ const styles = StyleSheet.create({
   tabTextActive: {
     color: colors.primary,
   },
-  planCard: {
+  planContainer: {
     backgroundColor: '#181818',
     borderRadius: 32,
     marginHorizontal: 18,
@@ -237,51 +240,33 @@ const styles = StyleSheet.create({
     fontFamily: fontNames.bold,
     marginBottom: 12,
   },
-  planFeaturesRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 18,
-    width: '100%',
-  },
-  planFeaturesCol: {
-    flex: 1,
-    alignItems: 'flex-start',
-    gap: 8,
-  },
-  featureRed: {
-    color: '#FF4C4C',
-    fontSize: 16,
-    fontFamily: fontNames.bold,
-  },
-  featureGreen: {
-    color: '#4CD964',
-    fontSize: 16,
-    fontFamily: fontNames.bold,
-  },
-  featureText: {
-    color: '#fff',
-    fontSize: 16,
-    fontFamily: fontNames.regular,
-  },
-  price: {
+  planPrice: {
     color: '#fff',
     fontSize: 32,
     fontFamily: fontNames.bold,
-    marginVertical: 12,
+    marginBottom: 12,
   },
-  priceCurrency: {
-    fontSize: 18,
-    fontFamily: fontNames.regular,
+  featuresList: {
+    marginVertical: 16,
+    paddingHorizontal: 8,
   },
-  priceCents: {
-    fontSize: 18,
-    fontFamily: fontNames.regular,
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
   },
-  pricePeriod: {
-    fontSize: 16,
-    fontFamily: fontNames.regular,
+  featureIcon: {
+    color: '#4CD964',
+    fontSize: 20,
+    fontFamily: fontNames.bold,
+    marginRight: 8,
   },
-  subscribeBtn: {
+  featureText: {
+    color: '#fff',
+    fontSize: 17,
+    fontFamily: fontNames.bold,
+  },
+  downgradeButton: {
     backgroundColor: '#EAEAEA',
     borderRadius: 16,
     paddingVertical: 12,
@@ -289,20 +274,24 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 8,
   },
-  subscribeBtnText: {
+  downgradeButtonText: {
     color: colors.primary,
     fontSize: 18,
     fontFamily: fontNames.bold,
     textAlign: 'center',
   },
-  recommended: {
-    color: '#fff',
-    fontSize: 12,
-    fontFamily: fontNames.regular,
+  upgradeButton: {
+    backgroundColor: '#EAEAEA',
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 48,
     marginTop: 8,
-    opacity: 0.7,
+    marginBottom: 8,
   },
-  subscribeBtnDisabled: {
-    opacity: 0.7,
+  upgradeButtonText: {
+    color: colors.primary,
+    fontSize: 18,
+    fontFamily: fontNames.bold,
+    textAlign: 'center',
   },
 }); 
