@@ -29,6 +29,8 @@ import { TagService, Tag } from '../services/tagService';
 import { FlashcardService, Flashcard } from '../services/flashcardService';
 import { ActivityIndicator, Modal, TextInput } from 'react-native';
 import Toast from 'react-native-toast-message';
+import BotIcon from '@icons/BotIcon';
+import EditIcon from '@icons/EditIcon';
 
 // Definição do tipo de navegação para tipagem do TypeScript
 type GameStackNavigationProp = StackNavigationProp<RootTabParamList>;
@@ -224,19 +226,22 @@ const GamesScreen = () => {
 
   // =====================  UI RENDER FUNCTIONS ===================== //
   const renderStep0 = () => (
-    <View style={{ gap: 20 }}>
-      <Text style={{ fontSize: 20, fontFamily: fontNames.bold, textAlign: 'center' }}>
-        Como deseja criar?
-      </Text>
-      <TouchableOpacity
-        style={styles.optionButton}
-        onPress={() => {
+    <View style={ styles.containerOptions}>
+
+      <View style= {styles.txt}>
+        <Text style={styles.h1}>  Como deseja criar?  </Text>
+        <Text style={styles.sub}>  Escolha o método de criação dos flashcards  </Text>
+      </View>
+
+      <TouchableOpacity style={styles.optionButton} onPress={() => {
           setCreationType('ai');
           setCreationStep(1);
         }}
       >
-        <Text style={styles.optionText}>🤖 Criar com IA</Text>
+          <BotIcon size={24} color={colors.primary} />
+          <Text style={styles.optionText}>Criar com IA</Text> 
       </TouchableOpacity>
+      
       <TouchableOpacity
         style={styles.optionButton}
         onPress={() => {
@@ -244,13 +249,53 @@ const GamesScreen = () => {
           setCreationStep(1);
         }}
       >
-        <Text style={styles.optionText}>✍️ Criar Manualmente</Text>
+        <EditIcon size={24} color={colors.primary} />
+        <Text style={styles.optionText}>Criar Manualmente</Text>
       </TouchableOpacity>
+
+      {/* ===================== FLASHCARDS DO USUÁRIO ===================== */}
+      <View style={styles.flashcardsSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Seus Flashcards</Text>
+            <View style={styles.sectionLine} />
+
+          </View>
+            
+            <TextInput
+              placeholder="Pesquisar flashcards..."
+              value={searchFlashcardTerm}
+              onChangeText={setSearchFlashcardTerm}
+              style={styles.input}
+            />
+
+            {loadingFlashcards ? (
+              <ActivityIndicator />
+            ) : flashcards.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>Você ainda não tem flashcards</Text>
+                <Text style={styles.emptyStateSubText}>Crie seu primeiro flashcard usando IA ou manualmente</Text>
+              </View>
+            ) : (
+              flashcards
+                .filter((fc) =>
+                  (fc.front + ' ' + fc.back)
+                    .toLowerCase()
+                    .includes(searchFlashcardTerm.toLowerCase())
+                )
+                .map((fc) => (
+                  <View key={fc._id} style={styles.flashcardItem}>
+                    <Text style={styles.flashcardFront}>{fc.front}</Text>
+                    <Text style={styles.flashcardBack}>{fc.back}</Text>
+                  </View>
+                ))
+            )}
+      </View>
+
     </View>
   );
 
   const renderStep1 = () => (
-    <View style={{ flex: 1 }}>
+    <View style={GlobalStyles.frame}>
       <TextInput
         placeholder="Pesquisar card..."
         value={searchCardTerm}
@@ -260,7 +305,7 @@ const GamesScreen = () => {
       {loadingCards ? (
         <ActivityIndicator />
       ) : (
-        <ScrollView style={{ flex: 1 }}>
+        <ScrollView style={{ flex: 1, marginTop: 16}}>
           {cards
             .filter((c) => c.title.toLowerCase().includes(searchCardTerm.toLowerCase()))
             .map((c) => (
@@ -281,7 +326,7 @@ const GamesScreen = () => {
   );
 
   const renderStep2 = () => (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ gap: 20 }}>
+    <ScrollView style={GlobalStyles.frame} contentContainerStyle={{ gap: 20 }}>
       {creationType === 'manual' ? (
         <>
           <TextInput
@@ -313,15 +358,15 @@ const GamesScreen = () => {
         onPress={() => setCreationStep(3)}
         disabled={creationType === 'manual' ? !(front.trim() && back.trim()) : !aiTitle.trim()}
       >
-        <Text style={styles.nextButtonText}>Próximo: Tags</Text>
+        <Text style={styles.nextButtonText}>Avançar</Text>
       </TouchableOpacity>
     </ScrollView>
   );
 
   const renderStep3 = () => (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ gap: 12, paddingBottom: 100 }}>
+    <ScrollView style={{ flex: 1, gap:16 }} contentContainerStyle={{ gap: 12, paddingBottom: 100 }}>
       <TouchableOpacity style={styles.tagCreateButton} onPress={() => setShowTagModal(true)}>
-        <Text style={{ color: colors.primary }}>+ Criar nova tag</Text>
+        <Text style={{ color: colors.primary }}> + Criar nova tag </Text>
       </TouchableOpacity>
       {loadingTags ? (
         <ActivityIndicator />
@@ -357,14 +402,18 @@ const GamesScreen = () => {
   );
 
   const renderCreationFlow = () => (
-    <SafeAreaView style={[GlobalStyles.container, { padding: 16 }]}>
+    <SafeAreaView style={[GlobalStyles.frame]}>
       {/* Header Custom */}
-      <View style={[styles.header, { justifyContent: 'flex-start' }]}>
+      <View style={[styles.header, { marginTop:0, justifyContent: 'space-between' }]}>
+
         <TouchableOpacity onPress={exitFlow} style={{ marginRight: 16 }}>
           <Ionicons name="chevron-back" size={24} color={colors.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Criar Flashcards</Text>
+        <View style={{ width: 24 }} /> {/* Espaçador para centralizar título */}
+
       </View>
+
       {creationStep === 0 && renderStep0()}
       {creationStep === 1 && renderStep1()}
       {creationStep === 2 && renderStep2()}
@@ -462,35 +511,7 @@ const GamesScreen = () => {
             </TouchableOpacity>
           </View>
 
-          {/* ===================== FLASHCARDS DO USUÁRIO ===================== */}
-          <View style={styles.flashcardsSection}>
-            <Text style={styles.sectionTitle}>Seus Flashcards</Text>
-
-            <TextInput
-              placeholder="Pesquisar flashcards..."
-              value={searchFlashcardTerm}
-              onChangeText={setSearchFlashcardTerm}
-              style={styles.input}
-            />
-
-            {loadingFlashcards ? (
-              <ActivityIndicator />
-            ) : (
-              flashcards
-                .filter((fc) =>
-                  (fc.front + ' ' + fc.back)
-                    .toLowerCase()
-                    .includes(searchFlashcardTerm.toLowerCase())
-                )
-                .map((fc) => (
-                  <View key={fc._id} style={styles.flashcardItem}>
-                    <Text style={styles.flashcardFront}>{fc.front}</Text>
-                    <Text style={styles.flashcardBack}>{fc.back}</Text>
-                  </View>
-                ))
-            )}
-          </View>
-
+          
           {/* padding extra para não colar no bottomTab */}
           <View style={{ height: 80 }} />
         </ScrollView>
@@ -627,19 +648,52 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
   },
 
+  h1: {
+    fontSize: 24, 
+    fontFamily: fontNames.bold, 
+    textAlign: 'center' 
+  },
+
+  txt: {
+    marginBottom: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6
+  },
+
+  sub: {
+    fontSize: 12,
+    fontFamily: fontNames.regular,
+    textAlign: 'center',
+  },
+
   // Additional styles for flow
   optionButton: {
+    flexDirection: 'row',
     backgroundColor: 'white',
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.1)',
     borderRadius: 16,
-    padding: 20,
+    paddingVertical: 32,
+    paddingHorizontal: 20,
     alignItems: 'center',
+    justifyContent: "center",
+    gap: 16,
   },
   optionText: {
     fontFamily: fontNames.bold,
     fontSize: 16,
   },
+
+  containerOptions: {
+    width: "100%",
+    height: "100%",
+    alignSelf: 'center',
+    justifyContent: 'center',
+    paddingBottom: 130, 
+    gap: 20,
+  },
+
   input: {
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.1)',
@@ -701,9 +755,21 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    fontSize: 20,
-    fontFamily: fontNames.bold,
+    fontSize: 12,
+    fontFamily: fontNames.regular,
     color: colors.primary,
+  },
+
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+
+  sectionLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.lightGray,
   },
 
   flashcardItem: {
@@ -726,6 +792,27 @@ const styles = StyleSheet.create({
     fontFamily: fontNames.regular,
     fontSize: 12,
     color: '#555',
+  },
+
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+
+  emptyStateText: {
+    fontSize: 18,
+    fontFamily: fontNames.bold,
+    color: colors.primary,
+    marginBottom: 10,
+  },
+
+  emptyStateSubText: {
+    fontSize: 12,
+    fontFamily: fontNames.regular,
+    color: '#8E8E93',
+    textAlign: 'center',
   },
 });
 

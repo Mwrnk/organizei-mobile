@@ -484,9 +484,25 @@ const EscolarScreen = () => {
         acc + listCards.reduce((cardAcc, card) => cardAcc + (card.pdfs?.length || 0), 0),
       0
     );
+    
     const favoriteCards = favorites.size;
+    const highPriorityCards = Object.values(cards).reduce(
+      (acc, listCards) => acc + listCards.filter(card => card.priority === 'alta').length,
+      0
+    );
+    const mediumPriorityCards = Object.values(cards).reduce(
+      (acc, listCards) => acc + listCards.filter(card => card.priority === 'media').length,
+      0
+    );
 
-    return { totalLists, totalCards, totalPdfs, favoriteCards };
+    return { 
+      totalLists, 
+      totalCards, 
+      totalPdfs, 
+      favoriteCards,
+      highPriorityCards,
+      mediumPriorityCards
+    };
   }, [lists, cards, favorites]);
 
   // Função para deletar card com swipe
@@ -1112,7 +1128,7 @@ const EscolarScreen = () => {
                 </TouchableOpacity>
               </View>
 
-              <ScrollView style={styles.statsContent}>
+              <View style={styles.statsContent}>
                 <View style={styles.statsGrid}>
                   <View style={styles.statCard}>
                     <FolderIcon size={32} color={colors.primary} />
@@ -1137,32 +1153,21 @@ const EscolarScreen = () => {
                     <Text style={styles.statNumber}>{stats.favoriteCards}</Text>
                     <Text style={styles.statLabel}>Favoritos</Text>
                   </View>
-                </View>
 
-                <View style={styles.progressSection}>
-                  <Text style={styles.sectionTitle}>Progresso de Estudos</Text>
-                  <View style={styles.progressItem}>
-                    <View style={styles.progressTxtContent}>
-                      <Text style={styles.progressText}>Cards estudados hoje</Text>
-                      <Text style={styles.progressValue}>65%</Text>
-                    </View>
-
-                    <View style={styles.progressBar}>
-                      <View style={[styles.progressFill, { width: '65%' }]} />
-                    </View>
+                  <View style={styles.statCard}>
+                    <Ionicons name="alert-circle-outline" size={32} color={colors.primary} />
+                    <Text style={styles.statNumber}>{stats.highPriorityCards}</Text>
+                    <Text style={styles.statLabel}>Alta Prioridade</Text>
                   </View>
 
-                  <View style={styles.progressItem}>
-                    <View style={styles.progressTxtContent}>
-                      <Text style={styles.progressText}>Meta semanal</Text>
-                      <Text style={styles.progressValue}>40%</Text>
-                    </View>
-
-                    <View style={styles.progressBar}>
-                      <View style={[styles.progressFill, { width: '40%' }]} />
-                    </View>
+                  <View style={styles.statCard}>
+                    <Ionicons name="alert-outline" size={32} color={colors.primary} />
+                    <Text style={styles.statNumber}>{stats.mediumPriorityCards}</Text>
+                    <Text style={styles.statLabel}>Média Prioridade</Text>
                   </View>
+
                 </View>
+
 
                 {offlineMode && (
                   <View style={styles.demoNotice}>
@@ -1170,7 +1175,7 @@ const EscolarScreen = () => {
                     <Text style={styles.demoNoticeText}>Estatísticas em modo demonstração</Text>
                   </View>
                 )}
-              </ScrollView>
+              </View>
             </Animated.View>
           </View>
         </Modal>
@@ -2203,8 +2208,11 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   statLabel: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    textAlign: 'center',
     fontSize: 14,
-    color: '#666',
+    color: colors.gray,
     fontFamily: fontNames.regular,
     marginTop: 4,
   },

@@ -6,10 +6,18 @@ import { fontNames } from './fonts';
 export const GlobalStyles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     backgroundColor: '#fff',
   },
+
+  frame: {
+    flex: 1,
+    paddingTop: 40,
+    paddingHorizontal: 16,
+    backgroundColor: colors.white,
+  },
+
   title: {
     fontSize: 20,
     fontFamily: fontNames.bold,

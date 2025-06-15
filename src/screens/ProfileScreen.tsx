@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,6 +9,8 @@ import {
   ScrollView,
   ActivityIndicator,
   SafeAreaView,
+  Modal,
+  Animated,
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { fontNames } from '../styles/fonts';
@@ -31,6 +33,11 @@ import LogOutIcon from '@icons/LogOutIcon';
 import api from '../services/api';
 import UserGroupIcon from '@icons/UserGroupIcon';
 import GamesIcon from 'assets/icons/GamesIcon';
+import CloseIcon from '@icons/CloseIcon';
+import FileDocumentIcon from '@icons/FileDocumentIcon';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import FolderIcon from '@icons/FolderIcon';
+import HeartIcon from '@icons/HeartIcon';
 
 // Atualizar o tipo de navegação para incluir CardDetail, About e Points
 type ProfileScreenNavigationProp = StackNavigationProp<
@@ -72,14 +79,24 @@ interface Card {
   content?: string;
   priority?: 'baixa' | 'media' | 'alta';
   is_published?: boolean;
+  is_favorite?: boolean;
+}
+
+interface Lista {
+  id: string;
+  name: string;
+  userId: string;
 }
 
 const ProfileScreen = () => {
   const { logout, user } = useAuth();
   const navigation = useNavigation<ProfileScreenNavigationProp>();
   const [cards, setCards] = useState<Card[]>([]);
+  const [lists, setLists] = useState<Lista[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showStats, setShowStats] = useState(false);
+  const [fadeAnim] = useState(new Animated.Value(0));
 
   // Função para fazer logout
   const handleLogout = async () => {
@@ -110,10 +127,23 @@ const ProfileScreen = () => {
     }
   };
 
-  // Buscar cards quando a tela é focada
+  // Função para buscar listas do usuário
+  const fetchUserLists = async () => {
+    try {
+      const response = await api.get(`/lists/user/${user?.id || user?._id}`);
+      setLists(response.data.data || []);
+    } catch (err: any) {
+      console.error('ProfileScreen: Erro ao buscar listas:', err);
+      setError('Não foi possível carregar suas listas');
+      setLists([]);
+    }
+  };
+
+  // Buscar cards e listas quando a tela é focada
   useFocusEffect(
     React.useCallback(() => {
       fetchUserCards();
+      fetchUserLists();
     }, [])
   );
 
@@ -193,11 +223,53 @@ const ProfileScreen = () => {
 
   // Preparar dados da lista
   const listData = React.useMemo(() => {
+    const totalLists = lists.length;
     return cards.slice(0, 10).map((card, index) => ({
       ...card,
       uniqueKey: getItemKey(card, index),
     }));
   }, [cards]);
+
+  // Função para calcular estatísticas
+  const stats = useMemo(() => {
+    const totalCards = cards.length;
+    const totalPdfs = cards.reduce((acc, card) => acc + (card.pdfs?.length || 0), 0);
+    const highPriorityCards = cards.filter(card => card.priority === 'alta').length;
+    const mediumPriorityCards = cards.filter(card => card.priority === 'media').length;
+    const totalLists = lists.length;
+    const favoriteCards = cards.filter(card => card.is_favorite).length;
+
+    return { 
+      totalCards, 
+      totalPdfs, 
+      highPriorityCards,
+      mediumPriorityCards,
+      
+      totalLists,
+      favoriteCards
+    };
+  }, [cards, lists]);
+
+  // Função para abrir o modal de estatísticas
+  const handleOpenStats = () => {
+    setShowStats(true);
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  // Função para fechar o modal de estatísticas
+  const handleCloseStats = () => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowStats(false);
+    });
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -232,7 +304,7 @@ const ProfileScreen = () => {
       <Text style={styles.userPlan}>Plano: {formatPlanName(user?.plan)}</Text>
       <View style={styles.pointsRow}>
         <RaioIcon color="#222" size={16} />
-        <Text style={styles.pointsText}>+0pts</Text>
+        <Text style={styles.pointsText}>+{user?.orgPoints || 0}pts</Text>
       </View>
 
       {/* Cards */}
@@ -292,7 +364,7 @@ const ProfileScreen = () => {
 
       <View style={styles.menuBox}>
         
-        <TouchableOpacity style={styles.menuBtn}>
+        <TouchableOpacity style={styles.menuBtn} onPress={handleOpenStats}>
           <AnaliticsIcon color="#222" size={16} />
           <Text style={styles.menuText}>Minhas Análises</Text>
           <View style={styles.iconCircle}>
@@ -326,6 +398,69 @@ const ProfileScreen = () => {
             buttonStyle={styles.logoutButton}
             icon={<LogOutIcon size={16} color={colors.white} />}
         />
+
+      {/* Modal de Estatísticas */}
+      <Modal
+        visible={showStats}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={handleCloseStats}
+      >
+        <View style={styles.modalOverlay}>
+          <Animated.View style={[styles.modalContent, { opacity: fadeAnim }]}>
+            <View style={styles.cardDetailsHeader}>
+              <View style={styles.titleModalContainer}>
+                <AnaliticsIcon size={24} color={colors.primary} />
+                <Text style={styles.modalTitle}>Estatísticas</Text>
+              </View>
+              <TouchableOpacity onPress={handleCloseStats} style={styles.closeButton}>
+                <CloseIcon size={24} color={colors.gray} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.statsContent}>
+              <View style={styles.statsGrid}>
+                <View style={styles.statCard}>
+                  <FolderIcon size={32} color={colors.primary} />
+                  <Text style={styles.statNumber}>{stats.totalLists}</Text>
+                  <Text style={styles.statLabel}>Listas</Text>
+                </View>
+
+                <View style={styles.statCard}>
+                  <Ionicons name="documents-outline" size={32} color={colors.primary} />
+                  <Text style={styles.statNumber}>{stats.totalCards}</Text>
+                  <Text style={styles.statLabel}>Cards</Text>
+                </View>
+
+                <View style={styles.statCard}>
+                  <Ionicons name="document-text-outline" size={32} color={colors.primary} />
+                  <Text style={styles.statNumber}>{stats.totalPdfs}</Text>
+                  <Text style={styles.statLabel}>PDFs</Text>
+                </View>
+
+                <View style={styles.statCard}>
+                  <HeartIcon size={32} color={colors.primary} />
+                  <Text style={styles.statNumber}>{stats.favoriteCards}</Text>
+                  <Text style={styles.statLabel}>Favoritos</Text>
+                </View>
+
+                <View style={styles.statCard}>
+                  <Ionicons name="alert-circle-outline" size={32} color={colors.primary} />
+                  <Text style={styles.statNumber}>{stats.highPriorityCards}</Text>
+                  <Text style={styles.statLabel}>Alta Prioridade</Text>
+                </View>
+
+                <View style={styles.statCard}>
+                  <Ionicons name="alert-outline" size={32} color={colors.primary} />
+                  <Text style={styles.statNumber}>{stats.mediumPriorityCards}</Text>
+                  <Text style={styles.statLabel}>Média Prioridade</Text>
+                </View>
+
+              </View>
+            </View>
+          </Animated.View>
+        </View>
+      </Modal>
 
     </SafeAreaView>
   );
@@ -613,5 +748,120 @@ const styles = StyleSheet.create({
     fontFamily: fontNames.regular,
     textAlign: 'center',
     marginTop: 4,
+  },
+
+  // Estilos do Modal de Estatísticas
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+    width: '90%',
+    maxWidth: 450,
+    maxHeight: '80%',
+    alignSelf: 'center',
+    gap: 16,
+  },
+  cardDetailsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  titleModalContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    gap: 6,
+  },
+  closeButton: {
+    padding: 4,
+  },
+  statsContent: {
+    flexGrow: 1,
+    padding: 16,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  statCard: {
+    width: '48%',
+    backgroundColor: colors.background,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: colors.primary,
+    fontFamily: fontNames.bold,
+    marginTop: 8,
+  },
+  statLabel: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    textAlign: 'center',
+    fontSize: 14,
+    color: colors.gray,
+    fontFamily: fontNames.regular,
+    marginTop: 4,
+  },
+  progressSection: {
+    marginTop: 16,
+  },
+  progressItem: {
+    marginBottom: 16,
+  },
+  progressTxtContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  progressText: {
+    fontSize: 14,
+    color: colors.gray,
+    fontFamily: fontNames.regular,
+  },
+  progressBar: {
+    height: 6,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 3,
+    marginTop: 8,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: colors.button,
+    borderRadius: 4,
+  },
+  progressValue: {
+    fontSize: 14,
+    color: colors.gray,
+    fontFamily: fontNames.regular,
+    textAlign: 'right',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.primary,
+    fontFamily: fontNames.bold,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.primary,
+    fontFamily: fontNames.bold,
+    marginBottom: 12,
   },
 });
