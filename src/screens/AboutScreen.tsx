@@ -63,51 +63,53 @@ const AboutScreen = () => {
                             <MemberCard
                                 name="Gabriel Cunha"
                                 image={require('assets/imgs/gc.png')}
-                                description="UX/UI / Front End Mobile"
+                                description="UX/UI / Front-End Mobile"
                                 style="first"
                             />
                             <MemberCard
                                 name="Mateus Werneck"
                                 image={require('assets/imgs/werneck.jpeg')}
-                                description="Front End Mobile"
+                                description="Front-End Mobile"
                                 style="second"
                             />
                             <MemberCard
                                 name="Matheus Ribas"
-                                image={require('assets/imgs/gc.png')}
-                                description="Front End Web"
+                                image={require('assets/imgs/Matheus Ribas.jpg')}
+                                description="Front-End Web"
                                 style="first"
                             />
                             <MemberCard
                                 name="Micael Ferrari"
-                                image={require('assets/imgs/titi.jpeg')}
-                                description="Backend Dev"
+                                image={require('assets/imgs/Micael.png')}
+                                description="Back-End Dev"
                                 style="second"
                             />
 
                             <MemberCard
                                 name="Thiago Malaquias"
-                                image={require('assets/imgs/titi.jpeg')}
-                                description="Backend Dev"
+                                image={require('assets/imgs/Tiago.png')}
+                                description="Back-End Dev"
                                 style="first"
                             />
+                            
                             <MemberCard
                                 name="Pedro Marazo"
-                                image={require('assets/imgs/titi.jpeg')}
-                                description="Backend Dev"
+                                image={require('assets/imgs/Marazo.png')}
+                                description="Back-End Dev"
                                 style="second"
                             />
 
                             <MemberCard
                                 name="Carlos Breno"
                                 image={require('assets/imgs/brenin.jpeg')}
-                                description="Backend Dev"
+                                description="Back-End Dev"
                                 style="first"
                             />
+
                             <MemberCard
                                 name="Mateus Silva"
-                                image={require('assets/imgs/titi.jpeg')}
-                                description="Front End Mobile"
+                                image={require('assets/imgs/Mateus Silva.png')}
+                                description="Front-End Mobile"
                                 style="second"
                             />
                         </View>
