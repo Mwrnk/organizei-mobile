@@ -16,6 +16,7 @@ export type RootTabParamList = {
   JogoDoMilhao: undefined;
   Points: undefined;
   About: undefined;
+  AllCards: undefined;
 };
 
 export type EscolarStackParamList = {

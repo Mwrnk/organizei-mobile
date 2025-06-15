@@ -30,8 +30,9 @@ import colors from '@styles/colors';
 import LogOutIcon from '@icons/LogOutIcon';
 import api from '../services/api';
 import UserGroupIcon from '@icons/UserGroupIcon';
+import GamesIcon from 'assets/icons/GamesIcon';
 
-// Atualizar o tipo de navegação para incluir CardDetail e About
+// Atualizar o tipo de navegação para incluir CardDetail, About e Points
 type ProfileScreenNavigationProp = StackNavigationProp<
   RootTabParamList & {
     CardDetail: {
@@ -40,25 +41,37 @@ type ProfileScreenNavigationProp = StackNavigationProp<
         title: string;
         content?: string;
         image_url?: string[];
-        createdAt: string;
-        pdfs?: any[];
+        createdAt?: string;
+        pdfs?: any[];    
+        priority?: 'baixa' | 'media' | 'alta';
+        is_published?: boolean;
       };
       listId: string;
       listName: string;
     };
     About: undefined;
+    Points: undefined;
+    AllCards: undefined;
+    Games: undefined;
   }
 >;
 
 // Atualizar interface Card para incluir pdfs
 interface Card {
-  _id: string;
+  id: string;
   title: string;
-  content?: string;
+  userId: string;
+  createdAt?: string;
+  pdfs?: {
+    url: string;
+    filename: string;
+    uploaded_at: string;
+    size_kb?: number;
+  }[];
   image_url?: string[];
-  createdAt: string;
-  priority?: string;
-  pdfs?: any[];
+  content?: string;
+  priority?: 'baixa' | 'media' | 'alta';
+  is_published?: boolean;
 }
 
 const ProfileScreen = () => {
@@ -130,14 +143,7 @@ const ProfileScreen = () => {
   // Função para navegar para o detalhe do card
   const handleCardPress = (card: Card) => {
     navigation.navigate('CardDetail', {
-      card: {
-        id: card._id,
-        title: card.title,
-        content: card.content,
-        image_url: card.image_url,
-        createdAt: card.createdAt,
-        pdfs: card.pdfs,
-      },
+      card: card,
       listId: 'profile',
       listName: 'Meus Cards'
     });
@@ -182,7 +188,7 @@ const ProfileScreen = () => {
 
   // Função para gerar key única para cada item
   const getItemKey = (item: Card, index: number): string => {
-    return item._id || `card-${index}-${Date.now()}`;
+    return item.id || `card-${index}-${Date.now()}`;
   };
 
   // Preparar dados da lista
@@ -232,7 +238,7 @@ const ProfileScreen = () => {
       {/* Cards */}
       <View style={styles.cardsHeaderRow}>
         <Text style={styles.cardsTitle}>#meus cards</Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('AllCards')}>
           <Text style={styles.cardsSeeAll}>Ver todos</Text>
         </TouchableOpacity>
       </View>
@@ -253,7 +259,7 @@ const ProfileScreen = () => {
       ) : cards.length > 0 ? (
         <FlatList
           data={cards.slice(0, 6)}
-          keyExtractor={(item) => item._id}
+          keyExtractor={(item) => item.id}
           renderItem={renderCard}
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -293,7 +299,16 @@ const ProfileScreen = () => {
             <ArrowDiag color="#222" size={16} />
           </View>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.menuBtn}>
+
+        <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate('Games')}>
+          <GamesIcon color="#222" size={16} />
+          <Text style={styles.menuText}>Games</Text>
+          <View style={styles.iconCircle}>
+            <ArrowDiag color="#222" size={16} />
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate('Points')}>
           <RaioIcon color="#222" size={16} />
           <Text style={styles.menuText}>Meus Pontos</Text>
           <View style={styles.iconCircle}>
