@@ -1,6 +1,7 @@
 import { User } from '../models/User';
 import api from '../services/api';
 import { convertImageToBase64 } from '@utils/imageUtils';
+import { TOKEN_KEY } from '../services/auth';
 
 // Interface para mapear a resposta da API
 interface ApiUserResponse {
@@ -220,21 +221,34 @@ export class UserController {
    */
   async updateProfileImage(id: string, base64Image: string): Promise<User | null> {
     try {
+      // Recupera token salvo (compatível com React Native e Web)
+      let token: string | null = null;
+      try {
+        const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+        token = await AsyncStorage.getItem(TOKEN_KEY);
+      } catch (_) {
+        // Ambiente web sem AsyncStorage ⇒ tenta localStorage
+        if (typeof localStorage !== 'undefined') {
+          token = localStorage.getItem('@Organizei:token');
+        }
+      }
+
       const response = await api.patch<ApiResponse<ApiUserResponse>>(
         `/users/${id}/image`,
         { image: base64Image },
         {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('@Organizei:token')}`
-          },
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         }
       );
+
       const updatedUser = this.mapApiUserToModel(response.data.data);
+
+      // Atualiza cache local
       const index = this.users.findIndex((user) => user._id === id);
       if (index !== -1) {
         this.users[index] = updatedUser;
       }
+
       return updatedUser;
     } catch (error) {
       console.error('Erro ao atualizar imagem:', error);
