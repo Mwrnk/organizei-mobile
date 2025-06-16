@@ -7,9 +7,7 @@ const FlashCardsScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.title}>Flash Cards</Text>
-      <Text style={styles.description}>
-        Pratique com cartões de memória gerados por IA
-      </Text>
+      <Text style={styles.description}>Pratique com cartões de memória gerados por IA</Text>
     </SafeAreaView>
   );
 };
@@ -31,4 +29,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default FlashCardsScreen; 
+export default FlashCardsScreen;

@@ -710,7 +710,7 @@ const styles = StyleSheet.create({
     gap: 8,
     marginHorizontal: 8,
     marginTop: 8,
-    marginBottom: 72,
+    marginBottom: 300,
   },
 
   placeholderImage: {

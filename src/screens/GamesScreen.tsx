@@ -1,5 +1,5 @@
 // Importações de bibliotecas React e React Native
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   Text,
   View,
@@ -8,6 +8,10 @@ import {
   ImageBackground,
   ScrollView,
   InteractionManager,
+  Animated,
+  ActivityIndicator,
+  Modal,
+  TextInput,
 } from 'react-native';
 
 // Importações de contextos, estilos e componentes de navegação
@@ -28,7 +32,6 @@ import RaioIcon from 'assets/icons/RaioIcon';
 import { CardService, Card } from '../services/cardService';
 import { TagService, Tag } from '../services/tagService';
 import { FlashcardService, Flashcard } from '../services/flashcardService';
-import { ActivityIndicator, Modal, TextInput } from 'react-native';
 import Toast from 'react-native-toast-message';
 import BotIcon from '@icons/BotIcon';
 import EditIcon from '@icons/EditIcon';
@@ -57,13 +60,16 @@ const GamesScreen = () => {
   const [submitting, setSubmitting] = useState(false);
   const [loadingFlashcards, setLoadingFlashcards] = useState(false);
 
-  // Evita travo inicial: só renderiza SVGs/banners depois que navegação terminou
+  // Evita lag inicial: só renderiza SVGs/banners depois que navegação terminou
   const [uiReady, setUiReady] = useState(false);
 
   // =====================  ESTUDO DE FLASHCARDS  ===================== //
   const [studyMode, setStudyMode] = useState(false);
   const [studyIndex, setStudyIndex] = useState(0);
   const [showBack, setShowBack] = useState(false);
+
+  // Animation value for fade in/out when flipping a card
+  const fadeAnim = useRef(new Animated.Value(1)).current;
 
   // Seleções e inputs
   const [searchCardTerm, setSearchCardTerm] = useState('');
@@ -272,9 +278,33 @@ const GamesScreen = () => {
     }
   };
 
+  // =====================  CARD FLIP ANIMATION  ===================== //
+  const handleCardFlip = () => {
+    // Fade out current side
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      // After fade-out completes, toggle side
+      setShowBack((prev) => !prev);
+      // Fade in new side
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    });
+  };
+
   // =====================  UI RENDER FUNCTIONS ===================== //
   const renderStep0 = () => (
-    <View style={styles.containerOptions}>
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={styles.containerOptions}
+      showsVerticalScrollIndicator={false}
+      nestedScrollEnabled
+    >
       <View style={styles.txt}>
         <Text style={styles.h1}> Como deseja criar? </Text>
         <Text style={styles.sub}> Escolha o método de criação dos flashcards </Text>
@@ -287,8 +317,10 @@ const GamesScreen = () => {
           setCreationStep(1);
         }}
       >
-        <BotIcon size={24} color={colors.primary} />
-        <Text style={styles.optionText}>Criar com IA</Text>
+        <View style={styles.optionInner}>
+          <BotIcon size={24} color={colors.primary} />
+          <Text style={styles.optionText}>Criar com IA</Text>
+        </View>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -298,8 +330,10 @@ const GamesScreen = () => {
           setCreationStep(1);
         }}
       >
-        <EditIcon size={24} color={colors.primary} />
-        <Text style={styles.optionText}>Criar Manualmente</Text>
+        <View style={styles.optionInner}>
+          <EditIcon size={24} color={colors.primary} />
+          <Text style={styles.optionText}>Criar Manualmente</Text>
+        </View>
       </TouchableOpacity>
 
       {/* ===================== FLASHCARDS DO USUÁRIO ===================== */}
@@ -326,23 +360,50 @@ const GamesScreen = () => {
             </Text>
           </View>
         ) : (
-          flashcards
-            .filter((fc) =>
-              (fc.front + ' ' + fc.back).toLowerCase().includes(searchFlashcardTerm.toLowerCase())
-            )
-            .map((fc) => (
-              <TouchableOpacity
-                key={fc._id}
-                style={styles.flashcardItem}
-                onPress={() => startStudyMode(fc._id)}
-              >
-                <Text style={styles.flashcardFront}>{fc.front}</Text>
-                <Text style={styles.flashcardBack}>{fc.back}</Text>
-              </TouchableOpacity>
-            ))
+          <ScrollView
+            nestedScrollEnabled
+            contentContainerStyle={{ gap: 12, paddingBottom: 120 }}
+            showsVerticalScrollIndicator={false}
+          >
+            {flashcards
+              .filter((fc) =>
+                (fc.front + ' ' + fc.back).toLowerCase().includes(searchFlashcardTerm.toLowerCase())
+              )
+              .map((fc) => {
+                const tagNames = fc.tags
+                  .map((t) =>
+                    typeof t === 'string'
+                      ? tags.find((tg) => tg._id === t)?.name || ''
+                      : (t as Tag).name
+                  )
+                  .filter(Boolean);
+
+                return (
+                  <TouchableOpacity
+                    key={fc._id}
+                    style={styles.flashcardItem}
+                    onPress={() => startStudyMode(fc._id)}
+                  >
+                    <Text style={styles.flashcardFront}>{fc.front}</Text>
+                    <Text style={styles.flashcardBack}>{fc.back}</Text>
+
+                    {/* Tags */}
+                    {tagNames.length > 0 && (
+                      <View style={styles.flashcardTagsContainer}>
+                        {tagNames.map((name, idx) => (
+                          <View key={`${fc._id}-${idx}`} style={styles.flashcardTag}>
+                            <Text style={styles.flashcardTagText}>{name}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+          </ScrollView>
         )}
       </View>
-    </View>
+    </ScrollView>
   );
 
   const renderStep1 = () => (
@@ -381,14 +442,14 @@ const GamesScreen = () => {
       {creationType === 'manual' ? (
         <>
           <TextInput
-            placeholder="Pergunta (front)"
+            placeholder="Pergunta"
             value={front}
             onChangeText={setFront}
             style={styles.input}
             multiline
           />
           <TextInput
-            placeholder="Resposta (back)"
+            placeholder="Resposta"
             value={back}
             onChangeText={setBack}
             style={styles.input}
@@ -512,30 +573,45 @@ const GamesScreen = () => {
 
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 16 }}>
             <TouchableOpacity
-              style={styles.studyCard}
               activeOpacity={0.9}
-              onPress={() => setShowBack(!showBack)}
+              onPress={handleCardFlip}
+              style={{ width: '100%' }}
             >
-              <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
-                <Text style={showBack ? styles.flashcardBack : styles.flashcardFront}>
-                  {showBack ? current?.back : current?.front}
-                </Text>
-              </ScrollView>
+              <Animated.View
+                style={[
+                  styles.studyCard,
+                  showBack ? styles.answerCard : styles.questionCard,
+                  { opacity: fadeAnim },
+                ]}
+              >
+                <ScrollView
+                  contentContainerStyle={{
+                    flexGrow: 1,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Text style={showBack ? styles.studyBackText : styles.studyFrontText}>
+                    {showBack ? current?.back : current?.front}
+                  </Text>
+                </ScrollView>
+              </Animated.View>
             </TouchableOpacity>
-            <Text style={{ marginTop: 12, fontFamily: fontNames.regular }}>
-              {showBack ? 'Toque para voltar à pergunta' : 'Toque para ver a resposta'}
-            </Text>
+
             {showBack && (
-              <View style={styles.gradeContainer}>
-                {[0, 1, 2, 3, 4, 5].map((g) => (
-                  <TouchableOpacity
-                    key={g}
-                    style={styles.gradeButton}
-                    onPress={() => handleGrade(g)}
-                  >
-                    <Text style={styles.gradeText}>{g}</Text>
-                  </TouchableOpacity>
-                ))}
+              <View style={styles.gradeBlock}>
+                <Text style={styles.gradeTitle}>Como você se saiu?</Text>
+                <View style={styles.gradeContainer}>
+                  {[0, 1, 2, 3, 4, 5].map((g) => (
+                    <TouchableOpacity
+                      key={g}
+                      style={styles.gradeButton}
+                      onPress={() => handleGrade(g)}
+                    >
+                      <Text style={styles.gradeText}>{g}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
             )}
           </View>
@@ -786,10 +862,6 @@ const styles = StyleSheet.create({
   },
 
   containerOptions: {
-    width: '100%',
-    height: '100%',
-    alignSelf: 'center',
-    justifyContent: 'center',
     paddingBottom: 130,
     gap: 20,
   },
@@ -919,26 +991,91 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 24,
     padding: 16,
-    width: '100%',
-    height: '50%',
+    minHeight: 220,
+    maxHeight: '60%',
+    minWidth: 220,
+    alignSelf: 'center',
   },
 
   gradeContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'center',
+    gap: 8,
     marginTop: 12,
   },
 
   gradeButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 16,
-    padding: 12,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     alignItems: 'center',
   },
 
   gradeText: {
-    color: 'white',
+    color: '#000',
     fontFamily: fontNames.bold,
+  },
+
+  gradeTitle: {
+    fontSize: 16,
+    fontFamily: fontNames.bold,
+    marginTop: 24,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+
+  questionCard: {
+    backgroundColor: '#000',
+  },
+
+  answerCard: {
+    backgroundColor: '#F2F2F7',
+  },
+
+  studyFrontText: {
+    fontFamily: fontNames.bold,
+    fontSize: 24,
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+
+  studyBackText: {
+    fontFamily: fontNames.regular,
+    fontSize: 14,
+    color: '#000000',
+    textAlign: 'center',
+  },
+
+  gradeBlock: {
+    alignItems: 'center',
+  },
+
+  optionInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+
+  /* Tag chips inside flashcards */
+  flashcardTagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    marginTop: 4,
+  },
+
+  flashcardTag: {
+    backgroundColor: colors.lightGray,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+
+  flashcardTagText: {
+    fontSize: 10,
+    fontFamily: fontNames.regular,
+    color: colors.primary,
   },
 });
 
