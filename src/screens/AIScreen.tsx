@@ -183,16 +183,7 @@ const AIScreen = () => {
           <Text style={styles.nomeIA}>Organi.ai</Text>
         </View>
 
-        {/* Título e subtítulo */}
-        <View style={{ alignItems: 'center', marginBottom: 24 }}>
-          <Text style={styles.titulo}>
-            A{' '}
-            <Text style={{ color: '#007AFF', fontStyle: 'italic', fontFamily: fontNames.bold }}>
-              ia
-            </Text>{' '}
-            que te torna{'\n'}mais produtivo
-          </Text>
-        </View>
+        {/* Espaço removido para oferecer área maior ao chat */}
 
         {/* Card de chat */}
         <View style={styles.cardChat}>
@@ -341,7 +332,7 @@ const styles = StyleSheet.create({
     color: '#1D1B20',
     textAlign: 'center',
     lineHeight: 28,
-    marginTop: 32,
+    marginTop: 12,
     fontFamily: fontNames.bold,
   },
   cardChat: {

@@ -11,9 +11,14 @@ import { fontNames } from '@styles/fonts';
 interface Props {
   card: ICard;
   onPress: () => void;
+  /**
+   * Optional callback fired when the user avatar/name is pressed.
+   * If not provided, the press will do nothing special.
+   */
+  onUserPress?: () => void;
 }
 
-const CommunityCard: React.FC<Props> = ({ card, onPress }) => {
+const CommunityCard: React.FC<Props> = ({ card, onPress, onUserPress }) => {
   const { likeCard, unlikeCard } = useCommunity();
 
   const handleLikeToggle = () => {
@@ -45,7 +50,11 @@ const CommunityCard: React.FC<Props> = ({ card, onPress }) => {
           {card.title}
         </Text>
         <View style={styles.footer}>
-          <View style={styles.authorInfo}>
+          <TouchableOpacity
+            style={styles.authorInfo}
+            activeOpacity={0.7}
+            onPress={() => onUserPress && onUserPress()}
+          >
             {card.userId?.profileImage ? (
               <Image source={{ uri: card.userId.profileImage }} style={styles.avatar} />
             ) : (
@@ -57,7 +66,7 @@ const CommunityCard: React.FC<Props> = ({ card, onPress }) => {
               <Text style={styles.authorName}>{card.userId?.name ?? 'Usuário'}</Text>
               <Text style={styles.date}>{formatDate(card.createdAt)}</Text>
             </View>
-          </View>
+          </TouchableOpacity>
           <View style={styles.actionsRow}>
             <LikeButton liked={!!card.likedByUser} count={card.likes} onPress={handleLikeToggle} />
             <CommentsButton

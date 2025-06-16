@@ -28,4 +28,5 @@ export type EscolarStackParamList = {
     listId: string;
     listName: string;
   };
+  Profile: undefined;
 };

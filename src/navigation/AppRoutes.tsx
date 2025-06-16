@@ -18,6 +18,7 @@ import JogoDoMilhaoScreen from '@screens/JogoDoMilhaoScreen';
 import PointsScreen from '@screens/PointsScreen';
 import AboutScreen from '@screens/AboutScreen';
 import AllCardsScreen from '@screens/AllCardsScreen';
+import UserProfileScreen from '@screens/UserProfileScreen';
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
 const ProfileStack = createStackNavigator();
@@ -30,12 +31,12 @@ function ProfileStackScreen() {
     <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
       <ProfileStack.Screen name="Profile" component={ProfileScreen} />
       <ProfileStack.Screen name="Plan" component={PlanScreen} />
-      <ProfileStack.Screen name='Points' component={PointsScreen} />
+      <ProfileStack.Screen name="Points" component={PointsScreen} />
       <ProfileStack.Screen name="EditProfile" component={EditProfileScreen} />
       <ProfileStack.Screen name="About" component={AboutScreen} />
       <ProfileStack.Screen name="AllCards" component={AllCardsScreen} />
-      <ProfileStack.Screen name='CardDetail' component={CardDetailScreen}/>
-      <ProfileStack.Screen name='Games' component={GamesScreen} />
+      <ProfileStack.Screen name="CardDetail" component={CardDetailScreen} />
+      <ProfileStack.Screen name="Games" component={GamesScreen} />
     </ProfileStack.Navigator>
   );
 }
@@ -68,6 +69,7 @@ function CommunityStackScreen() {
     <CommunityStack.Navigator screenOptions={{ headerShown: false }}>
       <CommunityStack.Screen name="CommunityMain" component={CommunityScreen} />
       <CommunityStack.Screen name="CardDetail" component={CardDetailScreen} />
+      <CommunityStack.Screen name="UserProfile" component={UserProfileScreen} />
     </CommunityStack.Navigator>
   );
 }

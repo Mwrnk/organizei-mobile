@@ -29,6 +29,7 @@ import Toast from 'react-native-toast-message';
 type RootStackParamList = {
   CommunityMain: undefined;
   CardDetail: { card: ICard };
+  UserProfile: { userId: string };
 };
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -86,8 +87,6 @@ const CommunityScreen = () => {
   const handleCardPress = (card: ICard) => {
     navigation.navigate('CardDetail', { card });
   };
-
-  
 
   const renderListHeader = () => (
     <>
@@ -151,7 +150,17 @@ const CommunityScreen = () => {
           data={filteredFeed}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <CommunityCard card={item} onPress={() => handleCardPress(item)} />
+            <CommunityCard
+              card={item}
+              onPress={() => handleCardPress(item)}
+              onUserPress={() => {
+                if (item.userId?.id) {
+                  navigation.navigate('UserProfile', { userId: item.userId.id });
+                } else if ((item as any).userId?._id) {
+                  navigation.navigate('UserProfile', { userId: (item as any).userId._id });
+                }
+              }}
+            />
           )}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 16 }}
