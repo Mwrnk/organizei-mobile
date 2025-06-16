@@ -12,14 +12,13 @@ import {
   RefreshControl,
   Animated,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
-import { TOKEN_KEY } from '../services/auth';
-import { GlobalStyles } from '@styles/global';
 import { fontNames } from '@styles/fonts';
 import colors from '@styles/colors';
 import Input from '@components/Input';
@@ -97,6 +96,11 @@ const EscolarScreen = () => {
 
   // Estados para formulários
   const [listName, setListName] = useState('');
+
+  // Estados de loading
+  const [creatingList, setCreatingList] = useState(false);
+  const [editingList, setEditingList] = useState(false);
+  const [deletingListId, setDeletingListId] = useState<string | null>(null);
 
   // Carrega listas e cards
   useEffect(() => {
@@ -568,29 +572,28 @@ const EscolarScreen = () => {
   };
 
   const handleCreateList = async () => {
-    if (!userId || !listName.trim()) {
+    if (!isListNameValid) {
       Alert.alert('Erro', 'Preencha o nome da lista corretamente.');
       return;
     }
-
-    if (offlineMode) {
-      // Modo offline - criar lista localmente
-      const novaLista: Lista = {
-        id: `demo-${Date.now()}`,
-        name: listName.trim(),
-        userId: userId,
-      };
-
-      setLists((prev) => [...prev, novaLista]);
-      setCards((prev) => ({ ...prev, [novaLista.id]: [] }));
-      setListName('');
-      setShowListModal(false);
-      Alert.alert('Sucesso', 'Lista criada com sucesso! (Modo Offline)');
-      return;
-    }
-
-    setLoading(true);
+    setCreatingList(true);
     try {
+      if (offlineMode) {
+        // Modo offline - criar lista localmente
+        const novaLista: Lista = {
+          id: `demo-${Date.now()}`,
+          name: listName.trim(),
+          userId: userId as string,
+        };
+
+        setLists((prev) => [...prev, novaLista]);
+        setCards((prev) => ({ ...prev, [novaLista.id]: [] }));
+        setListName('');
+        setShowListModal(false);
+        Alert.alert('Sucesso', 'Lista criada com sucesso! (Modo Offline)');
+        return;
+      }
+
       // Dados para criação de lista (logger removido)
       const payload = {
         name: listName.trim(),
@@ -602,7 +605,7 @@ const EscolarScreen = () => {
       const novaLista: Lista = {
         id: res.data.data.id || res.data.data._id,
         name: res.data.data.name,
-        userId: res.data.data.userId || userId,
+        userId: userId as string,
       };
 
       setLists((prev) => [...prev, novaLista]);
@@ -618,7 +621,7 @@ const EscolarScreen = () => {
       const errorMessage = err.response?.data?.message || 'Não foi possível criar a lista';
       Alert.alert('Erro', errorMessage);
     } finally {
-      setLoading(false);
+      setCreatingList(false);
     }
   };
 
@@ -654,17 +657,18 @@ const EscolarScreen = () => {
   };
 
   const handleDeleteList = async (listId: string) => {
-    // Ação de excluir lista
-    const listToDelete = lists.find((list) => list.id === listId);
-    const cardsInList = cards[listId] || [];
+    setDeletingListId(listId);
+    try {
+      // Ação de excluir lista
+      const listToDelete = lists.find((list) => list.id === listId);
+      const cardsInList = cards[listId] || [];
 
-    const confirmMessage = `Tem certeza que deseja excluir a lista "${listToDelete?.name}"?\n\nEsta ação é permanente e irá excluir também todos os cards que ela possui (${cardsInList.length} card(s)).`;
+      const confirmMessage = `Tem certeza que deseja excluir a lista "${listToDelete?.name}"?\n\nEsta ação é permanente e irá excluir também todos os cards que ela possui (${cardsInList.length} card(s)).`;
 
-    if (Platform.OS === 'web') {
-      const confirmed = window.confirm(confirmMessage);
-      if (!confirmed) return;
-      // Executa a exclusão
-      try {
+      if (Platform.OS === 'web') {
+        const confirmed = window.confirm(confirmMessage);
+        if (!confirmed) return;
+        // Executa a exclusão
         await api.delete(`/lists/${listId}`);
         setLists((prev) => prev.filter((list) => list.id !== listId));
         setCards((prev) => {
@@ -673,49 +677,40 @@ const EscolarScreen = () => {
           return updated;
         });
         alert('Lista e todos os seus cards foram excluídos permanentemente!');
-      } catch (err) {
-        console.error('Erro ao excluir lista', err);
-        alert('Erro ao excluir lista.');
+      } else {
+        // Mobile: Alert.alert
+        Alert.alert('Excluir Lista', confirmMessage, [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Excluir',
+            style: 'destructive',
+            onPress: async () => {
+              if (offlineMode) {
+                setLists((prev) => prev.filter((list) => list.id !== listId));
+                setCards((prev) => {
+                  const updated = { ...prev };
+                  delete updated[listId];
+                  return updated;
+                });
+                Alert.alert('Sucesso', 'Lista excluída com sucesso! (Modo Offline)');
+              } else {
+                await api.delete(`/lists/${listId}`);
+                setLists((prev) => prev.filter((list) => list.id !== listId));
+                setCards((prev) => {
+                  const updated = { ...prev };
+                  delete updated[listId];
+                  return updated;
+                });
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                Alert.alert('Sucesso', 'Lista e todos os seus cards foram excluídos permanentemente!');
+              }
+            },
+          },
+        ]);
       }
-      return;
+    } finally {
+      setDeletingListId(null);
     }
-
-    // Mobile: Alert.alert
-    Alert.alert('Excluir Lista', confirmMessage, [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Excluir',
-        style: 'destructive',
-        onPress: async () => {
-          if (offlineMode) {
-            setLists((prev) => prev.filter((list) => list.id !== listId));
-            setCards((prev) => {
-              const updated = { ...prev };
-              delete updated[listId];
-              return updated;
-            });
-            Alert.alert('Sucesso', 'Lista excluída com sucesso! (Modo Offline)');
-            return;
-          }
-
-          try {
-            await api.delete(`/lists/${listId}`);
-            setLists((prev) => prev.filter((list) => list.id !== listId));
-            setCards((prev) => {
-              const updated = { ...prev };
-              delete updated[listId];
-              return updated;
-            });
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            Alert.alert('Sucesso', 'Lista e todos os seus cards foram excluídos permanentemente!');
-          } catch (err: any) {
-            console.error('Erro ao excluir lista', err);
-            const errorMessage = err.response?.data?.message || 'Não foi possível excluir a lista';
-            Alert.alert('Erro', errorMessage);
-          }
-        },
-      },
-    ]);
   };
 
   // Função para editar card
@@ -801,8 +796,9 @@ const EscolarScreen = () => {
             <TouchableOpacity
               style={styles.listMoreButton}
               onPress={() => handleDeleteList(item.id)}
+              disabled={deletingListId === item.id}
             >
-              <Ionicons name="trash-outline" size={16} color="#ff4444" />
+              {deletingListId === item.id ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="trash" size={20} color={colors.primary} />}
             </TouchableOpacity>
           </View>
         </View>
@@ -973,6 +969,21 @@ const EscolarScreen = () => {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+      {loading && (
+        <View style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 999,
+          backgroundColor: 'rgba(255,255,255,0.7)',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      )}
       <View style={{ flex: 1 }}>
         {/* Network Status Indicator */}
         {offlineMode && (
@@ -1099,10 +1110,11 @@ const EscolarScreen = () => {
                   buttonStyle={styles.modalButton}
                 />
                 <CustomButton
-                  title="Criar"
+                  title={creatingList ? '' : 'Criar'}
                   onPress={handleCreateList}
                   buttonStyle={styles.modalButton}
-                  disabled={!isListNameValid}
+                  disabled={creatingList}
+                  icon={creatingList ? <ActivityIndicator size="small" color="#fff" /> : undefined}
                 />
               </View>
             </View>
