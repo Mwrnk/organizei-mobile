@@ -24,7 +24,7 @@ const PointsScreen = () => {
 
 
   const handleNavigateToGames = () => {
-    navigation.navigate('GameHome'); //apresenta erro, porem esta funcionando
+    navigation.navigate('Game');
   };
 
   return (
@@ -32,7 +32,7 @@ const PointsScreen = () => {
       {/* Header com botão de voltar */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <ArrowBack color={colors.primary} size={16} />
+          <ArrowBack color={colors.primary} size={28} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Meus Pontos</Text>
         <View style={{ width: 24 }} /> {/* Espaçador para centralizar título */}
@@ -53,19 +53,13 @@ const PointsScreen = () => {
           <View style={styles.pointsRow}>
             <RaioIcon color={colors.primary} size={16} />
             <Text style={styles.pointsText}>+10 pontos</Text>
-            <Text style={styles.pointsDescription}>por FlashCard completado</Text>
+            <Text style={styles.pointsDescription}>por resposta correta em quiz/flashcard</Text>
           </View>
 
           <View style={styles.pointsRow}>
             <RaioIcon color={colors.primary} size={16} />
-            <Text style={styles.pointsText}>+50 pontos</Text>
-            <Text style={styles.pointsDescription}>por vitória no Jogo do Milhão</Text>
-          </View>
-
-          <View style={styles.pointsRow}>
-            <RaioIcon color={colors.primary} size={16} />
-            <Text style={styles.pointsText}>+5 pontos</Text>
-            <Text style={styles.pointsDescription}>por card criado</Text>
+            <Text style={styles.pointsText}>+1 ponto</Text>
+            <Text style={styles.pointsDescription}>por curtida recebida em um card criado</Text>
           </View>
         </View>
       </View>
