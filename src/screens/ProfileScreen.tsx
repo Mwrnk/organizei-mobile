@@ -301,7 +301,7 @@ const ProfileScreen = () => {
           </View>
         </TouchableOpacity>
       </View>
-      <Text style={styles.userPlan}>Plano: {formatPlanName(user?.plan)}</Text>
+      <Text style={styles.userPlan}>Plano: {formatPlanName(user?.plan ?? null)}</Text>
       <View style={styles.pointsRow}>
         <RaioIcon color="#222" size={16} />
         <Text style={styles.pointsText}>+{user?.orgPoints || 0}pts</Text>
@@ -431,31 +431,6 @@ const ProfileScreen = () => {
                   <Text style={styles.statNumber}>{stats.totalCards}</Text>
                   <Text style={styles.statLabel}>Cards</Text>
                 </View>
-
-                <View style={styles.statCard}>
-                  <Ionicons name="document-text-outline" size={32} color={colors.primary} />
-                  <Text style={styles.statNumber}>{stats.totalPdfs}</Text>
-                  <Text style={styles.statLabel}>PDFs</Text>
-                </View>
-
-                <View style={styles.statCard}>
-                  <HeartIcon size={32} color={colors.primary} />
-                  <Text style={styles.statNumber}>{stats.favoriteCards}</Text>
-                  <Text style={styles.statLabel}>Favoritos</Text>
-                </View>
-
-                <View style={styles.statCard}>
-                  <Ionicons name="alert-circle-outline" size={32} color={colors.primary} />
-                  <Text style={styles.statNumber}>{stats.highPriorityCards}</Text>
-                  <Text style={styles.statLabel}>Alta Prioridade</Text>
-                </View>
-
-                <View style={styles.statCard}>
-                  <Ionicons name="alert-outline" size={32} color={colors.primary} />
-                  <Text style={styles.statNumber}>{stats.mediumPriorityCards}</Text>
-                  <Text style={styles.statLabel}>Média Prioridade</Text>
-                </View>
-
               </View>
             </View>
           </Animated.View>
