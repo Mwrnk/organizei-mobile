@@ -6,7 +6,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
-  TextInput,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,8 +30,8 @@ const JogoDoMilhaoScreen = () => {
   // Setup states
   const [cards, setCards] = useState<Card[]>([]);
   const [loadingCards, setLoadingCards] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
   const [questionAmount, setQuestionAmount] = useState(5);
+  const [showAmountDropdown, setShowAmountDropdown] = useState(false);
 
   // Quiz states
   const [stage, setStage] = useState<'setup' | 'quiz' | 'finished'>('setup');
@@ -49,6 +50,9 @@ const JogoDoMilhaoScreen = () => {
     points: 0,
     current: 1,
   });
+
+  const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+  const [cardModalVisible, setCardModalVisible] = useState(false);
 
   useEffect(() => {
     loadCards();
@@ -123,41 +127,103 @@ const JogoDoMilhaoScreen = () => {
 
   /* -------------------- RENDER SETUP -------------------- */
   const renderSetup = () => (
-    <ScrollView contentContainerStyle={{ padding: 16 }}>
+    <ScrollView contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+      {/* Header texts */}
       <Text style={styles.title}>Configurar Quiz</Text>
+      <Text style={styles.subtitle}>
+        Escolha a quantidade de perguntas e selecione um card para começar sua jornada rumo ao
+        milhão!
+      </Text>
 
-      <Text style={styles.label}>Quantidade de Perguntas</Text>
-      <View style={styles.amountContainer}>
-        {[1, 3, 5, 7, 10].map((n) => (
-          <TouchableOpacity
-            key={n}
-            style={[styles.amountButton, questionAmount === n && styles.amountButtonActive]}
-            onPress={() => setQuestionAmount(n)}
-          >
-            <Text style={styles.amountButtonText}>{n}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <Text style={[styles.label, { marginTop: 24 }]}>Escolha um Card</Text>
-      <TextInput
-        placeholder="Pesquisar..."
-        style={styles.searchInput}
-        value={searchTerm}
-        onChangeText={setSearchTerm}
-      />
-
-      {loadingCards ? (
-        <ActivityIndicator />
-      ) : (
-        cards
-          .filter((c) => c.title.toLowerCase().includes(searchTerm.toLowerCase()))
-          .map((c) => (
-            <TouchableOpacity key={c._id} style={styles.cardItem} onPress={() => startQuiz(c._id!)}>
-              <Text style={styles.cardTitle}>{c.title}</Text>
+      {/* Perguntas amount */}
+      <Text style={styles.sectionLabel}>Quantidade de Perguntas</Text>
+      <TouchableOpacity
+        style={styles.dropdown}
+        onPress={() => setShowAmountDropdown((prev) => !prev)}
+        activeOpacity={0.8}
+      >
+        <Text style={[styles.dropdownText, questionAmount ? {} : { color: '#AAA' }]}>
+          {questionAmount ? `${questionAmount} perguntas` : 'Selecionar'}
+        </Text>
+        <Ionicons
+          name={showAmountDropdown ? 'chevron-up' : 'chevron-down'}
+          size={20}
+          color={colors.primary}
+        />
+      </TouchableOpacity>
+      {showAmountDropdown && (
+        <View style={styles.dropdownList}>
+          {[1, 3, 5, 7, 10].map((n) => (
+            <TouchableOpacity
+              key={n}
+              style={styles.dropdownItem}
+              onPress={() => {
+                setQuestionAmount(n);
+                setShowAmountDropdown(false);
+              }}
+            >
+              <Text style={styles.dropdownItemText}>{n} perguntas</Text>
             </TouchableOpacity>
-          ))
+          ))}
+        </View>
       )}
+
+      {/* Card selection */}
+      <Text style={[styles.sectionLabel, { marginTop: 24 }]}>Selecionar Card</Text>
+
+      <TouchableOpacity
+        style={styles.dropdown}
+        onPress={() => setCardModalVisible(true)}
+        activeOpacity={0.8}
+      >
+        <Text style={[styles.dropdownText, !selectedCard && { color: '#AAA' }]}>
+          {selectedCard ? selectedCard.title : 'Selecionar o card'}
+        </Text>
+        <Ionicons name="chevron-down" size={20} color={colors.primary} />
+      </TouchableOpacity>
+
+      {/* Modal de seleção de card */}
+      <Modal
+        visible={cardModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCardModalVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setCardModalVisible(false)}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Selecione um card</Text>
+            {loadingCards ? (
+              <ActivityIndicator />
+            ) : cards.length === 0 ? (
+              <Text style={styles.emptyText}>Você não tem cards.</Text>
+            ) : (
+              <ScrollView style={{ maxHeight: 300 }} keyboardShouldPersistTaps="handled">
+                {cards.map((c) => (
+                  <TouchableOpacity
+                    key={c._id}
+                    style={styles.modalItem}
+                    onPress={() => {
+                      setSelectedCard(c);
+                      setCardModalVisible(false);
+                    }}
+                  >
+                    <Text style={styles.modalItemText}>{c.title}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* Create Quiz Button */}
+      <TouchableOpacity
+        style={[styles.createButton, !(selectedCard && questionAmount) && { opacity: 0.5 }]}
+        disabled={!selectedCard}
+        onPress={() => selectedCard && startQuiz(selectedCard._id!)}
+      >
+        <Text style={styles.createButtonText}>Criar Quiz</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 
@@ -272,34 +338,45 @@ const styles = StyleSheet.create({
 
   /* Setup */
   title: { fontSize: 20, fontFamily: fontNames.bold, marginBottom: 12 },
-  label: { fontSize: 14, fontFamily: fontNames.bold, marginBottom: 8 },
-  amountContainer: { flexDirection: 'row', flexWrap: 'wrap' },
-  amountButton: {
-    marginRight: 8,
-    marginBottom: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    borderRadius: 16,
-  },
-  amountButtonActive: { backgroundColor: colors.primary },
-  amountButtonText: { color: colors.primary, fontFamily: fontNames.bold },
-  searchInput: {
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.1)',
+  subtitle: { fontSize: 14, fontFamily: fontNames.regular, marginBottom: 24 },
+  sectionLabel: { fontSize: 14, fontFamily: fontNames.bold, marginBottom: 8 },
+  dropdown: {
+    backgroundColor: colors.lightGray,
     borderRadius: 12,
-    padding: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 12,
   },
-  cardItem: {
-    padding: 12,
+  dropdownText: {
+    color: colors.gray,
+    fontSize: 14,
+    fontFamily: fontNames.regular,
+  },
+  dropdownList: {
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.1)',
     borderRadius: 12,
+    maxHeight: 200,
+    marginBottom: 16,
+  },
+  dropdownItem: {
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
     marginBottom: 8,
   },
-  cardTitle: { fontFamily: fontNames.bold },
+  dropdownItemText: { fontFamily: fontNames.regular },
+  createButton: {
+    marginTop: 12,
+    backgroundColor: colors.primary,
+    borderRadius: 16,
+    padding: 14,
+    alignItems: 'center',
+  },
+  createButtonText: { color: '#fff', fontFamily: fontNames.bold },
 
   /* Quiz */
   questionCounter: { fontFamily: fontNames.regular, marginBottom: 8 },
@@ -333,6 +410,44 @@ const styles = StyleSheet.create({
 
   /* Result */
   resultText: { fontFamily: fontNames.bold, fontSize: 16, marginTop: 8 },
+
+  /* removed dropdown list styles no longer used */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    padding: 20,
+    width: '90%',
+    maxHeight: '60%',
+  },
+  modalTitle: {
+    fontFamily: fontNames.bold,
+    fontSize: 18,
+    color: colors.primary,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  modalItem: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  modalItemText: {
+    fontSize: 16,
+    color: colors.primary,
+    textAlign: 'center',
+    fontFamily: fontNames.regular,
+  },
+  emptyText: {
+    fontFamily: fontNames.regular,
+    color: '#AAA',
+    textAlign: 'center',
+  },
 });
 
 export default JogoDoMilhaoScreen;
