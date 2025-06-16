@@ -18,6 +18,8 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { RootTabParamList } from '../navigation/types';
 
 import { useAuth } from '../contexts/AuthContext';
 import { GlobalStyles } from '@styles/global';
@@ -37,7 +39,7 @@ interface Tag {
 }
 
 const CreateCardScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<BottomTabNavigationProp<RootTabParamList>>();
   const route = useRoute();
   const { listId, listName } = route.params as RouteParams;
   const { user } = useAuth();
@@ -245,7 +247,7 @@ const CreateCardScreen = () => {
           const pdfFormData = new FormData();
 
           if (Platform.OS === 'web') {
-            pdfFormData.append('files', selectedPdf); // selectedPdf é o File do input web
+            pdfFormData.append('pdfs', selectedPdf); // selectedPdf é o File do input web
             console.log('selectedPdf:', selectedPdf, 'type:', typeof selectedPdf, 'instanceof File:', selectedPdf instanceof File);
             // Logar todos os campos do FormData
             // @ts-ignore
@@ -256,11 +258,11 @@ const CreateCardScreen = () => {
               });
             }
           } else {
-          pdfFormData.append('files', {
-            uri: selectedPdf.uri,
-            type: selectedPdf.mimeType || 'application/pdf',
-            name: selectedPdf.name || 'document.pdf',
-          } as any);
+            pdfFormData.append('pdfs', {
+              uri: selectedPdf.uri,
+              type: selectedPdf.mimeType || 'application/pdf',
+              name: selectedPdf.name || 'document.pdf',
+            } as any);
           }
 
           try {
@@ -276,16 +278,16 @@ const CreateCardScreen = () => {
 
       if (Platform.OS === 'web') {
         window.alert('Card criado com sucesso ✅');
-        navigation.navigate('Escolar' as never);
+        navigation.navigate('Escolar');
       } else {
         Alert.alert(
           'Sucesso',
           'Card criado com sucesso ✅',
           [
-        {
+            {
               text: 'OK',
-              onPress: () => navigation.navigate('Escolar' as never),
-        },
+              onPress: () => navigation.navigate('Escolar'),
+            },
           ]
         );
       }
