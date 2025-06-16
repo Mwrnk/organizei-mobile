@@ -1,133 +1,125 @@
+# Organizei Mobile
 
-# Organize.ei
+Aplicativo móvel desenvolvido com React Native e Expo para auxiliar estudantes na organização e otimização dos estudos, oferecendo uma plataforma completa de gerenciamento de tarefas e recursos educacionais.
 
-## 📚 Introdução
+## 🚀 Tecnologias
 
-Bem-vindo ao Organizei, somos um projeto desenvolvido para buscar ajudar estudantes a se organizarem de forma que seus estudos possam ser otimizados. Nossa API ainda está em construção, mas por aqui você já consegue visualizar algumas coisas como tela de login mobile e web.
+- React Native 0.79.2
+- Expo SDK 53
+- TypeScript
+- Realm Database
+- React Navigation 7
+- Expo Router
+- Async Storage
+- Axios
+- React Native Reanimated
+- React Native Gesture Handler
+- Expo Image Picker
+- React Native Markdown Display
+- React Native SVG
 
-O projeto contará com as entidades **Usuário**, **Quadro**, **Lista**, **Card**, **tipoCard**, e **plano**.
+## 📱 Funcionalidades
 
-### Tecnologias Utilizadas
+- Sistema de autenticação completo (login/registro)
+- Gerenciamento de perfil de usuário
+- Criação e gerenciamento de cards de estudo
+- Sistema de quadros e listas
+- Jogos educacionais (Jogo do Milhão)
+- Flash Cards
+- Sistema de pontos e recompensas
+- Comunidade de usuários
+- Integração com IA
+- Suporte a documentos e imagens
+- Modo offline com sincronização
+- Interface moderna e responsiva
+- Sistema de planos (gratuito/premium)
 
-- **Backend:**
-  - Node.js com **Express**
-  - **bcrypt / bcryptjs** 
-  - **dotenv** 
-  - **jsonwebtoken** 
-  - **knex** 
-  - **mongoose** 
-  - **uuid** 
-  - **zod**
+## 🛠️ Pré-requisitos
 
-- **Frontend Web:**
-  - **React 19**
-  - **Styled Components**
+- Node.js (versão LTS recomendada)
+- npm ou yarn
+- Expo CLI
+- Android Studio (para desenvolvimento Android)
+- Xcode (para desenvolvimento iOS, apenas em macOS)
 
-- **Mobile (React Native com Expo):**
-  - **Expo**
-  - **React Navigation**
-  - **Axios**
-  - **AsyncStorage**
-  - **Reanimated, Safe Area Context, NetInfo, etc.**
-
----
-
-## ⚙️ Instalação
-
-### Requisitos
-
-Para rodar a API localmente, você precisa dos seguintes pré-requisitos:
-
-- **Node.js**: versão 16.x ou superior
-- **npm** ou **yarn**: para gerenciar pacotes
-- **MongoDB**: local ou em nuvem (MongoDB Atlas)
-
----
-
-## 🚀 Executando o Projeto
+## 🔧 Instalação
 
 1. Clone o repositório:
-
 ```bash
-git clone https://github.com/seu-usuario/organizei-api.git
-cd organizei-api
+git clone https://github.com/Mwrnk/organizei-mobile.git
 ```
 
 2. Instale as dependências:
-
 ```bash
 npm install
 # ou
-yarn
+yarn install
 ```
 
-3. Configure o arquivo `.env`:
-
-```env
-PORT=3000
-DATABASE_URL="sua_conexao_postgresql"
-JWT_SECRET="sua_chave_secreta"
-MONGO_URI="sua_string_mongodb"
-```
-
-4. Rode as migrations (se estiver usando Knex com banco relacional):
-
+3. Inicie o projeto:
 ```bash
-npx knex migrate:latest
-```
-
-5. Inicie o servidor:
-
-```bash
-npm run dev
+npm start
 # ou
-yarn dev
+yarn start
 ```
 
----
+## 📦 Scripts Disponíveis
 
-## 🧩 Estrutura do Projeto
+- `npm start` ou `yarn start`: Inicia o servidor de desenvolvimento
+- `npm run android` ou `yarn android`: Executa o app no Android
+- `npm run ios` ou `yarn ios`: Executa o app no iOS
+- `npm run web` ou `yarn web`: Executa o app na versão web
+- `npm run test:db` ou `yarn test:db`: Executa testes do banco de dados
+- `npm run test:sync` ou `yarn test:sync`: Executa testes de sincronização
 
-```bash
-organizei-api/
-├── controllers/
-├── middlewares/
-├── models/
-├── routes/
-├── services/
-├── utils/
-├── index.js
-└── .env
+## 📁 Estrutura do Projeto
+
+```
+src/
+├── components/     # Componentes reutilizáveis
+├── config/        # Configurações do app
+├── constants/     # Constantes e enums
+├── contexts/      # Contextos do React
+├── controllers/   # Controladores de lógica
+├── db/           # Configuração e modelos do banco de dados
+├── models/       # Modelos de dados
+├── navigation/   # Configuração de navegação
+├── screens/      # Telas do aplicativo
+│   ├── LoginScreen.tsx
+│   ├── RegisterScreen.tsx
+│   ├── ProfileScreen.tsx
+│   ├── BoardScreen.tsx
+│   ├── CreateCardScreen.tsx
+│   ├── GamesScreen.tsx
+│   ├── CommunityScreen.tsx
+│   └── ...
+├── services/     # Serviços e APIs
+├── styles/       # Estilos globais
+├── types/        # Definições de tipos TypeScript
+└── utils/        # Funções utilitárias
 ```
 
----
+## 🔐 Permissões
 
-## 🛠️ Funcionalidades (em desenvolvimento)
+O aplicativo requer as seguintes permissões:
 
-- [x] Autenticação JWT
-- [x] Criptografia de senhas
-- [ ] Integração completa com MongoDB
-- [ ] CRUD de Quadros, Listas e Cards
-- [ ] Plano Premium (futuramente)
-- [ ] Testes automatizados
+- Câmera: Para tirar fotos de perfil
+- Galeria: Para selecionar imagens
+- Armazenamento: Para salvar documentos e imagens
+- Internet: Para sincronização e recursos online
 
----
+## 🤝 Contribuição
 
-## 👤 Equipe
-
-- Mateus Werneck - [@Mwrnk](https://github.com/Mwrnk)
-- Carlos Breno - [@usuario2](https://github.com/usuario2)
-
----
+1. Faça um Fork do projeto
+2. Crie uma Branch para sua Feature (`git checkout -b feature/AmazingFeature`)
+3. Faça o Commit das suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. Faça o Push para a Branch (`git push origin feature/AmazingFeature`)
+5. Abra um Pull Request
 
 ## 📄 Licença
 
-Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+Este projeto está sob a licença [MIT](LICENSE).
 
----
+## 📞 Suporte
 
-## 💡 Observações Finais
-
-Ainda estamos trabalhando na documentação oficial da API (Swagger ou Postman). Em breve você poderá visualizar todos os endpoints e realizar testes diretamente por lá.
-
-Enquanto isso, agradecemos por estar acompanhando o desenvolvimento do **Organizei**! 🎓📅✨
+Para suporte, envie um email para carlosbrenops01@gmail.com ou abra uma issue no repositório.
