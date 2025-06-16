@@ -45,6 +45,7 @@ function EscolarStackScreen() {
       <EscolarStack.Screen name="EscolarMain" component={EscolarScreen} />
       <EscolarStack.Screen name="CreateCard" component={CreateCardScreen} />
       <EscolarStack.Screen name="CardDetail" component={CardDetailScreen} />
+      <EscolarStack.Screen name="Profile" component={ProfileScreen} />
     </EscolarStack.Navigator>
   );
 }

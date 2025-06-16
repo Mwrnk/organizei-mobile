@@ -996,14 +996,19 @@ const EscolarScreen = () => {
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View style={styles.userSection}>
-              <View style={styles.avatar}>
-                {user?.profileImage ? (
-                  <Image source={{ uri: user.profileImage }} style={styles.avatarImage} />
-                ) : (
-                  <Text style={styles.avatarText}>{user?.name?.charAt(0) || 'U'}</Text>
-                )}
-              </View>
-              <Text style={styles.username}>{user?.name || 'username'}</Text>
+              <TouchableOpacity 
+                style={styles.userSection}
+                onPress={() => navigation.navigate('Profile')}
+              >
+                <View style={styles.avatar}>
+                  {user?.profileImage ? (
+                    <Image source={{ uri: user.profileImage }} style={styles.avatarImage} />
+                  ) : (
+                    <Text style={styles.avatarText}>{user?.name?.charAt(0) || 'U'}</Text>
+                  )}
+                </View>
+                <Text style={styles.username}>{user?.name || 'username'}</Text>
+              </TouchableOpacity>
             </View>
 
             <View style={styles.headerActions}>

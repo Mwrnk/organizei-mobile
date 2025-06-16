@@ -17,7 +17,6 @@ import { fontNames } from '../styles/fonts';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import type { RootTabParamList } from '../navigation/types';
-import GameIcon from 'assets/icons/GamesIcon';
 import FogueteIcon from 'assets/icons/FogueteIcon';
 import RaioIcon from 'assets/icons/RaioIcon';
 import SuperCheck from 'assets/icons/SuperCheck';
@@ -32,7 +31,6 @@ import colors from '@styles/colors';
 import LogOutIcon from '@icons/LogOutIcon';
 import api from '../services/api';
 import UserGroupIcon from '@icons/UserGroupIcon';
-import GamesIcon from 'assets/icons/GamesIcon';
 import CloseIcon from '@icons/CloseIcon';
 import FileDocumentIcon from '@icons/FileDocumentIcon';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -59,7 +57,6 @@ type ProfileScreenNavigationProp = StackNavigationProp<
     About: undefined;
     Points: undefined;
     AllCards: undefined;
-    Games: undefined;
   }
 >;
 
@@ -273,170 +270,166 @@ const ProfileScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <ScrollView style={styles.scrollView}>
+        
+          {/* Btn Sobre */}
+          <View style={styles.sobreBtn}>
+            <TouchableOpacity style={styles.iconCircle} onPress={() => navigation.navigate('About')}>
+              <UserGroupIcon color={colors.primary} size={20} />
+            </TouchableOpacity>
+          </View>
+        
+        {/* Avatar centralizado */}
+        <View style={styles.avatarContainer}>
+          {user?.profileImage ? (
+            <Image source={{ uri: user.profileImage }} style={styles.avatar} />
+          ) : (
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{user?.name ? user.name[0].toUpperCase() : 'U'}</Text>
+            </View>
+          )}
+        </View>
 
-      {/* Btn Sobre */}
-        <View style={styles.sobreBtn}>
-          <TouchableOpacity style={styles.iconCircle} onPress={() => navigation.navigate('About')}>
-            <UserGroupIcon color={colors.primary} size={20} />
+        {/* Nome, pontos e editar */}
+        <View style={styles.nameRow}>
+          <Text style={styles.userName}>{user?.name || 'Usuário'}</Text>
+          <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('EditProfile')}>
+            <View style={styles.iconCircle}>
+              <EditIcon color="#222" size={20} />
+            </View>
           </TouchableOpacity>
         </View>
-      
-      {/* Avatar centralizado */}
-      <View style={styles.avatarContainer}>
-        {user?.profileImage ? (
-          <Image source={{ uri: user.profileImage }} style={styles.avatar} />
+        <Text style={styles.userPlan}>Plano: {formatPlanName(user?.plan ?? null)}</Text>
+        <View style={styles.pointsRow}>
+          <RaioIcon color="#222" size={16} />
+          <Text style={styles.pointsText}>+{user?.orgPoints || 0}pts</Text>
+        </View>
+
+        {/* Cards */}
+        <View style={styles.cardsHeaderRow}>
+          <Text style={styles.cardsTitle}>#meus cards</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('AllCards')}>
+            <Text style={styles.cardsSeeAll}>Ver todos</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Loading ou Lista de Cards */}
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#007AFF" />
+            <Text style={styles.loadingText}>Carregando seus cards...</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={fetchUserCards}>
+              <Text style={styles.retryButtonText}>Tentar novamente</Text>
+            </TouchableOpacity>
+          </View>
+        ) : cards.length > 0 ? (
+          <FlatList
+            data={cards.slice(0, 6)}
+            keyExtractor={(item) => item.id}
+            renderItem={renderCard}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.cardsList}
+            contentContainerStyle={styles.cardsContainer}
+            ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
+            initialNumToRender={6}
+            maxToRenderPerBatch={6}
+            windowSize={6}
+            removeClippedSubviews={true}
+          />
         ) : (
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{user?.name ? user.name[0].toUpperCase() : 'U'}</Text>
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>Você ainda não criou nenhum card</Text>
+            <Text style={styles.emptySubText}>Comece criando seu primeiro card de estudos!</Text>
           </View>
         )}
-      </View>
 
-      {/* Nome, pontos e editar */}
-      <View style={styles.nameRow}>
-        <Text style={styles.userName}>{user?.name || 'Usuário'}</Text>
-        <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('EditProfile')}>
-          <View style={styles.iconCircle}>
-            <EditIcon color="#222" size={20} />
+        {/* Botões de menu */}
+        
+        {/* Botão Premium */}
+        <TouchableOpacity style={styles.premiumBtn} onPress={() => navigation.navigate('Plan')}>
+          <SuperCheck color="#ffffff" size={16} />
+          <Text style={styles.premiumBtnText}>Vire Premium</Text>
+          <View style={[styles.iconCircle, { backgroundColor: 'rgba(26, 26, 26, 0.1)' }]}>
+            <ArrowDiag color="#ffffff" size={16} />
           </View>
         </TouchableOpacity>
-      </View>
-      <Text style={styles.userPlan}>Plano: {formatPlanName(user?.plan ?? null)}</Text>
-      <View style={styles.pointsRow}>
-        <RaioIcon color="#222" size={16} />
-        <Text style={styles.pointsText}>+{user?.orgPoints || 0}pts</Text>
-      </View>
 
-      {/* Cards */}
-      <View style={styles.cardsHeaderRow}>
-        <Text style={styles.cardsTitle}>#meus cards</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('AllCards')}>
-          <Text style={styles.cardsSeeAll}>Ver todos</Text>
-        </TouchableOpacity>
-      </View>
 
-      {/* Loading ou Lista de Cards */}
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Carregando seus cards...</Text>
-        </View>
-      ) : error ? (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchUserCards}>
-            <Text style={styles.retryButtonText}>Tentar novamente</Text>
+        <View style={styles.menuBox}>
+          
+          <TouchableOpacity style={styles.menuBtn} onPress={handleOpenStats}>
+            <AnaliticsIcon color="#222" size={16} />
+            <Text style={styles.menuText}>Minhas Análises</Text>
+            <View style={styles.iconCircle}>
+              <ArrowDiag color="#222" size={16} />
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate('Points')}>
+            <RaioIcon color="#222" size={16} />
+            <Text style={styles.menuText}>Meus Pontos</Text>
+            <View style={styles.iconCircle}>
+              <ArrowDiag color="#222" size={16} />
+            </View>
           </TouchableOpacity>
         </View>
-      ) : cards.length > 0 ? (
-        <FlatList
-          data={cards.slice(0, 6)}
-          keyExtractor={(item) => item.id}
-          renderItem={renderCard}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.cardsList}
-          contentContainerStyle={styles.cardsContainer}
-          ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
-          initialNumToRender={6}
-          maxToRenderPerBatch={6}
-          windowSize={6}
-          removeClippedSubviews={true}
-        />
-      ) : (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Você ainda não criou nenhum card</Text>
-          <Text style={styles.emptySubText}>Comece criando seu primeiro card de estudos!</Text>
-        </View>
-      )}
 
-      {/* Botões de menu */}
-      
-      {/* Botão Premium */}
-      <TouchableOpacity style={styles.premiumBtn} onPress={() => navigation.navigate('Plan')}>
-        <SuperCheck color="#ffffff" size={16} />
-        <Text style={styles.premiumBtnText}>Vire Premium</Text>
-        <View style={[styles.iconCircle, { backgroundColor: 'rgba(26, 26, 26, 0.1)' }]}>
-          <ArrowDiag color="#ffffff" size={16} />
-        </View>
-      </TouchableOpacity>
-
-
-      <View style={styles.menuBox}>
         
-        <TouchableOpacity style={styles.menuBtn} onPress={handleOpenStats}>
-          <AnaliticsIcon color="#222" size={16} />
-          <Text style={styles.menuText}>Minhas Análises</Text>
-          <View style={styles.iconCircle}>
-            <ArrowDiag color="#222" size={16} />
-          </View>
-        </TouchableOpacity>
+        {/* button logout */}
+        <CustomButton
+              title="Sair da conta"
+              loading={loading}
+              onPress={handleLogout}
+              buttonStyle={styles.logoutButton}
+              icon={<LogOutIcon size={16} color={colors.white} />}
+          />
 
-        <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate('Games')}>
-          <GamesIcon color="#222" size={16} />
-          <Text style={styles.menuText}>Games</Text>
-          <View style={styles.iconCircle}>
-            <ArrowDiag color="#222" size={16} />
-          </View>
-        </TouchableOpacity>
+        {/* Modal de Estatísticas */}
+        <Modal
+          visible={showStats}
+          animationType="fade"
+          transparent={true}
+          onRequestClose={handleCloseStats}
+        >
+          <View style={styles.modalOverlay}>
+            <Animated.View style={[styles.modalContent, { opacity: fadeAnim }]}>
+              <View style={styles.cardDetailsHeader}>
+                <View style={styles.titleModalContainer}>
+                  <AnaliticsIcon size={24} color={colors.primary} />
+                  <Text style={styles.modalTitle}>Estatísticas</Text>
+                </View>
+                <TouchableOpacity onPress={handleCloseStats} style={styles.closeButton}>
+                  <CloseIcon size={24} color={colors.gray} />
+                </TouchableOpacity>
+              </View>
 
-        <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate('Points')}>
-          <RaioIcon color="#222" size={16} />
-          <Text style={styles.menuText}>Meus Pontos</Text>
-          <View style={styles.iconCircle}>
-            <ArrowDiag color="#222" size={16} />
+              <View style={styles.statsContent}>
+                <View style={styles.statsGrid}>
+                  <View style={styles.statCard}>
+                    <FolderIcon size={32} color={colors.primary} />
+                    <Text style={styles.statNumber}>{stats.totalLists}</Text>
+                    <Text style={styles.statLabel}>Listas</Text>
+                  </View>
+
+                  <View style={styles.statCard}>
+                    <Ionicons name="documents-outline" size={32} color={colors.primary} />
+                    <Text style={styles.statNumber}>{stats.totalCards}</Text>
+                    <Text style={styles.statLabel}>Cards</Text>
+                  </View>
+                </View>
+              </View>
+            </Animated.View>
           </View>
-        </TouchableOpacity>
-      </View>
+        </Modal>
+
+      </ScrollView>
 
       
-       {/* button logout */}
-       <CustomButton
-            title="Sair da conta"
-            loading={loading}
-            onPress={handleLogout}
-            buttonStyle={styles.logoutButton}
-            icon={<LogOutIcon size={16} color={colors.white} />}
-        />
-
-      {/* Modal de Estatísticas */}
-      <Modal
-        visible={showStats}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={handleCloseStats}
-      >
-        <View style={styles.modalOverlay}>
-          <Animated.View style={[styles.modalContent, { opacity: fadeAnim }]}>
-            <View style={styles.cardDetailsHeader}>
-              <View style={styles.titleModalContainer}>
-                <AnaliticsIcon size={24} color={colors.primary} />
-                <Text style={styles.modalTitle}>Estatísticas</Text>
-              </View>
-              <TouchableOpacity onPress={handleCloseStats} style={styles.closeButton}>
-                <CloseIcon size={24} color={colors.gray} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.statsContent}>
-              <View style={styles.statsGrid}>
-                <View style={styles.statCard}>
-                  <FolderIcon size={32} color={colors.primary} />
-                  <Text style={styles.statNumber}>{stats.totalLists}</Text>
-                  <Text style={styles.statLabel}>Listas</Text>
-                </View>
-
-                <View style={styles.statCard}>
-                  <Ionicons name="documents-outline" size={32} color={colors.primary} />
-                  <Text style={styles.statNumber}>{stats.totalCards}</Text>
-                  <Text style={styles.statLabel}>Cards</Text>
-                </View>
-              </View>
-            </View>
-          </Animated.View>
-        </View>
-      </Modal>
-
     </SafeAreaView>
   );
 };
@@ -445,6 +438,11 @@ export default ProfileScreen;
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    backgroundColor: colors.white,
+  },
+
+  scrollView: {
     flex: 1,
     paddingTop: 40,
     paddingHorizontal: 16,

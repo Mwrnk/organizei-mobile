@@ -86,6 +86,8 @@ const CommunityScreen = () => {
     navigation.navigate('CardDetail', { card });
   };
 
+  
+
   const renderListHeader = () => (
     <>
       <View style={styles.header}>

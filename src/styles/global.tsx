@@ -6,7 +6,7 @@ import { fontNames } from './fonts';
 export const GlobalStyles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'flex-start',
+    justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#fff',
   },
