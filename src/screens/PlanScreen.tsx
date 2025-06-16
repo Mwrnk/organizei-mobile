@@ -6,7 +6,6 @@ import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import { AuthService } from '../services/auth';
 import api from '../services/api';
-import { Ionicons } from '@expo/vector-icons';
 
 // Função utilitária multiplataforma para alertas
 function showAlert(title: string, message: string) {

@@ -18,7 +18,6 @@ import { useAuth } from '../contexts/AuthContext';
 import UserController from '../controllers/UserController';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import * as MediaLibrary from 'expo-media-library';
 import { convertImageToBase64 } from '../utils/imageUtils';
 import DateTimePicker from '@react-native-community/datetimepicker';
 

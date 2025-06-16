@@ -25,7 +25,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { GlobalStyles } from '@styles/global';
 import { fontNames } from '@styles/fonts';
 import colors from '@styles/colors';
-import CustomButton from '@components/CustomButton';
 import api from '../services/api';
 
 interface RouteParams {

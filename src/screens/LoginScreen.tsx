@@ -6,7 +6,6 @@ import Input from '@components/Input';
 import { useAuth } from '@contexts/AuthContext';
 import CustomButton from '@components/CustomButton';
 import { checkConnectivity } from '@utils/network';
-import AuthController from '../controllers/AuthController';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootTabParamList } from '../navigation/types';
