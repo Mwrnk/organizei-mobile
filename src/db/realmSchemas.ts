@@ -41,6 +41,7 @@ const List = {
  * @property {number} likes - Número de curtidas
  * @property {string[]} likedBy - IDs dos usuários que curtiram
  * @property {number} downloads - Número de downloads
+ * @property {string[]} pdfs - Lista de PDFs associados ao card
  * @property {Date} createdAt - Data de criação
  * @property {Date} updatedAt - Data da última atualização
  * @property {string} content - Conteúdo do card
@@ -62,6 +63,11 @@ const Card = {
     likes: { type: 'int', default: 0 },
     likedBy: { type: 'list', objectType: 'string' },
     downloads: { type: 'int', default: 0 },
+    pdfs: {
+      type: 'list',
+      objectType: 'Pdf',
+      default: []
+    },
     createdAt: 'date',
     updatedAt: 'date',
     content: { type: 'string', default: '' },
@@ -114,12 +120,30 @@ const User = {
   }
 };
 
+/**
+ * Schema para o modelo Pdf (usado em Card)
+ * @property {string} url - URL do PDF
+ * @property {string} filename - Nome do arquivo
+ * @property {date} uploaded_at - Data de upload
+ * @property {number} [size_kb] - Tamanho em KB (opcional)
+ */
+const Pdf = {
+  name: 'Pdf',
+  properties: {
+    url: 'string',
+    filename: 'string',
+    uploaded_at: 'date',
+    size_kb: { type: 'int', optional: true },
+  }
+};
+
 // Array com todos os schemas que serão usados no Realm
-const realmSchemas = [User, List, Card];
+const realmSchemas = [User, List, Card, Pdf];
 
 module.exports = {
   Card,
   List,
   User,
+  Pdf,
   realmSchemas
 };

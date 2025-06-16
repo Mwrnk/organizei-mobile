@@ -37,6 +37,13 @@ const migrationFunction: MigrationCallback = (oldRealm, newRealm) => {
     console.log('Migração de schema version 2 para 3 concluída.');
   }
 
+  // Migração de schema version 3 para 4 (adicionando pdfs ao Card)
+  if (oldRealm.schemaVersion < 4) {
+    console.log('Migrando de schema version 3 para 4 (adicionando pdfs ao Card)...');
+    // Realm adiciona o campo pdfs automaticamente com valor default []
+    console.log('Migração de schema version 3 para 4 concluída.');
+  }
+
   console.log('Migração do Realm finalizada.');
 };
 
@@ -45,7 +52,7 @@ const migrationFunction: MigrationCallback = (oldRealm, newRealm) => {
 const databaseOptions = {
   path: 'organizeiMobile.realm', // Nome do arquivo do banco de dados local
   schema: [Card, List, User], // Schemas que o Realm vai usar
-  schemaVersion: 3, // Incrementamos a versão do schema para 3
+  schemaVersion: 4, // Incrementamos a versão do schema para 4 (inclusão do campo pdfs em Card)
   // Atribuímos a função de migração implementada acima
   onMigration: migrationFunction,
 };
