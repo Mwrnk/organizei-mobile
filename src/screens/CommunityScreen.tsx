@@ -27,10 +27,11 @@ import SearchIcon from '@icons/SearchIcon';
 import Toast from 'react-native-toast-message';
 
 type RootStackParamList = {
+  CommunityMain: undefined;
   CardDetail: { card: ICard };
 };
 
-type Nav = NativeStackNavigationProp<RootStackParamList, 'CardDetail'>;
+type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 const CommunityScreen = () => {
   const navigation = useNavigation<Nav>();
