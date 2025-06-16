@@ -845,12 +845,6 @@ const EscolarScreen = () => {
                 <Text style={styles.cardTitle}>{cardItem.title}</Text>
 
                 <View style={styles.cardProgress}>
-                  <View
-                    style={[
-                      styles.progressBar,
-                      { backgroundColor: getProgressColor(cardItem.priority) },
-                    ]}
-                  />
                   <Text style={styles.progressText}>
                     {cardItem.createdAt
                       ? new Date(cardItem.createdAt).toLocaleDateString('pt-BR', {
@@ -859,6 +853,14 @@ const EscolarScreen = () => {
                         })
                       : '11/01'}
                   </Text>
+
+                  <View
+                    style={[
+                      styles.progressBar,
+                      { backgroundColor: getProgressColor(cardItem.priority) },
+                    ]}
+                  />
+                  
                 </View>
               </TouchableOpacity>
             </View>
@@ -1502,19 +1504,22 @@ const styles = StyleSheet.create({
   listContainer: {
     flexDirection: 'column',
     alignItems: 'flex-start',
-    gap: 24,
     padding: 20,
     marginBottom: 20,
   },
   listHeader: {
+    width: '100%',
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     marginBottom: 16,
   },
   listTitleContainer: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    paddingRight: 16,
+    gap: 16,
   },
   listTitle: {
     fontSize: 18,
@@ -1528,6 +1533,7 @@ const styles = StyleSheet.create({
     fontFamily: fontNames.regular,
   },
   listIndicator: {
+    flex: 1,
     width: 60,
     height: 4,
     borderRadius: 2,
@@ -1545,19 +1551,17 @@ const styles = StyleSheet.create({
   },
   cardContainer: {
     width: 180,
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: colors.white,
+    borderRadius: 20,
     padding: 16,
     marginRight: 16,
     position: 'relative',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: colors.lightGray,
   },
   cardContent: {
     flex: 1,
+    justifyContent: 'space-between',
   },
   favoriteButton: {
     position: 'absolute',
@@ -1583,12 +1587,16 @@ const styles = StyleSheet.create({
     paddingRight: 30,
   },
   cardProgress: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     marginTop: 20,
   },
   progressBar: {
+    flex: 1,
     height: 6,
+    justifyContent: 'center',
     borderRadius: 3,
-    marginBottom: 8,
   },
   progressText: {
     fontSize: 14,
@@ -2221,7 +2229,7 @@ const styles = StyleSheet.create({
   },
   floatingActionButton: {
     position: 'absolute',
-    bottom: 80,
+    bottom: 130,
     right: 24,
     width: 56,
     height: 56,
