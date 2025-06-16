@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import * as Font from 'expo-font';
 import { customFonts } from '@styles/fonts';
+import { Ionicons } from '@expo/vector-icons';
 import * as SplashScreen from 'expo-splash-screen';
 import { AuthProvider } from '../src/contexts/AuthContext';
 import Routes from '../src/navigation/Routes';
@@ -23,8 +24,11 @@ export default function App() {
   useEffect(() => {
     async function prepare() {
       try {
-        // Load fonts
-        await Font.loadAsync(customFonts);
+        // Load custom fonts + Ionicons
+        await Font.loadAsync({
+          ...customFonts,
+          ...Ionicons.font,
+        });
         console.log('Fonts loaded successfully');
       } catch (e) {
         console.warn('Error loading fonts:', e);

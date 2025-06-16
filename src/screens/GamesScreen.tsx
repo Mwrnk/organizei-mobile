@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ImageBackground,
   ScrollView,
+  InteractionManager,
 } from 'react-native';
 
 // Importações de contextos, estilos e componentes de navegação
@@ -55,6 +56,9 @@ const GamesScreen = () => {
   const [loadingTags, setLoadingTags] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [loadingFlashcards, setLoadingFlashcards] = useState(false);
+
+  // Evita travo inicial: só renderiza SVGs/banners depois que navegação terminou
+  const [uiReady, setUiReady] = useState(false);
 
   // =====================  ESTUDO DE FLASHCARDS  ===================== //
   const [studyMode, setStudyMode] = useState(false);
@@ -135,11 +139,16 @@ const GamesScreen = () => {
     if (isCreating) {
       loadCards();
       loadTags();
+      // Carrega flashcards somente quando realmente necessário, evitando lag na entrada da tela
+      loadFlashcards();
     }
   }, [isCreating]);
 
   useEffect(() => {
-    loadFlashcards();
+    const task = InteractionManager.runAfterInteractions(() => {
+      setUiReady(true);
+    });
+    return () => task?.cancel();
   }, []);
 
   // --------------- Submissão --------------- //
@@ -559,24 +568,26 @@ const GamesScreen = () => {
           {/* Container principal dos cards de jogos */}
           <View style={styles.cardsContainer}>
             {/* Banner principal que leva para a tela de pontos */}
-            <TouchableOpacity onPress={() => navigation.navigate('Points')}>
-              <ImageBackground
-                source={require('../../assets/banners/bannerGames.png')}
-                style={styles.mainCard}
-              >
-                <Text style={styles.mainCardTitle}>O que vai jogar hoje?</Text>
-                {/* Container de pontuação com ícone */}
-                <View style={styles.pointsContainer}>
-                  <RaioIcon color={colors.white} size={16} />
-                  <Text style={styles.pointsText}>{user?.orgPoints || 0}pts</Text>
-                </View>
-              </ImageBackground>
-            </TouchableOpacity>
+            {uiReady && (
+              <TouchableOpacity onPress={() => navigation.navigate('Points')}>
+                <ImageBackground
+                  source={require('../../assets/banners/bannerGames.png')}
+                  style={styles.mainCard}
+                >
+                  <Text style={styles.mainCardTitle}>O que vai jogar hoje?</Text>
+                  {/* Container de pontuação com ícone */}
+                  <View style={styles.pointsContainer}>
+                    <RaioIcon color={colors.white} size={16} />
+                    <Text style={styles.pointsText}>{user?.orgPoints || 0}pts</Text>
+                  </View>
+                </ImageBackground>
+              </TouchableOpacity>
+            )}
 
             {/* Card do jogo Flash Cards */}
             <TouchableOpacity style={styles.gameCard} onPress={() => setIsCreating(true)}>
               <View style={styles.gameIconContainer}>
-                <CapaFlashCards size={130} />
+                {uiReady && <CapaFlashCards size={130} />}
               </View>
               <View style={styles.gameInfo}>
                 <Text style={styles.gameTitle}>Flash Cards</Text>
@@ -592,7 +603,7 @@ const GamesScreen = () => {
               onPress={() => navigation.navigate('JogoDoMilhao')}
             >
               <View style={styles.gameIconContainer}>
-                <CapaFlashCards size={130} />
+                {uiReady && <CapaFlashCards size={130} />}
               </View>
               <View style={styles.gameInfo}>
                 <Text style={styles.gameTitle}>Jogo do milhão</Text>
