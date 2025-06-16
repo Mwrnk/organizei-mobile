@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, ScrollView, ActivityIndicator, Alert, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  ScrollView,
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
+  TouchableOpacity,
+} from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { GlobalStyles } from '@styles/global';
 import CustomButton from '@components/CustomButton';
@@ -10,6 +19,7 @@ import { fontNames } from '../styles/fonts';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import api from '../services/api';
+import Markdown from 'react-native-markdown-display';
 
 interface Message {
   id: number;
@@ -53,17 +63,17 @@ const AIScreen = () => {
 
   const initializeIA = async () => {
     setIsInitialLoading(true);
-    
+
     // Simular delay de inicialização
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+
     // Mensagem de boas-vindas da IA
     const welcomeMessage: Message = {
       id: Date.now(),
-      text: "Olá! Eu sou a ORGAN.IA, sua assistente de organização. Como posso ajudá-lo hoje?",
+      text: 'Olá! Eu sou a ORGAN.IA, sua assistente de organização. Como posso ajudá-lo hoje?',
       isUser: false,
     };
-    
+
     setMessages([welcomeMessage]);
     setIsInitialLoading(false);
   };
@@ -77,7 +87,7 @@ const AIScreen = () => {
       isUser: true,
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setInputMessage('');
     setIsLoading(true);
 
@@ -90,15 +100,15 @@ const AIScreen = () => {
         isUser: false,
       };
 
-      setMessages(prev => [...prev, aiMessage]);
+      setMessages((prev) => [...prev, aiMessage]);
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
       const errorMessage: Message = {
         id: Date.now() + 2,
-        text: "Erro ao se comunicar com a IA. Tente novamente mais tarde.",
+        text: 'Erro ao se comunicar com a IA. Tente novamente mais tarde.',
         isUser: false,
       };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
@@ -110,9 +120,10 @@ const AIScreen = () => {
       <BotIcon color="#1D1B20" size={48} />
       <Text style={styles.lockedTitle}>Recurso Premium</Text>
       <Text style={styles.lockedDescription}>
-        Para acessar a ORGAN.IA e aproveitar todos os benefícios da inteligência artificial, você precisa assinar o plano Premium.
+        Para acessar a ORGAN.IA e aproveitar todos os benefícios da inteligência artificial, você
+        precisa assinar o plano Premium.
       </Text>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.upgradeButton}
         onPress={() => navigation.navigate('Plan' as never)}
       >
@@ -120,6 +131,36 @@ const AIScreen = () => {
       </TouchableOpacity>
     </View>
   );
+
+  // Estilos de markdown para melhorar legibilidade
+  const markdownStyles = {
+    body: {
+      color: '#1D1B20',
+      fontSize: 14,
+      lineHeight: 20,
+      fontFamily: fontNames.bold,
+    },
+    paragraph: {
+      marginBottom: 8,
+    },
+    bullet_list: {
+      marginBottom: 8,
+      paddingLeft: 16,
+    },
+    ordered_list: {
+      marginBottom: 8,
+      paddingLeft: 16,
+    },
+    list_item: {
+      marginBottom: 4,
+    },
+    link: {
+      color: colors.button,
+    },
+    strong: {
+      fontFamily: fontNames.bold,
+    },
+  } as const;
 
   if (isInitialLoading) {
     return (
@@ -138,14 +179,18 @@ const AIScreen = () => {
       <SafeAreaView style={styles.container}>
         {/* Header */}
         <View style={styles.logoIa}>
-          <BotIcon color="#1D1B20" size={20}/>
+          <BotIcon color="#1D1B20" size={20} />
           <Text style={styles.nomeIA}>Organi.ai</Text>
         </View>
 
         {/* Título e subtítulo */}
         <View style={{ alignItems: 'center', marginBottom: 24 }}>
           <Text style={styles.titulo}>
-            A <Text style={{ color: '#007AFF', fontStyle: 'italic', fontFamily: fontNames.bold }}>ia</Text> que te torna{'\n'}mais produtivo
+            A{' '}
+            <Text style={{ color: '#007AFF', fontStyle: 'italic', fontFamily: fontNames.bold }}>
+              ia
+            </Text>{' '}
+            que te torna{'\n'}mais produtivo
           </Text>
         </View>
 
@@ -176,21 +221,27 @@ const AIScreen = () => {
                   elevation: 1,
                 }}
               >
-                <Text
-                  style={{
-                    fontSize: 14,
-                    color: message.isUser ? '#fff' : '#1D1B20',
-                    fontWeight: '500',
-                    fontFamily: fontNames.bold,
-                  }}
-                >
-                  {message.text}
-                </Text>
+                {message.isUser ? (
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      color: '#fff',
+                      fontWeight: '500',
+                      fontFamily: fontNames.bold,
+                    }}
+                  >
+                    {message.text}
+                  </Text>
+                ) : (
+                  <Markdown style={markdownStyles}>{message.text}</Markdown>
+                )}
               </View>
             ))}
             {isLoading && (
               <View style={{ alignSelf: 'flex-start', marginBottom: 16 }}>
-                <Text style={{ color: '#1D1B20', fontSize: 14, fontFamily: fontNames.bold }}>Analisando...</Text>
+                <Text style={{ color: '#1D1B20', fontSize: 14, fontFamily: fontNames.bold }}>
+                  Analisando...
+                </Text>
               </View>
             )}
           </ScrollView>
@@ -205,7 +256,7 @@ const AIScreen = () => {
               onSubmitEditing={handleSendMessage}
               editable={!isLoading}
             />
-            
+
             <CustomButton
               title="Enviar"
               variant="primary"
@@ -281,7 +332,7 @@ const styles = StyleSheet.create({
   logoIa: {
     gap: 6,
     flexDirection: 'row',
-    alignItems: "baseline",
+    alignItems: 'baseline',
     justifyContent: 'center',
   },
   titulo: {
@@ -299,10 +350,12 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     width: '100%',
     alignSelf: 'center',
+    marginTop: 24,
   },
   chatMessages: {
     flex: 1,
-    padding: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
   },
   button: {
     alignItems: 'center',
@@ -338,4 +391,3 @@ const styles = StyleSheet.create({
     gap: 12,
   },
 });
-
