@@ -645,18 +645,22 @@ const GamesScreen = () => {
           <View style={styles.cardsContainer}>
             {/* Banner principal que leva para a tela de pontos */}
             {uiReady && (
-              <TouchableOpacity onPress={() => navigation.navigate('Points')}>
-                <ImageBackground
-                  source={require('../../assets/banners/bannerGames.png')}
-                  style={styles.mainCard}
-                >
-                  <Text style={styles.mainCardTitle}>O que vai jogar hoje?</Text>
-                  {/* Container de pontuação com ícone */}
-                  <View style={styles.pointsContainer}>
-                    <RaioIcon color={colors.white} size={16} />
-                    <Text style={styles.pointsText}>{user?.orgPoints || 0}pts</Text>
-                  </View>
-                </ImageBackground>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Points')}
+                style={styles.mainCard}
+              >
+                {/* Faded lightning icon */}
+                <View style={styles.mainCardBgIcon}>
+                  <RaioIcon size={180} color={colors.white} />
+                </View>
+
+                <Text style={styles.mainCardTitle}>O que vai jogar hoje?</Text>
+
+                {/* Pontuação */}
+                <View style={styles.pointsContainer}>
+                  <RaioIcon color={colors.white} size={16} />
+                  <Text style={styles.pointsText}>{user?.orgPoints || 0}pts</Text>
+                </View>
               </TouchableOpacity>
             )}
 
@@ -735,7 +739,8 @@ const styles = StyleSheet.create({
   },
 
   mainCard: {
-    width: '100%',
+    width: '90%',
+    alignSelf: 'center',
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
@@ -743,7 +748,15 @@ const styles = StyleSheet.create({
     paddingVertical: 64,
     gap: 12,
     overflow: 'hidden',
-    resizeMode: 'cover',
+    backgroundColor: '#007AFF',
+  },
+
+  mainCardBgIcon: {
+    position: 'absolute',
+    opacity: 0.12,
+    right: -20,
+    top: -20,
+    transform: [{ rotate: '20deg' }],
   },
 
   mainCardTitle: {
@@ -751,6 +764,10 @@ const styles = StyleSheet.create({
     fontFamily: fontNames.regular,
     fontSize: 24,
     fontWeight: 'bold',
+    textAlign: 'center',
+    width: '100%',
+    flexWrap: 'wrap',
+    maxWidth: '90%',
   },
 
   pointsContainer: {
