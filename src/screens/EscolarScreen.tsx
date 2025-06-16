@@ -13,6 +13,8 @@ import {
   Animated,
   Platform,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  useWindowDimensions,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
@@ -87,6 +89,7 @@ const EscolarScreen = () => {
   // Estados para animações
   const [fadeAnim] = useState(new Animated.Value(0));
   const [slideAnim] = useState(new Animated.Value(-50));
+  const { width } = useWindowDimensions();
 
   // Estados para modais
   const [showListModal, setShowListModal] = useState(false);
@@ -488,24 +491,24 @@ const EscolarScreen = () => {
         acc + listCards.reduce((cardAcc, card) => cardAcc + (card.pdfs?.length || 0), 0),
       0
     );
-    
+
     const favoriteCards = favorites.size;
     const highPriorityCards = Object.values(cards).reduce(
-      (acc, listCards) => acc + listCards.filter(card => card.priority === 'alta').length,
+      (acc, listCards) => acc + listCards.filter((card) => card.priority === 'alta').length,
       0
     );
     const mediumPriorityCards = Object.values(cards).reduce(
-      (acc, listCards) => acc + listCards.filter(card => card.priority === 'media').length,
+      (acc, listCards) => acc + listCards.filter((card) => card.priority === 'media').length,
       0
     );
 
-    return { 
-      totalLists, 
-      totalCards, 
-      totalPdfs, 
+    return {
+      totalLists,
+      totalCards,
+      totalPdfs,
       favoriteCards,
       highPriorityCards,
-      mediumPriorityCards
+      mediumPriorityCards,
     };
   }, [lists, cards, favorites]);
 
@@ -702,7 +705,10 @@ const EscolarScreen = () => {
                   return updated;
                 });
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                Alert.alert('Sucesso', 'Lista e todos os seus cards foram excluídos permanentemente!');
+                Alert.alert(
+                  'Sucesso',
+                  'Lista e todos os seus cards foram excluídos permanentemente!'
+                );
               }
             },
           },
@@ -798,7 +804,11 @@ const EscolarScreen = () => {
               onPress={() => handleDeleteList(item.id)}
               disabled={deletingListId === item.id}
             >
-              {deletingListId === item.id ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="trash" size={20} color={colors.primary} />}
+              {deletingListId === item.id ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <Ionicons name="trash" size={20} color={colors.primary} />
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -970,17 +980,19 @@ const EscolarScreen = () => {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
       {loading && (
-        <View style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 999,
-          backgroundColor: 'rgba(255,255,255,0.7)',
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}>
+        <View
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 999,
+            backgroundColor: 'rgba(255,255,255,0.7)',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
       )}
@@ -996,7 +1008,7 @@ const EscolarScreen = () => {
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View style={styles.userSection}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.userSection}
                 onPress={() => navigation.navigate('Profile')}
               >
@@ -1081,13 +1093,27 @@ const EscolarScreen = () => {
           onRequestClose={() => setShowListModal(false)}
         >
           <View style={styles.modalOverlay}>
-            <View
-              style={styles.modalContent}
+            <KeyboardAvoidingView
+              style={[styles.modalContent, { width: width > 500 ? 450 : width * 0.9 }]}
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+              keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
               onTouchStart={(e) => {
                 e.stopPropagation();
               }}
             >
-              <Text style={styles.modalTitle}>Nova Lista</Text>
+              {/* Cabeçalho do modal */}
+              <View style={styles.cardDetailsHeader}>
+                <Text style={styles.modalTitle}>Nova Lista</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowListModal(false);
+                    setListName('');
+                  }}
+                  style={styles.closeButton}
+                >
+                  <Ionicons name="close" size={24} color={colors.gray} />
+                </TouchableOpacity>
+              </View>
 
               <Input
                 placeholder="Nome da lista"
@@ -1096,6 +1122,11 @@ const EscolarScreen = () => {
                   setListName(text);
                 }}
               />
+              {/* Contador de caracteres */}
+              <Text style={{ alignSelf: 'flex-end', fontSize: 12, color: '#888' }}>
+                {listName.trim().length}/50
+              </Text>
+
               <Text style={{ color: '#888', fontSize: 13, marginTop: 4 }}>
                 O nome deve ter entre 3 e 50 caracteres e pode conter apenas letras, números,
                 espaço, hífen e underline.
@@ -1112,7 +1143,13 @@ const EscolarScreen = () => {
                     setListName('');
                   }}
                   variant="outline"
-                  buttonStyle={styles.modalButton}
+                  buttonStyle={[
+                    styles.modalButton,
+                    {
+                      backgroundColor: '#F5F5F5', // cinza leve para destaque
+                      borderColor: '#E0E0E0',
+                    },
+                  ]}
                 />
                 <CustomButton
                   title={creatingList ? '' : 'Criar'}
@@ -1122,7 +1159,7 @@ const EscolarScreen = () => {
                   icon={creatingList ? <ActivityIndicator size="small" color="#fff" /> : undefined}
                 />
               </View>
-            </View>
+            </KeyboardAvoidingView>
           </View>
         </Modal>
 
@@ -1182,9 +1219,7 @@ const EscolarScreen = () => {
                     <Text style={styles.statNumber}>{stats.mediumPriorityCards}</Text>
                     <Text style={styles.statLabel}>Média Prioridade</Text>
                   </View>
-
                 </View>
-
 
                 {offlineMode && (
                   <View style={styles.demoNotice}>
@@ -1704,7 +1739,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.35)', // overlay mais suave
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1717,6 +1752,11 @@ const styles = StyleSheet.create({
     maxHeight: '80%',
     alignSelf: 'center',
     gap: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 10,
   },
   modalTitle: {
     fontSize: 20,
@@ -1733,10 +1773,11 @@ const styles = StyleSheet.create({
   },
 
   modalButtonContainer: {
-    flex: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 12,
+    marginTop: 8,
+    marginBottom: 10,
   },
   modalButton: {
     flex: 1,
