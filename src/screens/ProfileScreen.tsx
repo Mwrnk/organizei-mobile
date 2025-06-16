@@ -47,7 +47,7 @@ type ProfileScreenNavigationProp = StackNavigationProp<
         content?: string;
         image_url?: string[];
         createdAt?: string;
-        pdfs?: any[];    
+        pdfs?: any[];
         priority?: 'baixa' | 'media' | 'alta';
         is_published?: boolean;
       };
@@ -105,16 +105,20 @@ const ProfileScreen = () => {
     }
   };
 
-  // Função para buscar cards do usuário
+  // Busca todos os cards do usuário (inclui createdAt e priority corretos)
   const fetchUserCards = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await api.get('/cards');
-      const userCards = response.data.data || [];
+      const userIdParam = user?._id || user?.id;
+      // Endpoint que devolve dados completos do card, incluindo createdAt
+      const response = await api.get(`/cards/user/${userIdParam}`);
+      const userCards = (response.data.data || []).map((c: any, idx: number) => ({
+        ...c,
+        id: c.id || c._id || `card-${idx}-${Date.now()}`,
+      }));
       setCards(userCards);
-      
     } catch (err: any) {
       console.error('ProfileScreen: Erro ao buscar cards:', err);
       setError('Não foi possível carregar seus cards');
@@ -157,7 +161,7 @@ const ProfileScreen = () => {
   // Função para formatar o nome do plano
   const formatPlanName = (planId: string | null) => {
     if (!planId) return 'Free';
-    
+
     // Mapeamento de IDs para nomes de planos
     const planNames: { [key: string]: string } = {
       '68379d4289ed7583b0596d87': 'Premium',
@@ -172,8 +176,23 @@ const ProfileScreen = () => {
     navigation.navigate('CardDetail', {
       card: card,
       listId: 'profile',
-      listName: 'Meus Cards'
+      listName: 'Meus Cards',
     });
+  };
+
+  // Função utilitária para obter cor da prioridade
+  const getPriorityColor = (priority?: string | null) => {
+    const value = priority?.toLowerCase();
+    switch (value) {
+      case 'alta':
+        return colors.highPriority;
+      case 'media':
+        return colors.mediumPriority;
+      case 'baixa':
+        return colors.lowPriority;
+      default:
+        return '#888';
+    }
   };
 
   // Função para renderizar card
@@ -182,19 +201,16 @@ const ProfileScreen = () => {
       item.image_url && Array.isArray(item.image_url) && item.image_url.length > 0
     );
     const imageUri = hasImages && item.image_url ? item.image_url[0] : null;
+    const priorityColor = getPriorityColor(item.priority);
 
     return (
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.cardBox}
         onPress={() => handleCardPress(item)}
         activeOpacity={0.7}
       >
         {imageUri ? (
-          <Image
-            source={{ uri: imageUri }}
-            style={styles.cardImage}
-            resizeMode="cover"
-          />
+          <Image source={{ uri: imageUri }} style={styles.cardImage} resizeMode="cover" />
         ) : (
           <View style={[styles.cardImage, styles.placeholderImage]}>
             <Text style={styles.placeholderText}>📄</Text>
@@ -207,7 +223,10 @@ const ProfileScreen = () => {
           <Text style={styles.cardDate}>
             {item.createdAt ? formatDate(item.createdAt) : '--/--/--'}
           </Text>
-          <Text style={styles.cardType}>{item.priority || 'N/A'}</Text>
+          <Text style={[styles.cardType, { color: priorityColor }]}>
+            {' '}
+            {item.priority || 'N/A'}{' '}
+          </Text>
         </View>
       </TouchableOpacity>
     );
@@ -231,19 +250,19 @@ const ProfileScreen = () => {
   const stats = useMemo(() => {
     const totalCards = cards.length;
     const totalPdfs = cards.reduce((acc, card) => acc + (card.pdfs?.length || 0), 0);
-    const highPriorityCards = cards.filter(card => card.priority === 'alta').length;
-    const mediumPriorityCards = cards.filter(card => card.priority === 'media').length;
+    const highPriorityCards = cards.filter((card) => card.priority === 'alta').length;
+    const mediumPriorityCards = cards.filter((card) => card.priority === 'media').length;
     const totalLists = lists.length;
-    const favoriteCards = cards.filter(card => card.is_favorite).length;
+    const favoriteCards = cards.filter((card) => card.is_favorite).length;
 
-    return { 
-      totalCards, 
-      totalPdfs, 
+    return {
+      totalCards,
+      totalPdfs,
       highPriorityCards,
       mediumPriorityCards,
-      
+
       totalLists,
-      favoriteCards
+      favoriteCards,
     };
   }, [cards, lists]);
 
@@ -271,14 +290,13 @@ const ProfileScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
-        
-          {/* Btn Sobre */}
-          <View style={styles.sobreBtn}>
-            <TouchableOpacity style={styles.iconCircle} onPress={() => navigation.navigate('About')}>
-              <UserGroupIcon color={colors.primary} size={20} />
-            </TouchableOpacity>
-          </View>
-        
+        {/* Btn Sobre */}
+        <View style={styles.sobreBtn}>
+          <TouchableOpacity style={styles.iconCircle} onPress={() => navigation.navigate('About')}>
+            <UserGroupIcon color={colors.primary} size={20} />
+          </TouchableOpacity>
+        </View>
+
         {/* Avatar centralizado */}
         <View style={styles.avatarContainer}>
           {user?.profileImage ? (
@@ -293,7 +311,10 @@ const ProfileScreen = () => {
         {/* Nome, pontos e editar */}
         <View style={styles.nameRow}>
           <Text style={styles.userName}>{user?.name || 'Usuário'}</Text>
-          <TouchableOpacity style={styles.editBtn} onPress={() => navigation.navigate('EditProfile')}>
+          <TouchableOpacity
+            style={styles.editBtn}
+            onPress={() => navigation.navigate('EditProfile')}
+          >
             <View style={styles.iconCircle}>
               <EditIcon color="#222" size={20} />
             </View>
@@ -349,7 +370,7 @@ const ProfileScreen = () => {
         )}
 
         {/* Botões de menu */}
-        
+
         {/* Botão Premium */}
         <TouchableOpacity style={styles.premiumBtn} onPress={() => navigation.navigate('Plan')}>
           <SuperCheck color="#ffffff" size={16} />
@@ -359,9 +380,7 @@ const ProfileScreen = () => {
           </View>
         </TouchableOpacity>
 
-
         <View style={styles.menuBox}>
-          
           <TouchableOpacity style={styles.menuBtn} onPress={handleOpenStats}>
             <AnaliticsIcon color="#222" size={16} />
             <Text style={styles.menuText}>Minhas Análises</Text>
@@ -379,15 +398,14 @@ const ProfileScreen = () => {
           </TouchableOpacity>
         </View>
 
-        
         {/* button logout */}
         <CustomButton
-              title="Sair da conta"
-              loading={loading}
-              onPress={handleLogout}
-              buttonStyle={styles.logoutButton}
-              icon={<LogOutIcon size={16} color={colors.white} />}
-          />
+          title="Sair da conta"
+          loading={loading}
+          onPress={handleLogout}
+          buttonStyle={styles.logoutButton}
+          icon={<LogOutIcon size={16} color={colors.white} />}
+        />
 
         {/* Modal de Estatísticas */}
         <Modal
@@ -426,10 +444,7 @@ const ProfileScreen = () => {
             </Animated.View>
           </View>
         </Modal>
-
       </ScrollView>
-
-      
     </SafeAreaView>
   );
 };
@@ -449,7 +464,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
 
-  sobreBtn:{
+  sobreBtn: {
     width: '100%',
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -684,8 +699,6 @@ const styles = StyleSheet.create({
     marginRight: 8,
     fontFamily: fontNames.bold,
   },
-
-
 
   logoutButton: {
     height: 68,

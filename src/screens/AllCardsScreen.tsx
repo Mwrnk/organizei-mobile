@@ -16,20 +16,21 @@ import { fontNames } from '../styles/fonts';
 import colors from '@styles/colors';
 import ArrowBack from 'assets/icons/ArrowBack';
 import api from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 type AllCardsScreenNavigationProp = StackNavigationProp<
   RootTabParamList & {
     CardDetail: {
-        card: {
-            id: string;
-            title: string;
-            content?: string;
-            image_url?: string[];
-            createdAt?: string;
-            pdfs?: any[];
-            priority?: 'baixa' | 'media' | 'alta';
-            is_published?: boolean;
-        };
+      card: {
+        id: string;
+        title: string;
+        content?: string;
+        image_url?: string[];
+        createdAt?: string;
+        pdfs?: any[];
+        priority?: 'baixa' | 'media' | 'alta';
+        is_published?: boolean;
+      };
       listId: string;
       listName: string;
     };
@@ -37,24 +38,25 @@ type AllCardsScreenNavigationProp = StackNavigationProp<
 >;
 
 interface Card {
-    id: string;
-    title: string;
-    userId: string;
-    createdAt?: string;
-    pdfs?: {
-      url: string;
-      filename: string;
-      uploaded_at: string;
-      size_kb?: number;
-    }[];
-    image_url?: string[];
-    content?: string;
-    priority?: 'baixa' | 'media' | 'alta';
-    is_published?: boolean;
+  id: string;
+  title: string;
+  userId: string;
+  createdAt?: string;
+  pdfs?: {
+    url: string;
+    filename: string;
+    uploaded_at: string;
+    size_kb?: number;
+  }[];
+  image_url?: string[];
+  content?: string;
+  priority?: 'baixa' | 'media' | 'alta';
+  is_published?: boolean;
 }
 
 const AllCardsScreen = () => {
   const navigation = useNavigation<AllCardsScreenNavigationProp>();
+  const { user } = useAuth();
   const [cards, setCards] = useState<Card[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,10 +66,19 @@ const AllCardsScreen = () => {
       setLoading(true);
       setError(null);
 
-      const response = await api.get('/cards');
-      const userCards = response.data.data || [];
+      const userIdParam = user?._id || user?.id;
+      if (!userIdParam) {
+        setCards([]);
+        setLoading(false);
+        return;
+      }
+
+      const response = await api.get(`/cards/user/${userIdParam}`);
+      const userCards = (response.data.data || []).map((c: any, idx: number) => ({
+        ...c,
+        id: c.id || c._id || `card-${idx}-${Date.now()}`,
+      }));
       setCards(userCards);
-      
     } catch (err: any) {
       console.error('AllCardsScreen: Erro ao buscar cards:', err);
       setError('Não foi possível carregar seus cards');
@@ -80,6 +91,20 @@ const AllCardsScreen = () => {
   useEffect(() => {
     fetchUserCards();
   }, []);
+
+  const getPriorityColor = (priority?: string | null) => {
+    const value = priority?.toLowerCase();
+    switch (value) {
+      case 'alta':
+        return colors.highPriority;
+      case 'media':
+        return colors.mediumPriority;
+      case 'baixa':
+        return colors.lowPriority;
+      default:
+        return '#888';
+    }
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -94,7 +119,7 @@ const AllCardsScreen = () => {
     navigation.navigate('CardDetail', {
       card: card,
       listId: 'allCards',
-      listName: 'Todos os Cards'
+      listName: 'Todos os Cards',
     });
   };
 
@@ -103,19 +128,16 @@ const AllCardsScreen = () => {
       item.image_url && Array.isArray(item.image_url) && item.image_url.length > 0
     );
     const imageUri = hasImages && item.image_url ? item.image_url[0] : null;
+    const priorityColor = getPriorityColor(item.priority);
 
     return (
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.cardBox}
         onPress={() => handleCardPress(item)}
         activeOpacity={0.7}
       >
         {imageUri ? (
-          <Image
-            source={{ uri: imageUri }}
-            style={styles.cardImage}
-            resizeMode="cover"
-          />
+          <Image source={{ uri: imageUri }} style={styles.cardImage} resizeMode="cover" />
         ) : (
           <View style={[styles.cardImage, styles.placeholderImage]}>
             <Text style={styles.placeholderText}>📄</Text>
@@ -128,7 +150,7 @@ const AllCardsScreen = () => {
           <Text style={styles.cardDate}>
             {item.createdAt ? formatDate(item.createdAt) : '--/--/--'}
           </Text>
-          <Text style={styles.cardType}>{item.priority || 'N/A'}</Text>
+          <Text style={[styles.cardType, { color: priorityColor }]}>{item.priority || 'N/A'}</Text>
         </View>
       </TouchableOpacity>
     );
@@ -313,4 +335,4 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: '#888',
   },
-}); 
+});
