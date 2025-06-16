@@ -23,6 +23,7 @@ const Tab = createBottomTabNavigator<RootTabParamList>();
 const ProfileStack = createStackNavigator();
 const EscolarStack = createStackNavigator<EscolarStackParamList>();
 const GameStack = createStackNavigator();
+const CommunityStack = createStackNavigator();
 
 function ProfileStackScreen() {
   return (
@@ -62,6 +63,15 @@ function GameStackScreen() {
   );
 }
 
+function CommunityStackScreen() {
+  return (
+    <CommunityStack.Navigator screenOptions={{ headerShown: false }}>
+      <CommunityStack.Screen name="CommunityMain" component={CommunityScreen} />
+      <CommunityStack.Screen name="CardDetail" component={CardDetailScreen} />
+    </CommunityStack.Navigator>
+  );
+}
+
 const AppRoutes = () => (
   <Tab.Navigator
     initialRouteName="Escolar"
@@ -70,7 +80,7 @@ const AppRoutes = () => (
   >
     <Tab.Screen name="Escolar" component={EscolarStackScreen} />
     <Tab.Screen name="Game" component={GameStackScreen} />
-    <Tab.Screen name="Comunidade" component={CommunityScreen} />
+    <Tab.Screen name="Comunidade" component={CommunityStackScreen} />
     <Tab.Screen name="IA" component={AIScreen} />
     <Tab.Screen name="Eu" component={ProfileStackScreen} />
   </Tab.Navigator>
