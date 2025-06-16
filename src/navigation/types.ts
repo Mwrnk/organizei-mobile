@@ -1,10 +1,8 @@
+import { NavigatorScreenParams } from '@react-navigation/native';
+
 export type RootTabParamList = {
   Game: undefined;
-  Escolar: undefined;
-  CreateCard: {
-    listId: string;
-    listName: string;
-  };
+  Escolar: NavigatorScreenParams<EscolarStackParamList> | undefined;
   Comunidade: undefined;
   IA: undefined;
   Eu: undefined;
