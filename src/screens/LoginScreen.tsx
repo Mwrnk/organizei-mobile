@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
 import { GlobalStyles } from '@styles/global';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import Input from '@components/Input';
@@ -12,8 +12,12 @@ import { RootTabParamList } from '../navigation/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '@styles/colors';
+import ReactNativeBiometrics, { BiometryTypes } from 'react-native-biometrics';
 
 const EMAIL_KEY = 'lastLoginEmail';
+const BIOMETRY_KEY = 'biometryEnabled';
+const CREDENTIALS_KEY = 'savedCredentials';
+const BIOMETRY_LAST_USED = 'biometryLastUsed';
 
 // Tela de Login do aplicativo
 const LoginScreen = () => {
@@ -27,6 +31,12 @@ const LoginScreen = () => {
   const [showPassword, setShowPassword] = useState(false); // Se a senha está visível
   const [showError, setShowError] = useState(false); // Controla exibição da mensagem de erro
   const [emailSuggestion, setEmailSuggestion] = useState<string | null>(null); // Sugestão de correção de e-mail
+  const [isBiometryAvailable, setIsBiometryAvailable] = useState(false);
+  const [isBiometryEnabled, setIsBiometryEnabled] = useState(false);
+  const [isBiometricLoading, setIsBiometricLoading] = useState(false);
+  const [biometryType, setBiometryType] = useState<string | null>(null);
+  const [isWebPlatform, setIsWebPlatform] = useState(false);
+  const rnBiometrics = new ReactNativeBiometrics();
 
   // Lista de domínios comuns digitados incorretamente e suas correções
   const commonDomains: { [wrong: string]: string } = {
@@ -84,6 +94,165 @@ const LoginScreen = () => {
     }
   }, [error]);
 
+  // Verifica se está rodando na web
+  useEffect(() => {
+    const checkPlatform = () => {
+      setIsWebPlatform(Platform.OS === 'web');
+    };
+    checkPlatform();
+  }, []);
+
+  // Verifica se a biometria está disponível e configurada
+  useEffect(() => {
+    const checkBiometry = async () => {
+      try {
+        if (isWebPlatform) {
+          setIsBiometryAvailable(false);
+          setBiometryType(null);
+          return;
+        }
+
+        const { available, biometryType } = await rnBiometrics.isSensorAvailable();
+        setIsBiometryAvailable(available);
+        setBiometryType(biometryType || null);
+        
+        const biometryEnabled = await AsyncStorage.getItem(BIOMETRY_KEY);
+        setIsBiometryEnabled(biometryEnabled === 'true');
+
+        // Verifica se as credenciais salvas ainda são válidas
+        if (biometryEnabled === 'true') {
+          const savedCredentials = await AsyncStorage.getItem(CREDENTIALS_KEY);
+          if (!savedCredentials) {
+            await AsyncStorage.removeItem(BIOMETRY_KEY);
+            setIsBiometryEnabled(false);
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao verificar biometria:', error);
+        setIsBiometryAvailable(false);
+      }
+    };
+    
+    checkBiometry();
+  }, [isWebPlatform]);
+
+  // Função para desabilitar a biometria
+  const handleDisableBiometry = async () => {
+    Alert.alert(
+      'Desabilitar Biometria',
+      'Tem certeza que deseja desabilitar o login com biometria?',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel'
+        },
+        {
+          text: 'Desabilitar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await AsyncStorage.removeItem(BIOMETRY_KEY);
+              await AsyncStorage.removeItem(CREDENTIALS_KEY);
+              await AsyncStorage.removeItem(BIOMETRY_LAST_USED);
+              setIsBiometryEnabled(false);
+              Alert.alert('Sucesso', 'Login com biometria desabilitado com sucesso.');
+            } catch (error) {
+              console.error('Erro ao desabilitar biometria:', error);
+              Alert.alert('Erro', 'Não foi possível desabilitar a biometria.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  // Função para login com biometria
+  const handleBiometricLogin = async () => {
+    try {
+      setIsBiometricLoading(true);
+      
+      // Verifica se as credenciais ainda são válidas
+      const savedCredentials = await AsyncStorage.getItem(CREDENTIALS_KEY);
+      if (!savedCredentials) {
+        setIsBiometryEnabled(false);
+        Alert.alert(
+          'Erro',
+          'Credenciais não encontradas. Por favor, faça login novamente com email e senha.',
+          [
+            {
+              text: 'OK',
+              onPress: async () => {
+                await AsyncStorage.removeItem(BIOMETRY_KEY);
+                setIsBiometricLoading(false);
+              }
+            }
+          ]
+        );
+        return;
+      }
+
+      const { success, error } = await rnBiometrics.simplePrompt({
+        promptMessage: 'Confirme sua identidade',
+        cancelButtonText: 'Cancelar'
+      });
+
+      if (success) {
+        const { email: savedEmail, password: savedPassword } = JSON.parse(savedCredentials);
+        await login(savedEmail, savedPassword);
+        
+        // Registra o último uso bem-sucedido da biometria
+        await AsyncStorage.setItem(BIOMETRY_LAST_USED, new Date().toISOString());
+      } else {
+        setError('Autenticação biométrica cancelada');
+      }
+    } catch (error) {
+      console.error('Erro na autenticação biométrica:', error);
+      setError('Erro na autenticação biométrica');
+    } finally {
+      setIsBiometricLoading(false);
+    }
+  };
+
+  // Função para salvar credenciais para biometria
+  const saveCredentialsForBiometry = async () => {
+    try {
+      // Verifica se já existem credenciais salvas
+      const existingCredentials = await AsyncStorage.getItem(CREDENTIALS_KEY);
+      if (existingCredentials) {
+        Alert.alert(
+          'Atenção',
+          'Já existem credenciais salvas para biometria. Deseja substituí-las?',
+          [
+            {
+              text: 'Cancelar',
+              style: 'cancel'
+            },
+            {
+              text: 'Substituir',
+              onPress: async () => {
+                await saveCredentials();
+              }
+            }
+          ]
+        );
+      } else {
+        await saveCredentials();
+      }
+    } catch (error) {
+      console.error('Erro ao salvar credenciais:', error);
+      Alert.alert('Erro', 'Não foi possível salvar as credenciais.');
+    }
+  };
+
+  const saveCredentials = async () => {
+    const credentials = JSON.stringify({ email, password });
+    await AsyncStorage.setItem(CREDENTIALS_KEY, credentials);
+    await AsyncStorage.setItem(BIOMETRY_KEY, 'true');
+    await AsyncStorage.setItem(BIOMETRY_LAST_USED, new Date().toISOString());
+    setIsBiometryEnabled(true);
+    Alert.alert('Sucesso', 'Login com biometria habilitado com sucesso!');
+  };
+
   // Manipula mudança no campo de e-mail, sugere correção e limpa erro
   const handleEmailChange = (text: string) => {
     setEmail(text);
@@ -119,7 +288,6 @@ const LoginScreen = () => {
 
   // Função principal de login, chamada ao pressionar o botão
   const handleLogin = async () => {
-    // Validação dos campos
     if (!validateForm()) {
       return;
     }
@@ -132,7 +300,6 @@ const LoginScreen = () => {
       return;
     }
 
-    // Verificação de conectividade
     const isConnected = await checkConnectivity();
     if (!isConnected) {
       setError('Sem conexão com a internet. Verifique sua conexão e tente novamente.');
@@ -142,16 +309,32 @@ const LoginScreen = () => {
 
     try {
       setError('');
-      // Chama o método de login do contexto de autenticação
       await login(email, password);
-      // Salva ou remove o e-mail do AsyncStorage conforme a opção "Lembrar meu e-mail"
+      
       if (rememberEmail) {
         await AsyncStorage.setItem(EMAIL_KEY, email);
       } else {
         await AsyncStorage.removeItem(EMAIL_KEY);
       }
+
+      // Pergunta se deseja habilitar biometria após login bem-sucedido
+      if (isBiometryAvailable && !isBiometryEnabled) {
+        Alert.alert(
+          'Habilitar Biometria',
+          'Deseja habilitar o login com biometria?',
+          [
+            {
+              text: 'Não',
+              style: 'cancel'
+            },
+            {
+              text: 'Sim',
+              onPress: saveCredentialsForBiometry
+            }
+          ]
+        );
+      }
     } catch (err: any) {
-      // Verifica se é erro de autenticação (e-mail/senha incorretos)
       if (err?.response?.status === 401 || err?.response?.status === 404) {
         setError('E-mail ou senha incorretos. Por favor, tente novamente.');
       } else {
@@ -171,6 +354,46 @@ const LoginScreen = () => {
         <View style={styles.welcomeContainer}>
           <Text style={GlobalStyles.title2}>Bem-vindo de volta!</Text>
         </View>
+
+        {isWebPlatform ? (
+          <View style={styles.webMessageContainer}>
+            <Ionicons name="information-circle" size={24} color={colors.warning} />
+            <Text style={styles.webMessageText}>
+              O login com biometria não está disponível no navegador web.{'\n'}
+              Por favor, use o aplicativo móvel para acessar esta funcionalidade.
+            </Text>
+          </View>
+        ) : isBiometryAvailable && isBiometryEnabled ? (
+          <View style={styles.biometricContainer}>
+            <TouchableOpacity
+              style={[styles.biometricButton, isBiometricLoading && styles.biometricButtonDisabled]}
+              onPress={handleBiometricLogin}
+              disabled={isBiometricLoading}
+              accessibilityLabel="Login com biometria"
+              accessibilityHint="Toque para fazer login usando biometria"
+            >
+              {isBiometricLoading ? (
+                <ActivityIndicator color={colors.primary} />
+              ) : (
+                <>
+                  <Ionicons name="finger-print" size={24} color={colors.primary} />
+                  <Text style={styles.biometricButtonText}>
+                    Login com {biometryType === BiometryTypes.TouchID ? 'Touch ID' : 'Biometria'}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.disableBiometryButton}
+              onPress={handleDisableBiometry}
+              accessibilityLabel="Desabilitar biometria"
+              accessibilityHint="Toque para desabilitar o login com biometria"
+            >
+              <Text style={styles.disableBiometryText}>Desabilitar Biometria</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
         <View style={styles.formContainer}>
           <View style={{ position: 'relative', width: '100%' }}>
@@ -299,6 +522,56 @@ const styles = StyleSheet.create({
     color: 'red',
     textAlign: 'center',
     marginTop: 8,
+  },
+  biometricContainer: {
+    width: '100%',
+    paddingHorizontal: 32,
+    marginBottom: 16,
+  },
+  biometricButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  biometricButtonDisabled: {
+    opacity: 0.7,
+  },
+  biometricButtonText: {
+    color: colors.primary,
+    fontSize: 16,
+    marginLeft: 8,
+    fontWeight: '500',
+  },
+  disableBiometryButton: {
+    marginTop: 8,
+    padding: 8,
+    alignItems: 'center',
+  },
+  disableBiometryText: {
+    color: colors.warning,
+    fontSize: 14,
+  },
+  webMessageContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    padding: 16,
+    marginHorizontal: 32,
+    marginBottom: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.warning,
+  },
+  webMessageText: {
+    color: colors.warning,
+    fontSize: 14,
+    marginLeft: 8,
+    flex: 1,
   },
 });
 
