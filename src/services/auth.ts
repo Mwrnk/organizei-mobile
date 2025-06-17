@@ -1,13 +1,36 @@
+/**
+ * SERVIÇO DE AUTENTICAÇÃO
+ * 
+ * Este serviço gerencia todas as operações relacionadas à autenticação do usuário:
+ * - Login e logout
+ * - Armazenamento de tokens JWT
+ * - Gerenciamento de dados do usuário
+ * - Verificação de autenticação
+ * - Registro de novos usuários
+ * 
+ * Funcionalidades:
+ * - Integração com API de autenticação
+ * - Armazenamento seguro de tokens
+ * - Mapeamento de dados da API para modelo local
+ * - Validação de dados do usuário
+ */
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from './api';
 import { User } from '../models/User';
 
+/**
+ * Interface para respostas da API
+ */
 export interface ApiResponse<T> {
   status: string;
   data: T;
 }
 
-// Interface para mapear a resposta da API de usuário
+/**
+ * Interface para mapear a resposta da API de usuário
+ * Suporta tanto formato antigo (_id) quanto novo (id)
+ */
 interface ApiUserResponse {
   _id?: string; // MongoDB ID (formato antigo)
   id?: string; // ID simplificado (formato novo)
@@ -26,20 +49,35 @@ interface ApiUserResponse {
   __v?: number;
 }
 
+/**
+ * Interface para resposta de autenticação
+ */
 export interface AuthResponse {
   token: string;
   user: ApiUserResponse;
 }
 
+/**
+ * Interface para credenciais de login
+ */
 export interface LoginCredentials {
   email: string;
   password: string;
 }
 
+// Chaves para armazenamento local
 export const TOKEN_KEY = 'jwtToken';
 export const USER_KEY = 'user';
 
-// Função para converter a resposta da API para o modelo User
+/**
+ * FUNÇÃO DE MAPEAMENTO DE DADOS
+ * 
+ * Converte a resposta da API para o modelo User local
+ * Garante compatibilidade entre diferentes formatos de ID
+ * 
+ * @param apiUser - Dados do usuário vindos da API
+ * @returns Objeto User mapeado
+ */
 const mapApiUserToModel = (apiUser: ApiUserResponse): User => {
   // A API pode retornar tanto 'id' quanto '_id', vamos lidar com ambos
   const userId = apiUser._id || apiUser.id || '';
@@ -67,10 +105,27 @@ const mapApiUserToModel = (apiUser: ApiUserResponse): User => {
   };
 };
 
+/**
+ * OBJETO PRINCIPAL DO SERVIÇO DE AUTENTICAÇÃO
+ * 
+ * Contém todas as funções relacionadas à autenticação
+ */
 export const AuthService = {
-  // Login e armazenamento do token
+  /**
+   * REALIZA O LOGIN DO USUÁRIO
+   * 
+   * Processo completo de autenticação:
+   * 1. Envia credenciais para a API
+   * 2. Armazena o token JWT
+   * 3. Busca dados completos do usuário
+   * 4. Armazena dados do usuário localmente
+   * 
+   * @param credentials - Email e senha do usuário
+   * @returns Objeto com usuário e token
+   */
   async login(credentials: LoginCredentials): Promise<{ user: User; token: string }> {
     try {
+      // Faz a requisição de login para a API
       const response = await api.post<ApiResponse<AuthResponse>>('/login', credentials);
 
       // Extraindo os dados da estrutura de resposta
@@ -122,7 +177,11 @@ export const AuthService = {
     }
   },
 
-  // Logout - remove token e informações do usuário
+  /**
+   * REALIZA O LOGOUT DO USUÁRIO
+   * 
+   * Remove token e dados do usuário do armazenamento local
+   */
   async logout(): Promise<void> {
     try {
       await AsyncStorage.removeItem(TOKEN_KEY);
@@ -133,18 +192,33 @@ export const AuthService = {
     }
   },
 
-  // Verifica se o usuário está autenticado
+  /**
+   * VERIFICA SE O USUÁRIO ESTÁ AUTENTICADO
+   * 
+   * @returns true se há um token válido, false caso contrário
+   */
   async isAuthenticated(): Promise<boolean> {
     const token = await AsyncStorage.getItem(TOKEN_KEY);
     return !!token;
   },
 
-  // Obtém o token JWT atual
+  /**
+   * OBTÉM O TOKEN JWT ATUAL
+   * 
+   * @returns Token JWT ou null se não existir
+   */
   async getToken(): Promise<string | null> {
     return AsyncStorage.getItem(TOKEN_KEY);
   },
 
-  // Obtém as informações do usuário atual
+  /**
+   * OBTÉM AS INFORMAÇÕES DO USUÁRIO ATUAL
+   * 
+   * Busca dados do usuário no armazenamento local
+   * Inclui validação e migração de dados
+   * 
+   * @returns Dados do usuário ou null se não encontrado
+   */
   async getCurrentUser(): Promise<User | null> {
     try {
       const userStr = await AsyncStorage.getItem(USER_KEY);
@@ -182,7 +256,11 @@ export const AuthService = {
     }
   },
 
-  // Atualiza os dados do usuário no armazenamento local
+  /**
+   * ATUALIZA OS DADOS DO USUÁRIO NO ARMAZENAMENTO LOCAL
+   * 
+   * @param userData - Novos dados do usuário
+   */
   async updateCurrentUser(userData: User): Promise<void> {
     try {
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(userData));
@@ -192,7 +270,14 @@ export const AuthService = {
     }
   },
 
-  // Registro de novo usuário
+  /**
+   * REGISTRO DE NOVO USUÁRIO
+   * 
+   * Cria uma nova conta de usuário
+   * 
+   * @param userData - Dados do novo usuário
+   * @returns Objeto com usuário criado e token
+   */
   async register(userData: {
     name: string;
     email: string;
