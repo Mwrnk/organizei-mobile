@@ -17,10 +17,12 @@ Aplicativo móvel desenvolvido com React Native e Expo para auxiliar estudantes 
 - Expo Image Picker
 - React Native Markdown Display
 - React Native SVG
+- React Native Biometrics
 
 ## 📱 Funcionalidades
 
 - Sistema de autenticação completo (login/registro)
+- Login com biometria (Touch ID, Face ID, impressão digital)
 - Gerenciamento de perfil de usuário
 - Criação e gerenciamento de cards de estudo
 - Sistema de quadros e listas
@@ -28,7 +30,7 @@ Aplicativo móvel desenvolvido com React Native e Expo para auxiliar estudantes 
 - Flash Cards
 - Sistema de pontos e recompensas
 - Comunidade de usuários
-- Integração com IA
+- Integração com IA (ORGAN.IA)
 - Suporte a documentos e imagens
 - Modo offline com sincronização
 - Interface moderna e responsiva
@@ -77,6 +79,7 @@ yarn start
 ```
 src/
 ├── components/     # Componentes reutilizáveis
+│   └── community/  # Componentes específicos da comunidade
 ├── config/        # Configurações do app
 ├── constants/     # Constantes e enums
 ├── contexts/      # Contextos do React
@@ -84,29 +87,60 @@ src/
 ├── db/           # Configuração e modelos do banco de dados
 ├── models/       # Modelos de dados
 ├── navigation/   # Configuração de navegação
-├── screens/      # Telas do aplicativo
-│   ├── LoginScreen.tsx
-│   ├── RegisterScreen.tsx
-│   ├── ProfileScreen.tsx
-│   ├── BoardScreen.tsx
-│   ├── CreateCardScreen.tsx
-│   ├── GamesScreen.tsx
-│   ├── CommunityScreen.tsx
-│   └── ...
+├── screens/      # Telas do aplicativo (organizadas por funcionalidade)
+│   ├── auth/     # Autenticação
+│   │   ├── LoginScreen.tsx
+│   │   └── RegisterScreen.tsx
+│   ├── profile/  # Perfil do usuário
+│   │   ├── ProfileScreen.tsx
+│   │   ├── EditProfileScreen.tsx
+│   │   └── UserProfileScreen.tsx
+│   ├── cards/    # Gerenciamento de cards
+│   │   ├── AllCardsScreen.tsx
+│   │   ├── CardDetailScreen.tsx
+│   │   ├── CreateCardScreen.tsx
+│   │   └── FlashCardsScreen.tsx
+│   ├── games/    # Jogos educacionais
+│   │   ├── GamesScreen.tsx
+│   │   ├── JogoDoMilhaoScreen.tsx
+│   │   └── BoardScreen.tsx
+│   ├── points/   # Sistema de pontos
+│   │   ├── PointsScreen.tsx
+│   │   └── PlanScreen.tsx
+│   ├── community/ # Comunidade
+│   │   └── CommunityScreen.tsx
+│   ├── escolar/  # Módulo escolar
+│   │   └── EscolarScreen.tsx
+│   ├── ai/       # Integração com IA
+│   │   └── AIScreen.tsx
+│   └── info/     # Informações do app
+│       └── AboutScreen.tsx
 ├── services/     # Serviços e APIs
 ├── styles/       # Estilos globais
 ├── types/        # Definições de tipos TypeScript
 └── utils/        # Funções utilitárias
 ```
 
-## 🔐 Permissões
+## 🔐 Funcionalidades de Segurança
 
+### Biometria
+O aplicativo oferece suporte completo a autenticação biométrica:
+
+- Touch ID (iOS) e Impressão Digital (Android)
+- Face ID (iOS)
+- Configuração opcional após login bem-sucedido
+- Armazenamento seguro de credenciais
+- Opção de desabilitar a qualquer momento
+- Compatibilidade multiplataforma (não disponível na web)
+
+### Permissões
 O aplicativo requer as seguintes permissões:
 
 - Câmera: Para tirar fotos de perfil
 - Galeria: Para selecionar imagens
 - Armazenamento: Para salvar documentos e imagens
 - Internet: Para sincronização e recursos online
+- Biometria: Para autenticação biométrica (opcional)
 
 ## 🤝 Contribuição
 
