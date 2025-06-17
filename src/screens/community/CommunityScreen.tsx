@@ -16,10 +16,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useCommunity } from '../contexts/CommunityContext';
-import { ICard } from '../types/community.types';
-import CommunityCard from '../components/community/CommunityCard';
-import api from '../services/api';
+import { useCommunity } from '@contexts/CommunityContext';
+import { ICard } from '../../types/community.types';
+import CommunityCard from '../../components/community/CommunityCard';
+import api from '../../services/api';
 import colors from '@styles/colors';
 import { fontNames } from '@styles/fonts';
 import SearchIcon from '@icons/SearchIcon';

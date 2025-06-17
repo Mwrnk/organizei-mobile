@@ -2,9 +2,9 @@ import React from 'react';
 import { StyleSheet, Text, View, SafeAreaView, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RootTabParamList } from '../navigation/types';
+import { RootTabParamList } from '../../navigation/types';
 import colors from '@styles/colors';
-import { fontNames } from '../styles/fonts';
+import { fontNames } from '../../styles/fonts';
 import ArrowBack from 'assets/icons/ArrowBack';
 import MemberCard from '@components/MemberCard';
 

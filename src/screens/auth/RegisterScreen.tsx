@@ -6,13 +6,13 @@ import Input from '@components/Input';
 import CustomButton from '@components/CustomButton';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RootTabParamList } from '../navigation/types';
-import api from '../services/api';
+import { RootTabParamList } from '../../navigation/types';
+import api from '../../services/api';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '@styles/colors';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '@contexts/AuthContext';
 
 const RegisterScreen = () => {
   const [etapa, setEtapa] = useState(1);

@@ -8,7 +8,7 @@ import CustomButton from '@components/CustomButton';
 import { checkConnectivity } from '@utils/network';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RootTabParamList } from '../navigation/types';
+import { RootTabParamList } from '../../navigation/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '@styles/colors';

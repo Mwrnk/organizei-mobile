@@ -11,12 +11,12 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
-import type { RootTabParamList } from '../navigation/types';
-import { fontNames } from '../styles/fonts';
+import type { RootTabParamList } from '../../navigation/types';
+import { fontNames } from '@styles/fonts';
 import colors from '@styles/colors';
 import ArrowBack from 'assets/icons/ArrowBack';
-import api from '../services/api';
-import { useAuth } from '../contexts/AuthContext';
+import api from '../../services/api';
+import { useAuth } from '@contexts/AuthContext';
 
 type AllCardsScreenNavigationProp = StackNavigationProp<
   RootTabParamList & {

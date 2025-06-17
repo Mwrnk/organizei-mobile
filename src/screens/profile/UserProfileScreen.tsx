@@ -12,10 +12,10 @@ import {
 } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import api from '../services/api';
+import api from '../../services/api';
 import colors from '@styles/colors';
 import { fontNames } from '@styles/fonts';
-import { ICard } from '../types/community.types';
+import { ICard } from '../../types/community.types';
 
 // Param list for Community stack navigator
 export type CommunityStackParamList = {

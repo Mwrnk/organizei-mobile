@@ -4,7 +4,7 @@ import Input from '@components/Input';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { GlobalStyles } from '@styles/global';
 import { useAuth } from '@contexts/AuthContext';
-import BoardController, { Board, Card } from '../controllers/BoardController';
+import BoardController, { Board, Card } from '../../controllers/BoardController';
 import CustomButton from '@components/CustomButton';
 import colors from '@styles/colors';
 

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Switch, ActivityIndicator, Alert, Platform } from 'react-native';
-import { fontNames } from '../styles/fonts';
-import colors from '../styles/colors';
+import { fontNames } from '@styles/fonts';
+import colors from '@styles/colors';
 import { useNavigation } from '@react-navigation/native';
-import { useAuth } from '../contexts/AuthContext';
-import { AuthService } from '../services/auth';
-import api from '../services/api';
+import { useAuth } from '@contexts/AuthContext';
+import { AuthService } from '../../services/auth';
+import api from '../../services/api';
 
 // Função utilitária multiplataforma para alertas
 function showAlert(title: string, message: string) {

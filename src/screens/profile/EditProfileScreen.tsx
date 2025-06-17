@@ -11,14 +11,14 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { fontNames } from '../styles/fonts';
-import colors from '../styles/colors';
+import { fontNames } from '@styles/fonts';
+import colors from '@styles/colors';
 import { useNavigation } from '@react-navigation/native';
-import { useAuth } from '../contexts/AuthContext';
-import UserController from '../controllers/UserController';
+import { useAuth } from '@contexts/AuthContext';
+import UserController from '../../controllers/UserController';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { convertImageToBase64 } from '../utils/imageUtils';
+import { convertImageToBase64 } from '@utils/imageUtils';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 const EditProfileScreen = () => {

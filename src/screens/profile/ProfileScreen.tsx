@@ -12,11 +12,11 @@ import {
   Modal,
   Animated,
 } from 'react-native';
-import { useAuth } from '../contexts/AuthContext';
-import { fontNames } from '../styles/fonts';
+import { useAuth } from '@contexts/AuthContext';
+import { fontNames } from '@styles/fonts';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
-import type { RootTabParamList } from '../navigation/types';
+import type { RootTabParamList } from '../../navigation/types';
 import FogueteIcon from 'assets/icons/FogueteIcon';
 import RaioIcon from 'assets/icons/RaioIcon';
 import SuperCheck from 'assets/icons/SuperCheck';
@@ -26,7 +26,7 @@ import EditIcon from 'assets/icons/EditIcon';
 import CustomButton from '@components/CustomButton';
 import colors from '@styles/colors';
 import LogOutIcon from '@icons/LogOutIcon';
-import api from '../services/api';
+import api from '../../services/api';
 import UserGroupIcon from '@icons/UserGroupIcon';
 import CloseIcon from '@icons/CloseIcon';
 import FileDocumentIcon from '@icons/FileDocumentIcon';

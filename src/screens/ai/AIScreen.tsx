@@ -13,12 +13,12 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { GlobalStyles } from '@styles/global';
 import CustomButton from '@components/CustomButton';
 import colors from '@styles/colors';
-import AIService, { ChatMessage } from '../services/aiService';
+import AIService, { ChatMessage } from '../../services/aiService';
 import BotIcon from '@icons/BotIcon';
-import { fontNames } from '../styles/fonts';
-import { useAuth } from '../contexts/AuthContext';
+import { fontNames } from '@styles/fonts';
+import { useAuth } from '@contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
-import api from '../services/api';
+import api from '../../services/api';
 import Markdown from 'react-native-markdown-display';
 
 interface Message {

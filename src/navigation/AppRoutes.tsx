@@ -4,21 +4,21 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { RootTabParamList, EscolarStackParamList } from './types';
 import CustomTabBar from '@components/CustomTabBar';
 
-import GamesScreen from '@screens/GamesScreen';
-import EscolarScreen from '@screens/EscolarScreen';
-import CreateCardScreen from '@screens/CreateCardScreen';
-import CardDetailScreen from '@screens/CardDetailScreen';
-import CommunityScreen from '@screens/CommunityScreen';
-import AIScreen from '@screens/AIScreen';
-import ProfileScreen from '@screens/ProfileScreen';
-import PlanScreen from '@screens/PlanScreen';
-import EditProfileScreen from '@screens/EditProfileScreen';
-import FlashCardsScreen from '@screens/FlashCardsScreen';
-import JogoDoMilhaoScreen from '@screens/JogoDoMilhaoScreen';
-import PointsScreen from '@screens/PointsScreen';
-import AboutScreen from '@screens/AboutScreen';
-import AllCardsScreen from '@screens/AllCardsScreen';
-import UserProfileScreen from '@screens/UserProfileScreen';
+import GamesScreen from '@screens/games/GamesScreen';
+import EscolarScreen from '@screens/escolar/EscolarScreen';
+import CreateCardScreen from '@screens/cards/CreateCardScreen';
+import CardDetailScreen from '@screens/cards/CardDetailScreen';
+import CommunityScreen from '@screens/community/CommunityScreen';
+import AIScreen from '@screens/ai/AIScreen';
+import ProfileScreen from '@screens/profile/ProfileScreen';
+import PlanScreen from '@screens/points/PlanScreen';
+import EditProfileScreen from '@screens/profile/EditProfileScreen';
+import FlashCardsScreen from '@screens/cards/FlashCardsScreen';
+import JogoDoMilhaoScreen from '@screens/games/JogoDoMilhaoScreen';
+import PointsScreen from '@screens/points/PointsScreen';
+import AboutScreen from '@screens/info/AboutScreen';
+import AllCardsScreen from '@screens/cards/AllCardsScreen';
+import UserProfileScreen from '@screens/profile/UserProfileScreen';
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
 const ProfileStack = createStackNavigator();
@@ -78,7 +78,7 @@ const AppRoutes = () => (
   <Tab.Navigator
     initialRouteName="Escolar"
     screenOptions={{ headerShown: false }}
-    tabBar={(props) => <CustomTabBar {...props} />}
+    tabBar={(props: any) => <CustomTabBar {...props} />}
   >
     <Tab.Screen name="Escolar" component={EscolarStackScreen} />
     <Tab.Screen name="Game" component={GameStackScreen} />

@@ -16,6 +16,9 @@ config.resolver.alias = {
   '@fonts': path.resolve(__dirname, 'assets/fonts'),
   '@styles': path.resolve(__dirname, 'src/styles'),
   '@screens': path.resolve(__dirname, 'src/screens'),
+  '@contexts': path.resolve(__dirname, 'src/contexts'),
+  '@utils': path.resolve(__dirname, 'src/utils'),
+  '@icons': path.resolve(__dirname, 'assets/icons'),
 };
 
 // Ensure assets are properly resolved

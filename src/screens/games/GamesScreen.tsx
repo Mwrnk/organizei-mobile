@@ -15,23 +15,23 @@ import {
 } from 'react-native';
 
 // Importações de contextos, estilos e componentes de navegação
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '@contexts/AuthContext';
 import { GlobalStyles } from '@styles/global';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RootTabParamList } from '../navigation/types';
+import { RootTabParamList } from '../../navigation/types';
 
 // Importações de componentes e assets customizados
 import ArrowBack from 'assets/icons/ArrowBack';
-import { fontNames } from '../styles/fonts';
-import colors from '../styles/colors';
+import { fontNames } from '@styles/fonts';
+import colors from '@styles/colors';
 import CapaFlashCards from 'assets/banners/CapaFlashCards';
 import RaioIcon from 'assets/icons/RaioIcon';
-import { CardService, Card } from '../services/cardService';
-import { TagService, Tag } from '../services/tagService';
-import { FlashcardService, Flashcard } from '../services/flashcardService';
+import { CardService, Card } from '../../services/cardService';
+import { TagService, Tag } from '../../services/tagService';
+import { FlashcardService, Flashcard } from '../../services/flashcardService';
 import Toast from 'react-native-toast-message';
 import BotIcon from '@icons/BotIcon';
 import EditIcon from '@icons/EditIcon';

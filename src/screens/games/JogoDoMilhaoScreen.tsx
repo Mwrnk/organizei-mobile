@@ -11,15 +11,15 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import colors from '../styles/colors';
-import { fontNames } from '../styles/fonts';
+import colors from '@styles/colors';
+import { fontNames } from '@styles/fonts';
 import Toast from 'react-native-toast-message';
-import { Card, CardService } from '../services/cardService';
-import { QuizService, QuizStartResponse } from '../services/quizService';
-import { useAuth } from '../contexts/AuthContext';
+import { Card, CardService } from '../../services/cardService';
+import { QuizService, QuizStartResponse } from '../../services/quizService';
+import { useAuth } from '@contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RootTabParamList } from '../navigation/types';
+import { RootTabParamList } from '../../navigation/types';
 
 type NavProp = StackNavigationProp<RootTabParamList>;
 

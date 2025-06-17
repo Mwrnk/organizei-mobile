@@ -19,13 +19,13 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { RootTabParamList } from '../navigation/types';
+import { RootTabParamList } from '../../navigation/types';
 
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '@contexts/AuthContext';
 import { GlobalStyles } from '@styles/global';
 import { fontNames } from '@styles/fonts';
 import colors from '@styles/colors';
-import api from '../services/api';
+import api from '../../services/api';
 
 interface RouteParams {
   listId: string;
